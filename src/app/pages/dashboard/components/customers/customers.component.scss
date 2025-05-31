@@ -1,0 +1,108 @@
+// Styles spécifiques au composant de gestion des clients
+.avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #4f46e5;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.contact-info {
+  font-size: 0.875rem;
+  
+  div {
+    margin-bottom: 4px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.registration-date {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4em 0.8em;
+  font-size: 0.875rem;
+  background-color: #f8f9fa;
+  border-radius: 30px;
+  color: #555;
+}
+
+.orders-badge {
+  background-color: rgba(79, 70, 229, 0.1);
+  color: #4f46e5;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.45em 0.85em;
+}
+
+.table {
+  th {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 8px;
+    
+    .sort-icon {
+      font-size: 0.7rem;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
+  }
+
+  td {
+    padding: 12px 8px;
+    vertical-align: middle;
+  }
+}
+
+.customers-table {
+  tr {
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    
+    &:hover {
+      background-color: rgba(79, 70, 229, 0.03);
+      border-left: 3px solid #4f46e5;
+    }
+  }
+}
+
+.btn-group {
+  .btn {
+    border-radius: 4px;
+    margin: 0 2px;
+    padding: 0.25rem 0.5rem;
+    transition: all 0.2s;
+    
+    &:hover {
+      background-color: #f0f0f8;
+    }
+  }
+}
+
+.pagination {
+  .page-link {
+    color: #4f46e5;
+    border-radius: 4px;
+    margin: 0 2px;
+    
+    &:hover {
+      color: #4338ca;
+      background-color: #f0f0f8;
+    }
+  }
+  
+  .active .page-link {
+    background-color: #4f46e5;
+    border-color: #4f46e5;
+  }
+} 

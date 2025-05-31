@@ -1,0 +1,115 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Gestion des clients</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <button type="button" class="btn btn-sm btn-outline-primary me-2">
+      <i class="bi bi-envelope me-1"></i> Envoyer un email
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-download me-1"></i> Exporter
+    </button>
+  </div>
+</div>
+
+<!-- Recherche -->
+<div class="row mb-4">
+  <div class="col-lg-6">
+    <div class="input-group">
+      <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+      <input type="text" class="form-control" placeholder="Rechercher un client..." [(ngModel)]="searchTerm">
+      <button class="btn btn-outline-secondary" type="button" *ngIf="searchTerm" (click)="searchTerm = ''">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Liste des clients -->
+<div class="card shadow-sm mb-4 border-0 rounded-3 overflow-hidden">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table customers-table align-middle mb-0">
+        <thead class="bg-light">
+          <tr>
+            <th scope="col" class="ps-3" (click)="setSorting('name')" style="cursor: pointer;">
+              Client 
+              <i *ngIf="sortBy === 'name'" class="bi sort-icon" [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+            </th>
+            <th scope="col" (click)="setSorting('email')" style="cursor: pointer;">
+              Contact
+              <i *ngIf="sortBy === 'email'" class="bi sort-icon" [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+            </th>
+            <th scope="col" class="text-center" (click)="setSorting('date')" style="cursor: pointer;">
+              Inscription
+              <i *ngIf="sortBy === 'date'" class="bi sort-icon" [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+            </th>
+            <th scope="col" class="text-center" (click)="setSorting('orders')" style="cursor: pointer;">
+              Commandes
+              <i *ngIf="sortBy === 'orders'" class="bi sort-icon" [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+            </th>
+            <th scope="col" class="text-center" (click)="setSorting('total')" style="cursor: pointer;">
+              Total dépensé
+              <i *ngIf="sortBy === 'total'" class="bi sort-icon" [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+            </th>
+            <th scope="col" class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let customer of filteredCustomers; let i = index">
+            <td class="ps-3">
+              <div class="d-flex align-items-center">
+                <div class="avatar-circle me-3">{{ customer.name.charAt(0) }}</div>
+                <strong>{{ customer.name }}</strong>
+              </div>
+            </td>
+            <td>
+              <div class="contact-info">
+                <div><i class="bi bi-envelope-fill text-muted me-2"></i>{{ customer.email }}</div>
+                <div><i class="bi bi-telephone-fill text-muted me-2"></i>{{ customer.phone }}</div>
+              </div>
+            </td>
+            <td class="text-center">
+              <span class="registration-date">
+                <i class="bi bi-calendar3 me-1"></i>
+                {{ customer.date }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="badge rounded-pill orders-badge">
+                <i class="bi bi-cart3 me-1"></i>
+                {{ customer.orders }}
+              </span>
+            </td>
+            <td class="text-center fw-bold">{{ customer.total }} €</td>
+            <td class="text-end pe-3">
+              <div class="btn-group">
+                <button class="btn btn-sm btn-light" title="Voir profil">
+                  <i class="bi bi-person text-primary"></i>
+                </button>
+                <button class="btn btn-sm btn-light" title="Envoyer un email">
+                  <i class="bi bi-envelope text-secondary"></i>
+                </button>
+                <button class="btn btn-sm btn-light" title="Supprimer">
+                  <i class="bi bi-trash text-danger"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+<div class="d-flex justify-content-between align-items-center">
+  <div class="text-muted small">Affichage de 1 à {{ filteredCustomers.length }} sur {{ filteredCustomers.length }} clients</div>
+  <nav aria-label="Page navigation">
+    <ul class="pagination pagination-sm">
+      <li class="page-item disabled"><a class="page-link" href="#">Précédent</a></li>
+      <li class="page-item active"><a class="page-link" href="#">1</a></li>
+      <li class="page-item"><a class="page-link" href="#">2</a></li>
+      <li class="page-item"><a class="page-link" href="#">3</a></li>
+      <li class="page-item"><a class="page-link" href="#">Suivant</a></li>
+    </ul>
+  </nav>
+</div> 

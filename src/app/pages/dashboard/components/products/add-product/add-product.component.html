@@ -1,0 +1,251 @@
+<div class="container-fluid py-4">
+  <!-- En-tête -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Ajouter un produit</h1>
+      <p class="text-muted mb-0">Créez un nouveau produit pour votre boutique</p>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-outline-secondary" (click)="cancel()">
+        <i class="bi bi-x-lg me-2"></i>Annuler
+      </button>
+      <button class="btn btn-primary" 
+              (click)="onSubmit()" 
+              [disabled]="!productForm || productForm.invalid || loading">
+        <span class="spinner-border spinner-border-sm me-2" *ngIf="loading"></span>
+        <i class="bi bi-check-lg me-2" *ngIf="!loading"></i>
+        {{ loading ? 'Enregistrement...' : 'Enregistrer' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Indicateur de progression -->
+  <div class="progress-wrapper mb-4">
+    <div class="steps d-flex justify-content-between">
+      <div class="step" [class.active]="currentStep >= 1" [class.completed]="currentStep > 1">
+        <div class="step-number">1</div>
+        <div class="step-label">Informations</div>
+      </div>
+      <div class="step" [class.active]="currentStep >= 2" [class.completed]="currentStep > 2">
+        <div class="step-number">2</div>
+        <div class="step-label">Prix & Stock</div>
+      </div>
+      <div class="step" [class.active]="currentStep >= 3">
+        <div class="step-number">3</div>
+        <div class="step-label">Détails</div>
+      </div>
+    </div>
+    <div class="progress mt-2" style="height: 4px;">
+      <div class="progress-bar" [style.width]="((currentStep - 1) / (totalSteps - 1)) * 100 + '%'"></div>
+    </div>
+  </div>
+
+  <!-- Formulaire -->
+  <form *ngIf="productForm" [formGroup]="productForm" class="row g-4">
+    <!-- Étape 1: Informations de base -->
+    <div class="col-12" *ngIf="currentStep === 1">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h5 class="card-title mb-4">Informations principales</h5>
+          
+          <!-- Images du produit -->
+          <div class="mb-4">
+            <label class="form-label d-block">Images du produit</label>
+            <div class="dropzone" (click)="fileInput.click()" [class.has-files]="previewUrls.length > 0">
+              <input type="file" #fileInput hidden multiple accept="image/*" (change)="onFileSelected($event)">
+              <div class="dropzone-content" *ngIf="previewUrls.length === 0">
+                <i class="bi bi-cloud-upload display-4"></i>
+                <p class="mb-0">Cliquez ou glissez des images ici</p>
+                <small class="text-muted">PNG, JPG jusqu'à 5MB</small>
+              </div>
+              <div class="image-previews" *ngIf="previewUrls.length > 0">
+                <div class="preview-item" *ngFor="let url of previewUrls; let i = index">
+                  <img [src]="url" alt="Preview">
+                  <button type="button" class="btn-remove" (click)="removeImage(i)">
+                    <i class="bi bi-x"></i>
+                  </button>
+                </div>
+                <div class="add-more" (click)="fileInput.click()">
+                  <i class="bi bi-plus-lg"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nom du produit -->
+          <div class="mb-4">
+            <label class="form-label">Nom du produit*</label>
+            <input type="text" class="form-control" formControlName="name" 
+                   [class.is-invalid]="isFieldInvalid('name')"
+                   placeholder="ex: T-shirt en coton bio">
+            <div class="invalid-feedback" *ngIf="isFieldInvalid('name')">
+              {{ getErrorMessage('name') }}
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="mb-4">
+            <label class="form-label">Description*</label>
+            <textarea class="form-control" rows="4" formControlName="description"
+                      [class.is-invalid]="isFieldInvalid('description')"
+                      placeholder="Décrivez votre produit en détail..."></textarea>
+            <div class="invalid-feedback" *ngIf="isFieldInvalid('description')">
+              {{ getErrorMessage('description') }}
+            </div>
+          </div>
+
+          <!-- Catégorie et Marque -->
+          <div class="row">
+            <div class="col-md-6 mb-4">
+              <label class="form-label">Catégorie*</label>
+              <select class="form-select" formControlName="category"
+                      [class.is-invalid]="isFieldInvalid('category')">
+                <option value="">Sélectionner une catégorie</option>
+                <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+              </select>
+              <div class="invalid-feedback" *ngIf="isFieldInvalid('category')">
+                {{ getErrorMessage('category') }}
+              </div>
+            </div>
+            <div class="col-md-6 mb-4">
+              <label class="form-label">Marque</label>
+              <input type="text" class="form-control" formControlName="brand" placeholder="ex: Nike">
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div class="mb-4">
+            <label class="form-label">Tags</label>
+            <input type="text" class="form-control" formControlName="tags" 
+                   placeholder="Séparez les tags par des virgules (ex: bio, coton, été)">
+            <div class="form-text">Les tags aident à mieux référencer votre produit</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 2: Prix et Stock -->
+    <div class="col-12" *ngIf="currentStep === 2">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h5 class="card-title mb-4">Prix et stock</h5>
+
+          <div class="row">
+            <!-- Prix -->
+            <div class="col-md-6 mb-4">
+              <label class="form-label">Prix*</label>
+              <div class="input-group">
+                <input type="number" class="form-control" formControlName="price"
+                       [class.is-invalid]="isFieldInvalid('price')"
+                       placeholder="0.00" step="0.01">
+                <span class="input-group-text">€</span>
+              </div>
+              <div class="invalid-feedback" *ngIf="isFieldInvalid('price')">
+                {{ getErrorMessage('price') }}
+              </div>
+            </div>
+
+            <!-- Prix promotionnel -->
+            <div class="col-md-6 mb-4">
+              <label class="form-label">Prix promotionnel</label>
+              <div class="input-group">
+                <input type="number" class="form-control" formControlName="discountPrice"
+                       placeholder="0.00" step="0.01">
+                <span class="input-group-text">€</span>
+              </div>
+            </div>
+
+            <!-- Stock -->
+            <div class="col-md-6 mb-4">
+              <label class="form-label">Stock*</label>
+              <input type="number" class="form-control" formControlName="stock"
+                     [class.is-invalid]="isFieldInvalid('stock')"
+                     placeholder="0">
+              <div class="invalid-feedback" *ngIf="isFieldInvalid('stock')">
+                {{ getErrorMessage('stock') }}
+              </div>
+            </div>
+
+            <!-- SKU -->
+            <div class="col-md-6 mb-4">
+              <label class="form-label">SKU</label>
+              <input type="text" class="form-control" formControlName="sku" 
+                     placeholder="ex: PRD-001">
+              <div class="form-text">Code unique pour identifier votre produit</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 3: Détails techniques -->
+    <div class="col-12" *ngIf="currentStep === 3">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h5 class="card-title mb-4">Détails techniques</h5>
+
+          <!-- Poids -->
+          <div class="mb-4">
+            <label class="form-label">Poids (kg)</label>
+            <input type="number" class="form-control" formControlName="weight"
+                   placeholder="ex: 0.5" step="0.1">
+          </div>
+
+          <!-- Dimensions -->
+          <div class="mb-4" formGroupName="dimensions">
+            <label class="form-label">Dimensions (cm)</label>
+            <div class="row g-2">
+              <div class="col-sm-4">
+                <div class="input-group">
+                  <input type="number" class="form-control" formControlName="length" placeholder="Longueur">
+                  <span class="input-group-text">cm</span>
+                </div>
+              </div>
+              <div class="col-sm-4">
+                <div class="input-group">
+                  <input type="number" class="form-control" formControlName="width" placeholder="Largeur">
+                  <span class="input-group-text">cm</span>
+                </div>
+              </div>
+              <div class="col-sm-4">
+                <div class="input-group">
+                  <input type="number" class="form-control" formControlName="height" placeholder="Hauteur">
+                  <span class="input-group-text">cm</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Spécifications -->
+          <div class="mb-4">
+            <label class="form-label">Spécifications techniques</label>
+            <textarea class="form-control" rows="4" formControlName="specifications"
+                      placeholder="Ajoutez des spécifications techniques détaillées..."></textarea>
+          </div>
+
+          <!-- Statut -->
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" formControlName="isActive" id="isActive">
+            <label class="form-check-label" for="isActive">
+              Produit actif et visible dans la boutique
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Navigation entre les étapes -->
+  <div class="d-flex justify-content-between mt-4">
+    <button class="btn btn-outline-secondary" 
+            *ngIf="currentStep > 1"
+            (click)="previousStep()">
+      <i class="bi bi-arrow-left me-2"></i>Précédent
+    </button>
+    <button class="btn btn-primary ms-auto" 
+            *ngIf="currentStep < totalSteps"
+            (click)="nextStep()">
+      Suivant<i class="bi bi-arrow-right ms-2"></i>
+    </button>
+  </div>
+</div>

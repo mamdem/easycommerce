@@ -1,0 +1,590 @@
+<app-navbar></app-navbar>
+
+<div class="store-creation-container">
+  <!-- En-tête -->
+  <div class="creation-header py-4">
+    <div class="container">
+      <h1 class="creation-title">Créer votre boutique</h1>
+      <p class="creation-subtitle">Suivez les étapes ci-dessous pour configurer votre espace de vente en ligne</p>
+    </div>
+  </div>
+  
+  <div class="container">
+    <div class="content-wrapper">
+      <!-- Barre de progression verticale -->
+      <div class="sidebar">
+        <div class="progress-container">
+          <div class="progress-wrapper">
+            <div class="progress-steps">
+              <div class="progress-step" [ngClass]="{'active': currentStep >= 1, 'completed': currentStep > 1}">
+                <div class="step-icon">
+                  <div class="step-number">1</div>
+                  <i *ngIf="currentStep > 1" class="bi bi-check-lg"></i>
+                </div>
+                <div class="step-content">
+                  <span class="step-label">Informations</span>
+                  <span class="step-description">Détails de base de votre boutique</span>
+                </div>
+              </div>
+              <div class="progress-step" [ngClass]="{'active': currentStep >= 2, 'completed': currentStep > 2}">
+                <div class="step-icon">
+                  <div class="step-number">2</div>
+                  <i *ngIf="currentStep > 2" class="bi bi-check-lg"></i>
+                </div>
+                <div class="step-content">
+                  <span class="step-label">Image de marque</span>
+                  <span class="step-description">Logo et couleurs</span>
+                </div>
+              </div>
+              <div class="progress-step" [ngClass]="{'active': currentStep >= 3, 'completed': currentStep > 3}">
+                <div class="step-icon">
+                  <div class="step-number">3</div>
+                  <i *ngIf="currentStep > 3" class="bi bi-check-lg"></i>
+                </div>
+                <div class="step-content">
+                  <span class="step-label">Détails commerciaux</span>
+                  <span class="step-description">Informations légales</span>
+                </div>
+              </div>
+              <div class="progress-step" [ngClass]="{'active': currentStep >= 4}">
+                <div class="step-icon">
+                  <div class="step-number">4</div>
+                  <i *ngIf="currentStep > 4" class="bi bi-check-lg"></i>
+                </div>
+                <div class="step-content">
+                  <span class="step-label">Confirmation</span>
+                  <span class="step-description">Vérification et validation</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Contenu principal -->
+      <div class="main-content">
+        <!-- Message d'erreur -->
+        <div *ngIf="errorMessage" class="alert alert-danger mb-4">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          {{ errorMessage }}
+        </div>
+
+        <!-- Formulaire de création de boutique -->
+        <div class="creation-form-card">
+          <form [formGroup]="storeForm" (ngSubmit)="submitForm()">
+            
+            <!-- Étape 1: Informations de base -->
+            <div *ngIf="currentStep === 1" class="step-content">
+              <h2 class="step-title">Informations de base</h2>
+              <p class="step-description">Commençons par définir l'identité de votre boutique en ligne.</p>
+              
+              <div class="info-banner mb-4">
+                <i class="bi bi-lightbulb-fill"></i>
+                <span>Ces informations seront visibles par les clients et permettront de définir votre présence en ligne.</span>
+              </div>
+              
+              <div class="form-section mb-4">
+                <h3 class="section-title">Profil de la boutique</h3>
+                
+                <div class="mb-4">
+                  <label for="storeName" class="form-label">Nom de la boutique</label>
+                  <div class="input-with-icon">
+                    <i class="bi bi-shop"></i>
+                    <input 
+                      type="text" 
+                      id="storeName" 
+                      formControlName="storeName" 
+                      class="form-control with-icon"
+                      [ngClass]="{'is-invalid': basicInfoForm['storeName']?.invalid && basicInfoForm['storeName']?.touched}"
+                      placeholder="Le nom qui représentera votre marque">
+                  </div>
+                  <div *ngIf="basicInfoForm['storeName']?.invalid && basicInfoForm['storeName']?.touched" class="invalid-feedback">
+                    <div *ngIf="basicInfoForm['storeName']?.errors?.['required']">Le nom de la boutique est requis</div>
+                    <div *ngIf="basicInfoForm['storeName']?.errors?.['minlength']">Le nom doit contenir au moins 3 caractères</div>
+                    <div *ngIf="basicInfoForm['storeName']?.errors?.['maxlength']">Le nom ne peut pas dépasser 50 caractères</div>
+                  </div>
+                  <div class="form-text">
+                    <i class="bi bi-info-circle"></i> Choisissez un nom mémorable et représentatif de votre activité.
+                  </div>
+                </div>
+                
+                <div class="mb-4">
+                  <label for="storeCategory" class="form-label">Catégorie de la boutique</label>
+                  <div class="input-with-icon">
+                    <i class="bi bi-tags"></i>
+                    <select 
+                      id="storeCategory" 
+                      formControlName="storeCategory" 
+                      class="form-select with-icon"
+                      [ngClass]="{'is-invalid': basicInfoForm['storeCategory']?.invalid && basicInfoForm['storeCategory']?.touched}">
+                      <option value="" disabled selected>Sélectionnez une catégorie</option>
+                      <option *ngFor="let category of storeCategories" [value]="category">{{ category }}</option>
+                    </select>
+                  </div>
+                  <div *ngIf="basicInfoForm['storeCategory']?.invalid && basicInfoForm['storeCategory']?.touched" class="invalid-feedback">
+                    Veuillez sélectionner une catégorie
+                  </div>
+                  <div class="form-text">
+                    <i class="bi bi-info-circle"></i> La catégorie aide les clients à trouver plus facilement votre boutique.
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-section mb-4">
+                <h3 class="section-title">Description</h3>
+                
+                <div class="mb-3">
+                  <label for="storeDescription" class="form-label">Description de la boutique</label>
+                  <textarea 
+                    id="storeDescription" 
+                    formControlName="storeDescription" 
+                    class="form-control" 
+                    [ngClass]="{'is-invalid': basicInfoForm['storeDescription']?.invalid && basicInfoForm['storeDescription']?.touched}"
+                    rows="5" 
+                    placeholder="Présentez votre boutique, vos produits ou services, et ce qui vous différencie..."></textarea>
+                  <div *ngIf="basicInfoForm['storeDescription']?.invalid && basicInfoForm['storeDescription']?.touched" class="invalid-feedback">
+                    <div *ngIf="basicInfoForm['storeDescription']?.errors?.['required']">La description est requise</div>
+                    <div *ngIf="basicInfoForm['storeDescription']?.errors?.['minlength']">La description doit contenir au moins 20 caractères</div>
+                    <div *ngIf="basicInfoForm['storeDescription']?.errors?.['maxlength']">La description ne peut pas dépasser 500 caractères</div>
+                  </div>
+                  
+                  <div class="char-count mt-2" [ngClass]="{'text-danger': basicInfoForm['storeDescription']?.value?.length > 450}">
+                    <i class="bi bi-pencil-square"></i>
+                    <span>{{ basicInfoForm['storeDescription']?.value?.length || 0 }}/500 caractères</span>
+                  </div>
+                  
+                  <div class="description-tips mt-3">
+                    <div class="tip-title"><i class="bi bi-lightbulb"></i> Conseils pour une bonne description :</div>
+                    <ul class="tip-list">
+                      <li>Soyez concis et précis sur vos produits ou services</li>
+                      <li>Mettez en avant ce qui distingue votre boutique</li>
+                      <li>Incluez des mots-clés pertinents pour votre secteur</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Étape 2: Image de marque -->
+            <div *ngIf="currentStep === 2" class="step-content">
+              <h2 class="step-title">Image de marque</h2>
+              <p class="step-description">Personnalisez l'apparence de votre boutique pour refléter votre identité.</p>
+              
+              <div class="mb-4">
+                <label class="form-label">Logo de la boutique</label>
+                <div class="logo-upload-area">
+                  <div *ngIf="!brandingForm['logoUrl']?.value" class="upload-placeholder">
+                    <i class="bi bi-image"></i>
+                    <p>Cliquez ou déposez pour ajouter un logo</p>
+                  </div>
+                  <img *ngIf="brandingForm['logoUrl']?.value" [src]="brandingForm['logoUrl']?.value" class="preview-logo" alt="Logo preview">
+                  <input type="file" class="file-input" accept="image/*" (change)="uploadLogo($event)">
+                </div>
+                <div class="form-text">Format recommandé: PNG ou JPG, carré, 200x200px minimum</div>
+              </div>
+              
+              <div class="mb-4">
+                <label class="form-label">Bannière de la boutique</label>
+                <div class="banner-upload-area">
+                  <div *ngIf="!brandingForm['bannerUrl']?.value" class="upload-placeholder">
+                    <i class="bi bi-image"></i>
+                    <p>Cliquez ou déposez pour ajouter une bannière</p>
+                  </div>
+                  <img *ngIf="brandingForm['bannerUrl']?.value" [src]="brandingForm['bannerUrl']?.value" class="preview-banner" alt="Banner preview">
+                  <input type="file" class="file-input" accept="image/*" (change)="uploadBanner($event)">
+                </div>
+                <div class="form-text">Format recommandé: PNG ou JPG, 1200x300px</div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="primaryColor" class="form-label">Couleur principale</label>
+                  <div class="color-picker-container">
+                    <input 
+                      type="color" 
+                      id="primaryColor" 
+                      formControlName="primaryColor" 
+                      class="form-control form-control-color">
+                    <input 
+                      type="text" 
+                      [value]="brandingForm['primaryColor']?.value" 
+                      class="form-control color-code" 
+                      readonly>
+                  </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="secondaryColor" class="form-label">Couleur secondaire</label>
+                  <div class="color-picker-container">
+                    <input 
+                      type="color" 
+                      id="secondaryColor" 
+                      formControlName="secondaryColor" 
+                      class="form-control form-control-color">
+                    <input 
+                      type="text" 
+                      [value]="brandingForm['secondaryColor']?.value" 
+                      class="form-control color-code" 
+                      readonly>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Étape 3: Détails commerciaux -->
+            <div *ngIf="currentStep === 3" class="step-content">
+              <h2 class="step-title">Détails commerciaux</h2>
+              <p class="step-description">Veuillez fournir les informations légales de votre entreprise.</p>
+              
+              <div class="info-banner mb-4">
+                <i class="bi bi-info-circle-fill"></i>
+                <span>Ces informations serviront à générer vos documents légaux et factures. Assurez-vous qu'elles sont exactes.</span>
+              </div>
+              
+              <div class="form-section mb-4">
+                <h3 class="section-title">Informations légales</h3>
+                
+                <div class="mb-3">
+                  <label for="legalName" class="form-label">Nom légal de l'entreprise</label>
+                  <input 
+                    type="text" 
+                    id="legalName" 
+                    formControlName="legalName" 
+                    class="form-control"
+                    [ngClass]="{'is-invalid': businessDetailsForm['legalName']?.invalid && businessDetailsForm['legalName']?.touched}"
+                    placeholder="Nom légal de l'entreprise">
+                  <div *ngIf="businessDetailsForm['legalName']?.invalid && businessDetailsForm['legalName']?.touched" class="invalid-feedback">
+                    Le nom légal de l'entreprise est requis
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="taxId" class="form-label optional">Numéro SIRET/TVA (Optionnel)</label>
+                  <input 
+                    type="text" 
+                    id="taxId" 
+                    formControlName="taxId" 
+                    class="form-control"
+                    placeholder="Numéro SIRET ou TVA">
+                  <div class="form-text">
+                    <i class="bi bi-lightbulb"></i> Vous pourrez ajouter cette information ultérieurement si vous ne la connaissez pas encore.
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-section mb-4">
+                <h3 class="section-title">Localisation & Contact</h3>
+                
+                <div class="mb-3">
+                  <label for="address" class="form-label">Adresse</label>
+                  <div class="input-with-icon">
+                    <i class="bi bi-geo-alt"></i>
+                    <input 
+                      type="text" 
+                      id="address" 
+                      formControlName="address" 
+                      class="form-control with-icon"
+                      [ngClass]="{'is-invalid': businessDetailsForm['address']?.invalid && businessDetailsForm['address']?.touched}"
+                      placeholder="Commencez à taper votre adresse...">
+                  </div>
+                  <div *ngIf="businessDetailsForm['address']?.invalid && businessDetailsForm['address']?.touched" class="invalid-feedback">
+                    L'adresse est requise
+                  </div>
+                  <div class="form-text">
+                    <i class="bi bi-cursor"></i> Sélectionnez une adresse dans les suggestions pour récupérer automatiquement les coordonnées GPS.
+                    <a href="javascript:void(0)" (click)="enableManualCoordinates()" *ngIf="!businessDetailsForm['manualCoordinates']?.value" class="manual-link">
+                      <i class="bi bi-pencil-square"></i> Saisir les coordonnées manuellement
+                    </a>
+                  </div>
+                </div>
+                
+                <!-- Champs pour les coordonnées manuelles -->
+                <div *ngIf="businessDetailsForm['manualCoordinates']?.value" class="coordinates-container mb-3">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <label for="latitude" class="form-label">Latitude</label>
+                      <input 
+                        type="number" 
+                        id="latitude" 
+                        formControlName="latitude" 
+                        class="form-control"
+                        [ngClass]="{'is-invalid': businessDetailsForm['latitude']?.invalid && businessDetailsForm['latitude']?.touched}"
+                        placeholder="Ex: 48.8566"
+                        step="0.0000001">
+                      <div *ngIf="businessDetailsForm['latitude']?.invalid && businessDetailsForm['latitude']?.touched" class="invalid-feedback">
+                        La latitude est requise
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label for="longitude" class="form-label">Longitude</label>
+                      <input 
+                        type="number" 
+                        id="longitude" 
+                        formControlName="longitude" 
+                        class="form-control"
+                        [ngClass]="{'is-invalid': businessDetailsForm['longitude']?.invalid && businessDetailsForm['longitude']?.touched}"
+                        placeholder="Ex: 2.3522"
+                        step="0.0000001">
+                      <div *ngIf="businessDetailsForm['longitude']?.invalid && businessDetailsForm['longitude']?.touched" class="invalid-feedback">
+                        La longitude est requise
+                      </div>
+                    </div>
+                  </div>
+                  <div class="coords-helper mt-2">
+                    <i class="bi bi-geo"></i> 
+                    <span>Ces coordonnées permettront de localiser votre boutique sur la carte.</span>
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="city" class="form-label">Ville</label>
+                    <input 
+                      type="text" 
+                      id="city" 
+                      formControlName="city" 
+                      class="form-control"
+                      [ngClass]="{'is-invalid': businessDetailsForm['city']?.invalid && businessDetailsForm['city']?.touched}"
+                      placeholder="Ville">
+                    <div *ngIf="businessDetailsForm['city']?.invalid && businessDetailsForm['city']?.touched" class="invalid-feedback">
+                      La ville est requise
+                    </div>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="zipCode" class="form-label">Code postal</label>
+                    <input 
+                      type="text" 
+                      id="zipCode" 
+                      formControlName="zipCode" 
+                      class="form-control"
+                      [ngClass]="{'is-invalid': businessDetailsForm['zipCode']?.invalid && businessDetailsForm['zipCode']?.touched}"
+                      placeholder="Code postal">
+                    <div *ngIf="businessDetailsForm['zipCode']?.invalid && businessDetailsForm['zipCode']?.touched" class="invalid-feedback">
+                      Le code postal est requis
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="country" class="form-label">Pays</label>
+                    <select 
+                      id="country" 
+                      formControlName="country" 
+                      class="form-select"
+                      [ngClass]="{'is-invalid': businessDetailsForm['country']?.invalid && businessDetailsForm['country']?.touched}">
+                      <option value="" disabled selected>Sélectionnez un pays</option>
+                      <option value="France">France</option>
+                      <option value="Belgique">Belgique</option>
+                      <option value="Suisse">Suisse</option>
+                      <option value="Canada">Canada</option>
+                      <option value="Luxembourg">Luxembourg</option>
+                      <option value="Autre">Autre</option>
+                    </select>
+                    <div *ngIf="businessDetailsForm['country']?.invalid && businessDetailsForm['country']?.touched" class="invalid-feedback">
+                      Le pays est requis
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label for="phoneNumber" class="form-label">Téléphone professionnel</label>
+                    <div class="input-with-icon">
+                      <i class="bi bi-telephone"></i>
+                      <input 
+                        type="tel" 
+                        id="phoneNumber" 
+                        formControlName="phoneNumber" 
+                        class="form-control with-icon"
+                        [ngClass]="{'is-invalid': businessDetailsForm['phoneNumber']?.invalid && businessDetailsForm['phoneNumber']?.touched}"
+                        placeholder="Ex: +33 6 12 34 56 78">
+                    </div>
+                    <div *ngIf="businessDetailsForm['phoneNumber']?.invalid && businessDetailsForm['phoneNumber']?.touched" class="invalid-feedback">
+                      Le numéro de téléphone est requis
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="email" class="form-label">Email professionnel</label>
+                  <div class="input-with-icon">
+                    <i class="bi bi-envelope"></i>
+                    <input 
+                      type="email" 
+                      id="email" 
+                      formControlName="email" 
+                      class="form-control with-icon"
+                      [ngClass]="{'is-invalid': businessDetailsForm['email']?.invalid && businessDetailsForm['email']?.touched}"
+                      placeholder="Email de contact professionnel">
+                  </div>
+                  <div *ngIf="businessDetailsForm['email']?.invalid && businessDetailsForm['email']?.touched" class="invalid-feedback">
+                    <div *ngIf="businessDetailsForm['email']?.errors?.['required']">L'email est requis</div>
+                    <div *ngIf="businessDetailsForm['email']?.errors?.['email']">Format d'email invalide</div>
+                  </div>
+                  <div class="form-text">
+                    <i class="bi bi-info-circle"></i> Cet email sera visible par vos clients et sera utilisé pour les communications professionnelles.
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Étape 4: Confirmation -->
+            <div *ngIf="currentStep === 4" class="step-content">
+              <h2 class="step-title">Confirmation</h2>
+              <p class="step-description">Veuillez vérifier les informations avant de valider la création de votre boutique.</p>
+              
+              <!-- Informations de base -->
+              <div class="summary-card">
+                <h3 class="summary-section-title">Informations de base</h3>
+                <div class="summary-item">
+                  <div class="summary-label">Nom</div>
+                  <div class="summary-value">{{ basicInfoForm['storeName']?.value }}</div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-label">Catégorie</div>
+                  <div class="summary-value">{{ basicInfoForm['storeCategory']?.value }}</div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-label">Description</div>
+                  <div class="summary-value">
+                    <span class="summary-description">{{ basicInfoForm['storeDescription']?.value }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Image de marque -->
+              <div class="summary-card">
+                <h3 class="summary-section-title">Image de marque</h3>
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <div class="summary-item">
+                      <div class="summary-label">Logo</div>
+                      <div class="summary-value">
+                        <div class="summary-logo">
+                          <img *ngIf="brandingForm['logoUrl']?.value" [src]="brandingForm['logoUrl']?.value" alt="Logo">
+                          <div *ngIf="!brandingForm['logoUrl']?.value" class="no-image">
+                            <i class="bi bi-image"></i>
+                            <span>Pas de logo</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="summary-item">
+                      <div class="summary-label">Bannière</div>
+                      <div class="summary-value">
+                        <div class="summary-banner">
+                          <img *ngIf="brandingForm['bannerUrl']?.value" [src]="brandingForm['bannerUrl']?.value" alt="Bannière">
+                          <div *ngIf="!brandingForm['bannerUrl']?.value" class="no-image wide">
+                            <i class="bi bi-image"></i>
+                            <span>Pas de bannière</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-label">Couleurs</div>
+                  <div class="summary-value d-flex">
+                    <div class="d-flex align-items-center me-3">
+                      <div class="color-preview" [style.background-color]="brandingForm['primaryColor']?.value"></div>
+                      Principale
+                    </div>
+                    <div class="d-flex align-items-center">
+                      <div class="color-preview" [style.background-color]="brandingForm['secondaryColor']?.value"></div>
+                      Secondaire
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Informations légales -->
+              <div class="summary-card">
+                <h3 class="summary-section-title">Informations légales</h3>
+                <div class="summary-item">
+                  <div class="summary-label">Nom légal</div>
+                  <div class="summary-value">{{ businessDetailsForm['legalName']?.value }}</div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-label">SIRET/TVA</div>
+                  <div class="summary-value">{{ businessDetailsForm['taxId']?.value || 'Non spécifié' }}</div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-label">Adresse</div>
+                  <div class="summary-value">
+                    {{ businessDetailsForm['address']?.value }}<br>
+                    {{ businessDetailsForm['zipCode']?.value }} {{ businessDetailsForm['city']?.value }}
+                  </div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-label">Coordonnées</div>
+                  <div class="summary-value">
+                    Latitude: {{ businessDetailsForm['latitude']?.value }}<br>
+                    Longitude: {{ businessDetailsForm['longitude']?.value }}
+                  </div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-label">Contact</div>
+                  <div class="summary-value">
+                    {{ businessDetailsForm['phoneNumber']?.value }}<br>
+                    {{ businessDetailsForm['email']?.value }}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Termes et conditions -->
+              <div class="mb-4">
+                <div class="form-check">
+                  <input 
+                    type="checkbox" 
+                    id="termsAccepted" 
+                    formControlName="termsAccepted" 
+                    class="form-check-input"
+                    [ngClass]="{'is-invalid': confirmationForm['termsAccepted']?.invalid && confirmationForm['termsAccepted']?.touched}">
+                  <label for="termsAccepted" class="form-check-label">
+                    J'accepte les <a href="#" target="_blank">conditions générales d'utilisation</a> et la <a href="#" target="_blank">politique de confidentialité</a>
+                  </label>
+                  <div *ngIf="confirmationForm['termsAccepted']?.invalid && confirmationForm['termsAccepted']?.touched" class="invalid-feedback">
+                    Vous devez accepter les conditions générales pour continuer
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Navigation entre étapes -->
+            <div class="step-navigation">
+              <button 
+                *ngIf="currentStep > 1" 
+                type="button" 
+                class="btn step-back" 
+                (click)="prevStep()">
+                <i class="bi bi-arrow-left"></i>
+                Précédent
+              </button>
+              
+              <button 
+                *ngIf="currentStep < totalSteps" 
+                type="button" 
+                class="btn step-next" 
+                (click)="nextStep()">
+                Suivant
+                <i class="bi bi-arrow-right"></i>
+              </button>
+              
+              <button 
+                *ngIf="currentStep === totalSteps" 
+                type="submit" 
+                class="btn step-submit" 
+                [disabled]="!confirmationForm['termsAccepted']?.value || isSubmitting || storeForm.invalid">
+                <i *ngIf="!isSubmitting" class="bi bi-check-circle"></i>
+                <span *ngIf="!isSubmitting">Créer ma boutique</span>
+                <span *ngIf="isSubmitting">Création en cours...</span>
+              </button>
+            </div>
+            
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

@@ -1,0 +1,44 @@
+// Styles spécifiques au composant d'aperçu 
+.stats-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid #edf2f9;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .stats-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    margin-bottom: 1rem;
+
+    i {
+      font-size: 1.5rem;
+      color: var(--primary-color);
+    }
+  }
+
+  .stats-info {
+    .stats-value {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #2c3e50;
+    }
+
+    .stats-label {
+      color: #6c757d;
+      font-size: 0.875rem;
+      margin: 0;
+    }
+  }
+} 

@@ -1,0 +1,32 @@
+<nav class="navbar">
+  <div class="navbar-container">
+    <div class="navbar-brand">
+      <a routerLink="/" class="brand-logo">
+        <i class="bi bi-shop"></i>
+        <span>{{ storeName }}</span>
+      </a>
+    </div>
+    
+    <div class="navbar-menu">
+      <div class="navbar-start">
+        <a routerLink="/dashboard" class="navbar-item" *ngIf="isAuthenticated()">
+          <i class="bi bi-speedometer2"></i>
+          <span>Tableau de bord</span>
+        </a>
+      </div>
+      
+      <div class="navbar-end">
+        <div class="user-info" *ngIf="isAuthenticated()">
+          <span class="user-name">{{ getUserName() }}</span>
+          <div class="avatar">
+            <i class="bi bi-person-circle"></i>
+          </div>
+          <button class="logout-button" (click)="logout()">
+            <i class="bi bi-box-arrow-right"></i>
+            <span>Déconnexion</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>

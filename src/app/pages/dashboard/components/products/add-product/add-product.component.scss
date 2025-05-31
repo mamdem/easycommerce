@@ -1,0 +1,651 @@
+// Variables
+$border-radius: 10px;
+$primary-color: var(--primary-color);
+$secondary-color: var(--secondary-color);
+
+// Styles généraux
+.card {
+  border-radius: $border-radius;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+  }
+  
+  .card-title {
+    color: $primary-color;
+    font-weight: 600;
+  }
+}
+
+// Zone de dépôt d'images
+.dropzone {
+  border: 2px dashed #ddd;
+  border-radius: $border-radius;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+  
+  &:hover {
+    border-color: $primary-color;
+    background-color: rgba($primary-color, 0.02);
+  }
+  
+  &.has-files {
+    padding: 1rem;
+  }
+  
+  .dropzone-content {
+    i {
+      color: #adb5bd;
+      margin-bottom: 1rem;
+    }
+    
+    p {
+      color: #495057;
+      font-weight: 500;
+    }
+  }
+  
+  .image-previews {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 1rem;
+    
+    .preview-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .btn-remove {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.9);
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.2s;
+        
+        &:hover {
+          background: #fff;
+          i {
+            color: #dc3545;
+          }
+        }
+      }
+      
+      &:hover .btn-remove {
+        opacity: 1;
+      }
+    }
+    
+    .add-more {
+      aspect-ratio: 1;
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      
+      i {
+        font-size: 1.5rem;
+        color: #adb5bd;
+      }
+      
+      &:hover {
+        border-color: $primary-color;
+        background-color: rgba($primary-color, 0.02);
+        
+        i {
+          color: $primary-color;
+        }
+      }
+    }
+  }
+}
+
+// Formulaire
+.form-control, .form-select {
+  border-radius: 8px;
+  border-color: #dee2e6;
+  padding: 0.6rem 1rem;
+  
+  &:focus {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 0.2rem rgba($primary-color, 0.15);
+  }
+}
+
+.input-group {
+  .form-control {
+    &:not(:last-child) {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    
+    &:not(:first-child) {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+  }
+}
+
+// Switch personnalisé
+.form-check-input {
+  &:checked {
+    background-color: $primary-color;
+    border-color: $primary-color;
+  }
+  
+  &:focus {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 0.2rem rgba($primary-color, 0.15);
+  }
+}
+
+// Boutons
+.btn {
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  border-radius: 8px;
+  
+  &.btn-primary {
+    background-color: $primary-color;
+    border-color: $primary-color;
+    
+    &:hover {
+      // background-color: darken($primary-color, 5%);
+      // border-color: darken($primary-color, 5%);
+    }
+    
+    &:focus {
+      box-shadow: 0 0 0 0.2rem rgba($primary-color, 0.25);
+    }
+  }
+  
+  &.btn-outline-secondary {
+    &:hover {
+      background-color: #f8f9fa;
+      color: #495057;
+    }
+  }
+}
+
+// Dimensions
+.dimensions {
+  .input-group {
+    .form-control {
+      text-align: center;
+      
+      &:not(:last-child) {
+        border-right: 1px solid #dee2e6;
+      }
+    }
+  }
+}
+
+// Progress steps
+.progress-wrapper {
+  position: relative;
+  padding: 0 1rem;
+
+  .steps {
+    position: relative;
+    z-index: 1;
+    
+    .step {
+      flex: 1;
+      text-align: center;
+      position: relative;
+      padding: 0 1rem;
+
+      .step-number {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+      }
+
+      .step-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        transition: color 0.3s ease;
+      }
+
+      &.active {
+        .step-number {
+          background-color: var(--primary-color);
+          color: white;
+        }
+        .step-label {
+          color: var(--primary-color);
+          font-weight: 600;
+        }
+      }
+
+      &.completed {
+        .step-number {
+          background-color: #28a745;
+          color: white;
+        }
+        .step-label {
+          color: #28a745;
+        }
+      }
+    }
+  }
+
+  .progress {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    margin: 0 3rem;
+
+    .progress-bar {
+      background-color: var(--primary-color);
+      transition: width 0.3s ease;
+    }
+  }
+}
+
+// Cards
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 0.5rem;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+}
+
+// Form controls
+.form-control, .form-select {
+  border-radius: 0.375rem;
+  border: 1px solid #dee2e6;
+  padding: 0.625rem 0.875rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+  &:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25);
+  }
+
+  &.is-invalid {
+    border-color: #dc3545;
+    &:focus {
+      box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+  }
+}
+
+// Dropzone
+.dropzone {
+  border: 2px dashed #dee2e6;
+  border-radius: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(var(--primary-color-rgb), 0.05);
+  }
+
+  .dropzone-content {
+    color: #6c757d;
+
+    i {
+      margin-bottom: 1rem;
+    }
+  }
+
+  &.has-files {
+    padding: 1rem;
+  }
+
+  .image-previews {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+
+    .preview-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 0.375rem;
+      overflow: hidden;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .btn-remove {
+        position: absolute;
+        top: 0.25rem;
+        right: 0.25rem;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.9);
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+
+        &:hover {
+          background-color: #fff;
+        }
+      }
+
+      &:hover .btn-remove {
+        opacity: 1;
+      }
+    }
+
+    .add-more {
+      aspect-ratio: 1;
+      border: 2px dashed #dee2e6;
+      border-radius: 0.375rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        background-color: rgba(var(--primary-color-rgb), 0.05);
+      }
+    }
+  }
+}
+
+// Buttons
+.btn {
+  padding: 0.625rem 1rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+
+  &.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+
+    &:hover {
+      filter: brightness(90%);
+    }
+
+    &:disabled {
+      opacity: 0.65;
+    }
+  }
+
+  &.btn-outline-secondary {
+    &:hover {
+      background-color: #6c757d;
+      border-color: #6c757d;
+      color: white;
+    }
+  }
+
+  i {
+    font-size: 1.1em;
+    vertical-align: -0.125em;
+  }
+}
+
+// Form switch
+.form-switch {
+  padding-left: 3rem;
+
+  .form-check-input {
+    width: 2.5rem;
+    margin-left: -3rem;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba%280, 0, 0, 0.25%29'/%3e%3c/svg%3e");
+    background-position: left center;
+    border-radius: 2.5rem;
+    transition: background-position .15s ease-in-out;
+
+    &:checked {
+      background-position: right center;
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .progress-wrapper {
+    .steps {
+      .step {
+        padding: 0 0.5rem;
+
+        .step-label {
+          font-size: 0.75rem;
+        }
+      }
+    }
+
+    .progress {
+      margin: 0 2rem;
+    }
+  }
+
+  .card .card-body {
+    padding: 1rem;
+  }
+
+  .dropzone {
+    padding: 1rem;
+
+    .image-previews {
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 0.5rem;
+    }
+  }
+}
+
+.product-form {
+  .step-indicator {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    
+    .step {
+      flex: 1;
+      text-align: center;
+      padding: 1rem;
+      position: relative;
+      
+      &.active {
+        color: var(--primary-color);
+        font-weight: bold;
+        
+        &::after {
+          background-color: var(--primary-color);
+        }
+      }
+      
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background-color: #e0e0e0;
+        transition: background-color 0.3s ease;
+      }
+    }
+  }
+
+  .form-section {
+    margin-bottom: 2rem;
+    
+    h3 {
+      color: var(--primary-color);
+      margin-bottom: 1.5rem;
+    }
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    
+    .error-message {
+      color: #dc3545;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+    }
+  }
+
+  .image-upload {
+    border: 2px dashed var(--primary-color);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background-color: rgba(var(--primary-color-rgb), 0.05);
+    }
+    
+    .upload-icon {
+      font-size: 2rem;
+      color: var(--primary-color);
+      margin-bottom: 1rem;
+    }
+  }
+
+  .image-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+    
+    .preview-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .remove-image {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        background-color: rgba(255, 255, 255, 0.9);
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background-color: #dc3545;
+          color: white;
+        }
+      }
+    }
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    
+    button {
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      
+      &.btn-primary {
+        background-color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+        color: white;
+        
+        &:hover {
+          filter: brightness(90%);
+        }
+        
+        &:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
+        }
+      }
+      
+      &.btn-outline {
+        background-color: transparent;
+        border: 1px solid var(--primary-color);
+        color: var(--primary-color);
+        
+        &:hover {
+          background-color: rgba(var(--primary-color-rgb), 0.05);
+        }
+      }
+    }
+  }
+}

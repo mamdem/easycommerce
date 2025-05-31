@@ -1,0 +1,35 @@
+<div class="container py-5">
+  <div class="row">
+    <div class="col-12">
+      <div *ngIf="storeId" class="store-header mb-4">
+        <h1 class="display-5 fw-bold">Boutique #{{storeId}}</h1>
+        <p class="lead">Découvrez les produits de cette boutique</p>
+      </div>
+      
+      <!-- Placeholder pour le contenu de la boutique -->
+      <div class="alert alert-info">
+        <p class="mb-0">Cette fonctionnalité est en cours de développement. La boutique avec l'ID "{{storeId}}" sera bientôt disponible.</p>
+      </div>
+      
+      <!-- Structure pour les produits -->
+      <div class="row g-4 mt-3">
+        <!-- Placeholders pour les produits -->
+        <div class="col-md-4 mb-4" *ngFor="let i of [1, 2, 3, 4, 5, 6]">
+          <div class="card h-100 shadow-sm">
+            <div class="bg-light p-4 text-center" style="height: 200px;">
+              <span class="text-muted">Image du produit</span>
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Produit exemple</h5>
+              <p class="card-text text-muted">Description du produit...</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold">39.99 €</span>
+                <button class="btn btn-primary btn-sm">Ajouter au panier</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 
