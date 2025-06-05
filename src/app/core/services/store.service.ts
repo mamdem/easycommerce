@@ -11,7 +11,7 @@ import { StorageService, STORE_IMAGE_DIMENSIONS, ImageDimensions } from './stora
 
 // Interface pour les données de boutique
 export interface StoreData {
-  id?: string;
+  id?:string;
   ownerId: string;
   storeName: string;
   storeCategory: string;
@@ -36,32 +36,27 @@ export interface StoreData {
 
 export interface StoreSettings {
   id?: string;
-  name: string;
-  description: string;
-  logo?: string;
-  banner?: string;
-  userId: string;
+  ownerId: string;
+  legalName: string;
+  storeName: string;
+  storeDescription: string;
+  storeCategory: string;
+  email: string;
+  phoneNumber: string;
+  address: string;
+  city: string;
+  country: string;
+  zipCode: string;
+  latitude: number;
+  longitude: number;
+  taxId: string;
+  logoUrl: string;
+  bannerUrl: string;
   primaryColor: string;
   secondaryColor: string;
-  currency?: string;
-  language?: string;
-  address?: {
-    street?: string;
-    city?: string;
-    zipCode?: string;
-    country?: string;
-  };
-  phoneNumber?: string;
-  email?: string;
-  createdAt?: any;
-  updatedAt?: any;
-  // Propriétés de compatibilité avec StoreData
-  storeName?: string;
-  storeCategory?: string;
-  storeDescription?: string;
-  logoUrl?: string;
-  bannerUrl?: string;
-  ownerId?: string;
+  createdAt: number;
+  updatedAt: number;
+  status?: 'active' | 'inactive' | 'pending';
 }
 
 // Interface pour les URLs de boutique
@@ -92,19 +87,13 @@ export class StoreService {
    * Crée une URL simplifiée pour une boutique
    */
   private async createStoreUrl(storeName: string, userId: string, storeId: string): Promise<string> {
-    // Créer une URL conviviale à partir du nom de la boutique
-    const baseUrl = storeName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-') // Remplacer les caractères spéciaux par des tirets
-      .replace(/^-+|-+$/g, ''); // Supprimer les tirets au début et à la fin
-    
-    const uniqueSuffix = Math.random().toString(36).substring(2, 7);
-    const friendlyUrl = `${baseUrl}-${uniqueSuffix}`;
+    // Utiliser le même format que le storeId
+    const friendlyUrl = storeId.split('_')[1]; // Récupère la partie après userId_
 
     // Sauvegarder dans la collection urls
     await this.firestore.collection('urls').doc(friendlyUrl).set({
       userId,
-      storeId: `${userId}_${storeId}`,
+      storeId,
       createdAt: Date.now()
     });
 
@@ -173,7 +162,7 @@ export class StoreService {
       
       this.toastService.success('Votre boutique a été créée avec succès!', 'Félicitations');
       
-      return friendlyUrl; // Retourner l'URL simplifiée au lieu de l'ID
+      return friendlyUrl;
     } catch (error) {
       this.toastService.error('Une erreur est survenue lors de la création de votre boutique.', 'Erreur');
       console.error('Erreur lors de la création de la boutique:', error);
@@ -340,11 +329,12 @@ export class StoreService {
     const user = await this.authService.getCurrentUser();
     if (!user) throw new Error('Utilisateur non connecté');
 
+    const timestamp = Date.now();
     const storeData: Partial<Store> = {
       ...store,
       ownerId: user.uid,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: timestamp,
+      updatedAt: timestamp,
       status: 'active'
     };
 
@@ -367,37 +357,16 @@ export class StoreService {
   /**
    * Met à jour une boutique existante
    */
-  async updateStore(storeId: string, updates: Partial<Store>, newLogoFile?: File): Promise<void> {
+  async updateStore(storeId: string, updates: Partial<Store>): Promise<void> {
     const user = await this.authService.getCurrentUser();
     if (!user) throw new Error('Utilisateur non connecté');
 
     const updateData: Partial<Store> = {
       ...updates,
-      updatedAt: new Date()
+      updatedAt: Date.now()
     };
 
-    // Upload du nouveau logo si fourni
-    if (newLogoFile) {
-      const fileName = this.storageService.generateUniqueFileName(newLogoFile.name);
-      const path = `stores/${user.uid}/logo/${fileName}`;
-      const dimensions: ImageDimensions = STORE_IMAGE_DIMENSIONS.logo;
-      const uploadResult = await this.storageService.uploadImage(newLogoFile, path, dimensions).toPromise();
-      if (!uploadResult) {
-        throw new Error('Échec de l\'upload du logo');
-      }
-      updateData.logoUrl = uploadResult;
-
-      // Supprimer l'ancien logo si existant
-      const storeDoc = await this.firestore.collection('stores').doc<Store>(storeId).get().toPromise();
-      const storeData = storeDoc?.data();
-      if (storeData?.logoUrl) {
-        const oldLogoPath = storeData.logoUrl.split('?')[0].split('/o/')[1];
-        if (oldLogoPath) {
-          await this.storageService.deleteFile(decodeURIComponent(oldLogoPath));
-        }
-      }
-    }
-
+    // Le logoUrl est déjà une URL dans les updates, pas besoin de le réuploader
     await this.firestore.collection('stores').doc(storeId).update(updateData);
   }
 
@@ -583,8 +552,28 @@ export class StoreService {
       map(storeSettings => {
         if (!storeSettings) return null;
         return {
-          ...storeSettings,
-          status: 'active' // Par défaut, on considère la boutique comme active
+          id: storeSettings.id || '',
+          ownerId: storeSettings.ownerId || '',
+          legalName: storeSettings.legalName || '',
+          storeName: storeSettings.storeName || '',
+          storeDescription: storeSettings.storeDescription || '',
+          storeCategory: storeSettings.storeCategory || '',
+          email: storeSettings.email || '',
+          phoneNumber: storeSettings.phoneNumber || '',
+          address: storeSettings.address || '',
+          city: storeSettings.city || '',
+          country: storeSettings.country || '',
+          zipCode: storeSettings.zipCode || '',
+          latitude: storeSettings.latitude || 0,
+          longitude: storeSettings.longitude || 0,
+          taxId: storeSettings.taxId || '',
+          logoUrl: storeSettings.logoUrl || '',
+          bannerUrl: storeSettings.bannerUrl || '',
+          primaryColor: storeSettings.primaryColor || '#000000',
+          secondaryColor: storeSettings.secondaryColor || '#000000',
+          createdAt: storeSettings.createdAt || Date.now(),
+          updatedAt: storeSettings.updatedAt || Date.now(),
+          status: 'active'
         } as Store;
       })
     );
@@ -626,5 +615,25 @@ export class StoreService {
           );
       })
     );
+  }
+
+  // Méthode séparée pour uploader un nouveau logo
+  async uploadNewStoreLogo(storeId: string, logoFile: File): Promise<string> {
+    const user = await this.authService.getCurrentUser();
+    if (!user) throw new Error('Utilisateur non connecté');
+
+    const fileName = this.storageService.generateUniqueFileName(logoFile.name);
+    const path = `stores/${user.uid}/logo/${fileName}`;
+    const dimensions: ImageDimensions = STORE_IMAGE_DIMENSIONS.logo;
+    const uploadResult = await this.storageService.uploadImage(logoFile, path, dimensions).toPromise();
+    
+    if (!uploadResult) {
+      throw new Error('Échec de l\'upload du logo');
+    }
+
+    // Mettre à jour le logoUrl dans la boutique
+    await this.updateStore(storeId, { logoUrl: uploadResult });
+    
+    return uploadResult;
   }
 } 

@@ -17,7 +17,7 @@
              alt="Logo de la boutique" 
              class="store-logo"
              (error)="onImageError($event)">
-        <span class="store-name">{{ selectedStore.name || 'Ma Boutique' }}</span>
+        <span class="store-name">{{ selectedStore.legalName || 'Ma Boutique' }}</span>
       </div>
     </div>
     
@@ -25,10 +25,10 @@
       <div class="store-selector">
         <select class="form-select" (change)="onStoreSelect($event)">
           <option [value]="selectedStore.id" selected>
-            {{ selectedStore.name || 'Sélectionner une boutique' }}
+            {{ selectedStore.legalName || 'Sélectionner une boutique' }}
           </option>
           <option *ngFor="let store of userStores" [value]="store.id" [selected]="store.id === selectedStore.id">
-            {{ store.name }}
+            {{ store.legalName }}
           </option>
           <option value="new" class="new-store-option">+ Nouvelle boutique</option>
         </select>
@@ -95,7 +95,7 @@
             <div class="color-dot" [style.background-color]="selectedStore.primaryColor"></div>
             <div class="color-dot" [style.background-color]="selectedStore.secondaryColor"></div>
           </div>
-          <h6>{{ selectedStore.name || 'Ma Boutique' }}</h6>
+          <h6>{{ selectedStore.legalName || 'Ma Boutique' }}</h6>
         </div>
       </div>
       

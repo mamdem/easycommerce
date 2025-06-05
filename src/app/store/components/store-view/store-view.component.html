@@ -1,0 +1,113 @@
+<div class="store-container">
+  <!-- Message d'erreur -->
+  <div class="alert alert-danger" *ngIf="error">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    {{ error }}
+  </div>
+
+  <!-- En-tête de la boutique -->
+  <ng-container *ngIf="storeData">
+    <header class="store-header">
+      <div class="store-banner" [style.backgroundImage]="'url(' + (storeData.bannerUrl || 'assets/default-store-banner.svg') + ')'">
+        <div class="store-info">
+          <img [src]="storeData.logoUrl || 'assets/default-store-logo.png'" 
+               [alt]="storeData.name" 
+               class="store-logo"
+               (error)="onImageError($event)">
+          <div class="store-details">
+            <h1>{{ storeData.name }}</h1>
+            <p>{{ storeData.description }}</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Contenu principal -->
+    <main class="store-content">
+      <!-- En-tête avec bouton panier -->
+      <div class="store-actions">
+        <div class="products-header">
+          <h2>Nos produits</h2>
+          <div class="products-count">{{ products.length }} produits</div>
+        </div>
+        <button class="cart-button" (click)="cartComponent.toggleCart()">
+          <i class="bi bi-cart"></i>
+          <span class="cart-count" *ngIf="cartItemsCount > 0">{{ cartItemsCount }}</span>
+        </button>
+      </div>
+
+      <!-- Loading spinner -->
+      <div *ngIf="loading" class="loading-spinner">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Chargement...</span>
+        </div>
+        <p>Chargement des produits...</p>
+      </div>
+
+      <!-- Liste des produits -->
+      <div *ngIf="!loading" class="products-grid">
+        <div *ngIf="products.length === 0" class="no-products">
+          <i class="bi bi-box-seam"></i>
+          <p>Aucun produit disponible dans cette boutique.</p>
+        </div>
+
+        <app-product-card 
+          *ngFor="let product of products"
+          [product]="product"
+          (addToCart)="onAddToCart($event)">
+        </app-product-card>
+      </div>
+    </main>
+  </ng-container>
+
+  <!-- Composant panier -->
+  <app-cart #cartComponent [storeUrl]="storeUrl"></app-cart>
+</div>
+
+<style>
+.store-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.cart-button {
+  position: relative;
+  background: var(--primary-color, #007bff);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cart-button:hover {
+  background: var(--primary-color-dark, #0056b3);
+}
+
+.cart-button i {
+  font-size: 1.5rem;
+}
+
+.cart-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #dc3545;
+  color: white;
+  border-radius: 50%;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+</style> 

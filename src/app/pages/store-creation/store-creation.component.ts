@@ -450,7 +450,20 @@ export class StoreCreationComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
-      this.logoFile = file; // Stocker le fichier pour l'upload ultérieur
+      
+      // Validation du type de fichier
+      if (!file.type.startsWith('image/')) {
+        this.toastService.error('Seules les images sont autorisées');
+        return;
+      }
+
+      // Validation de la taille
+      if (file.size > 5 * 1024 * 1024) {
+        this.toastService.error('L\'image ne doit pas dépasser 5MB');
+        return;
+      }
+
+      this.logoFile = file;
       
       // Afficher un aperçu de l'image
       const reader = new FileReader();
@@ -467,7 +480,20 @@ export class StoreCreationComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
-      this.bannerFile = file; // Stocker le fichier pour l'upload ultérieur
+
+      // Validation du type de fichier
+      if (!file.type.startsWith('image/')) {
+        this.toastService.error('Seules les images sont autorisées');
+        return;
+      }
+
+      // Validation de la taille
+      if (file.size > 10 * 1024 * 1024) {
+        this.toastService.error('L\'image ne doit pas dépasser 10MB');
+        return;
+      }
+
+      this.bannerFile = file;
       
       // Afficher un aperçu de l'image
       const reader = new FileReader();

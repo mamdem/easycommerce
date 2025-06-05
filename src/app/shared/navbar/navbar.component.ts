@@ -26,8 +26,8 @@ export class NavbarComponent implements OnInit {
   loadStoreName(): void {
     if (this.isAuthenticated()) {
       this.storeService.getStoreSettings().subscribe(settings => {
-        if (settings && settings.length > 0 && settings[0].name) {
-          this.storeName = settings[0].name;
+        if (settings && settings.length > 0 && (settings[0].storeName || settings[0].legalName)) {
+          this.storeName = settings[0].storeName || settings[0].legalName;
         }
       });
     }

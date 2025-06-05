@@ -13,6 +13,7 @@ import { ImageCropperModule } from 'ngx-image-cropper';
 import { MatDialogModule } from '@angular/material/dialog';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ImageCropperModalComponent } from './shared/components/image-cropper-modal/image-cropper-modal.component';
+import { SharedModule } from './shared/shared.module';
 
 // Firebase imports
 import { AngularFireModule } from '@angular/fire/compat';
@@ -45,7 +46,7 @@ import { StoreModule } from './pages/store/store.module';
     StoreModule,
     ImageCropperModule,
     MatDialogModule,
-    // Initialisation d'AngularFire
+    SharedModule,
     AngularFireModule.initializeApp(environment.firebase),
     AngularFirestoreModule,
     AngularFireAuthModule,

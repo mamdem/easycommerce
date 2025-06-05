@@ -1,0 +1,5 @@
+<a routerLink="/panier" class="nav-link" routerLinkActive="active">
+  <i class="bi bi-cart3"></i>
+  Panier
+  <span class="badge bg-primary" *ngIf="cartItemsCount > 0">{{ cartItemsCount }}</span>
+</a> 

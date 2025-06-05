@@ -103,7 +103,7 @@ export class DashboardComponent implements OnInit {
           
           if (store) {
             // Mettre à jour les informations de la boutique
-            this.storeInfo.name = store.storeName || store.name || this.storeInfo.name;
+            this.storeInfo.name = store.storeName || store.legalName || this.storeInfo.name;
             this.storeInfo.url = store.id || this.storeInfo.url;
             
             // Appliquer le thème de la boutique avec les couleurs
@@ -144,7 +144,7 @@ export class DashboardComponent implements OnInit {
             localStorage.setItem('selectedStoreId', firstStore.id || '');
             
             // Mettre à jour les informations de la boutique
-            this.storeInfo.name = firstStore.storeName || firstStore.name || this.storeInfo.name;
+            this.storeInfo.name = firstStore.storeName || firstStore.legalName || this.storeInfo.name;
             this.storeInfo.url = firstStore.id || this.storeInfo.url;
             
             // Appliquer le thème de la boutique
@@ -405,7 +405,7 @@ export class DashboardComponent implements OnInit {
           localStorage.setItem('selectedStoreId', storeId);
           
           // Mettre à jour les informations de la boutique
-          this.storeInfo.name = store.storeName || store.name || this.storeInfo.name;
+          this.storeInfo.name = store.storeName || store.legalName || this.storeInfo.name;
           this.storeInfo.url = store.id || this.storeInfo.url;
           
           // Appliquer les couleurs du thème
@@ -418,7 +418,7 @@ export class DashboardComponent implements OnInit {
           // Charger les données de la boutique
           this.loadStoreData();
           
-          this.toastService.success(`Boutique "${store.storeName || store.name || 'Ma Boutique'}" sélectionnée`);
+          this.toastService.success(`Boutique "${store.storeName || store.legalName || 'Ma Boutique'}" sélectionnée`);
         } else {
           this.toastService.error('Boutique introuvable', 'Erreur');
         }

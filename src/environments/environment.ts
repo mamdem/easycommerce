@@ -7,5 +7,6 @@ export const environment = {
     storageBucket: "ecommerce-cf09f.firebasestorage.app",
     messagingSenderId: "208251838230",
     appId: "1:208251838230:web:7fc52aed8e6cf76a8c3a37"
-  }
+  },
+  storeBaseUrl: 'http://localhost:4200/boutique'
 }; 

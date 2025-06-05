@@ -1,6 +1,7 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Product } from '../../../core/models/product.model';
+import { CartService } from '../../../core/services/cart.service';
 
 @Component({
   selector: 'app-product-card',
@@ -24,10 +25,10 @@ import { Product } from '../../../core/models/product.model';
         
         <div class="product-price">
           <span class="current-price" [class.discounted]="product.discountPrice && product.discountPrice < product.price">
-            {{ product.price | number:'1.2-2' }}€
+            {{ product.price | number:'1.0-0' }} FCFA
           </span>
           <span class="discount-price" *ngIf="product.discountPrice && product.discountPrice < product.price">
-            {{ product.discountPrice | number:'1.2-2' }}€
+            {{ product.discountPrice | number:'1.0-0' }} FCFA
           </span>
         </div>
 
@@ -36,11 +37,12 @@ import { Product } from '../../../core/models/product.model';
           {{ product.stock > 0 ? product.stock + ' en stock' : 'Rupture de stock' }}
         </div>
 
-        <button class="btn btn-primary w-100" 
-                (click)="addToCart.emit(product)"
+        <button class="btn w-100" 
+                [class.in-cart]="isInCart"
+                (click)="onAddToCartClick()"
                 [disabled]="product.stock === 0">
-          <i class="bi bi-cart-plus me-2"></i>
-          Ajouter au panier
+          <i class="bi" [class.bi-cart-plus]="!isInCart" [class.bi-cart-check]="isInCart"></i>
+          {{ isInCart ? 'Déjà dans le panier' : 'Ajouter au panier' }}
         </button>
       </div>
     </div>
@@ -75,7 +77,7 @@ import { Product } from '../../../core/models/product.model';
       position: absolute;
       top: 1rem;
       left: 1rem;
-      background: #dc3545;
+      background: var(--store-primary-color);
       color: white;
       padding: 0.25rem 0.5rem;
       border-radius: 4px;
@@ -90,11 +92,11 @@ import { Product } from '../../../core/models/product.model';
       font-size: 1.1rem;
       font-weight: 600;
       margin: 0;
-      color: #2c3e50;
+      color: var(--store-primary-color);
     }
 
     .product-category {
-      color: #6c757d;
+      color: var(--store-secondary-color);
       font-size: 0.9rem;
       margin: 0.5rem 0;
     }
@@ -109,16 +111,17 @@ import { Product } from '../../../core/models/product.model';
     .current-price {
       font-weight: 600;
       font-size: 1.2rem;
+      color: var(--store-primary-color);
     }
 
     .current-price.discounted {
       text-decoration: line-through;
-      color: #6c757d;
+      color: var(--store-secondary-color);
       font-size: 1rem;
     }
 
     .discount-price {
-      color: #dc3545;
+      color: var(--store-primary-color);
       font-weight: 600;
       font-size: 1.2rem;
     }
@@ -127,7 +130,7 @@ import { Product } from '../../../core/models/product.model';
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      color: #198754;
+      color: var(--store-primary-color);
       font-size: 0.9rem;
       margin-bottom: 1rem;
     }
@@ -140,6 +143,23 @@ import { Product } from '../../../core/models/product.model';
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background-color: var(--store-primary-color);
+      color: white;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--store-primary-dark);
+    }
+
+    .btn.in-cart {
+      background-color: var(--store-secondary-color);
     }
 
     .btn:disabled {
@@ -148,9 +168,17 @@ import { Product } from '../../../core/models/product.model';
     }
   `]
 })
-export class ProductCardComponent {
+export class ProductCardComponent implements OnInit {
   @Input() product!: Product;
+  @Input() storeUrl!: string;
   @Output() addToCart = new EventEmitter<Product>();
+  isInCart = false;
+
+  constructor(private cartService: CartService) {}
+
+  ngOnInit() {
+    this.checkIfInCart();
+  }
 
   getDiscountPercentage(): number {
     if (!this.product.discountPrice || !this.product.price) return 0;
@@ -161,6 +189,20 @@ export class ProductCardComponent {
     const img = event.target as HTMLImageElement;
     if (img) {
       img.src = 'assets/default-product.svg';
+    }
+  }
+
+  checkIfInCart(): void {
+    if (this.product.id && this.storeUrl) {
+      const cartItems = this.cartService.getCartItemsByStore(this.storeUrl);
+      this.isInCart = cartItems.some(item => item.product.id === this.product.id);
+    }
+  }
+
+  onAddToCartClick(): void {
+    if (!this.isInCart) {
+      this.addToCart.emit(this.product);
+      this.isInCart = true;
     }
   }
 } 

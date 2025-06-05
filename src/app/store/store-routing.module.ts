@@ -1,11 +1,23 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { StoreLayoutComponent } from './layouts/store-layout/store-layout.component';
 import { StoreHomeComponent } from './pages/store-home/store-home.component';
+import { CartPageComponent } from './pages/store-home/components/cart-page/cart-page.component';
 
 const routes: Routes = [
   {
     path: '',
-    component: StoreHomeComponent
+    component: StoreLayoutComponent,
+    children: [
+      {
+        path: '',
+        component: StoreHomeComponent
+      },
+      {
+        path: 'cart',
+        component: CartPageComponent
+      }
+    ]
   }
 ];
 

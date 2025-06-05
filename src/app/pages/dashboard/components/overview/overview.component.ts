@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Chart, registerables } from 'chart.js';
+import { StoreService, StoreSettings } from '../../../../core/services/store.service';
+import { Store } from '../../../../core/models/store.model';
+import { environment } from '../../../../../environments/environment';
 
 Chart.register(...registerables);
 
@@ -18,23 +21,26 @@ export class OverviewComponent implements OnInit, AfterViewInit {
   salesChart: Chart | undefined;
   ordersChart: Chart | undefined;
 
+  storeBaseUrl = environment.storeBaseUrl;
+
   // Information de la boutique
   storeInfo: any = {
-    name: 'Ma Boutique',
-    url: 'ma-boutique',
+    legalName: '',
+    storeName: '',
+    url: '',
     status: 'Actif',
-    productsCount: 12,
+    productsCount: 0,
     revenue: {
-      today: 240,
-      week: 1850,
-      month: 7520,
-      total: 24680
+      today: 0,
+      week: 0,
+      month: 0,
+      total: 0
     },
     orders: {
-      pending: 5,
-      processing: 3,
-      shipped: 8,
-      completed: 42
+      pending: 0,
+      processing: 0,
+      shipped: 0,
+      completed: 0
     }
   };
   
@@ -65,15 +71,36 @@ export class OverviewComponent implements OnInit, AfterViewInit {
     values: [25, 42, 35, 48, 38, 52]
   };
 
-  constructor() { }
+  constructor(private storeService: StoreService) { }
 
-  ngOnInit(): void {
-    console.log('Overview component initialized');
+  ngOnInit() {
+    this.loadStoreData();
   }
 
   ngAfterViewInit() {
     this.initSalesChart();
     this.initOrdersChart();
+  }
+
+  private loadStoreData() {
+    console.log('Début du chargement des données de la boutique');
+    // Récupérer les informations de la boutique sélectionnée
+    this.storeService.getSelectedStore().subscribe(store => {
+      console.log('Données de la boutique reçues:', store);
+      if (store) {
+        this.storeInfo = {
+          ...this.storeInfo,
+          legalName: store.legalName,
+          storeName: store.storeName,
+          url: store.id?.split('_')[1] || '', // Récupère la partie après userId_
+        };
+        console.log('StoreInfo mis à jour:', this.storeInfo);
+      } else {
+        console.log('Aucune donnée de boutique reçue');
+      }
+    }, error => {
+      console.error('Erreur lors du chargement des données de la boutique:', error);
+    });
   }
 
   private initSalesChart() {
