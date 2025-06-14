@@ -3,11 +3,25 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Chart, registerables } from 'chart.js';
-import { StoreService, StoreSettings } from '../../../../core/services/store.service';
+import { StoreService } from '../../../../core/services/store.service';
+import { OrderService } from '../../../../core/services/order.service';
 import { Store } from '../../../../core/models/store.model';
+import { Order, OrderStatus } from '../../../../core/models/order.model';
 import { environment } from '../../../../../environments/environment';
+import { map, switchMap } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
 
 Chart.register(...registerables);
+
+// Clé pour le stockage local
+const AMOUNTS_VISIBILITY_KEY = 'dashboard_amounts_visibility';
+
+// Interface pour la configuration de visibilité
+interface AmountsVisibilityConfig {
+  showAmounts: boolean;
+  lastUpdated: number;
+  storeId?: string;
+}
 
 @Component({
   selector: 'app-overview',
@@ -20,6 +34,15 @@ export class OverviewComponent implements OnInit, AfterViewInit {
   
   salesChart: Chart | undefined;
   ordersChart: Chart | undefined;
+  
+  private _showAmounts: boolean = false;
+  get showAmounts(): boolean {
+    return this._showAmounts;
+  }
+  set showAmounts(value: boolean) {
+    this._showAmounts = value;
+    this.saveAmountsVisibility(value);
+  }
 
   storeBaseUrl = environment.storeBaseUrl;
 
@@ -37,73 +60,203 @@ export class OverviewComponent implements OnInit, AfterViewInit {
       total: 0
     },
     orders: {
-      pending: 0,
-      processing: 0,
-      shipped: 0,
-      completed: 0
+      en_cours: 0,
+      valide: 0,
+      rejete: 0,
+      total: 0
     }
   };
-  
-  // Produits récents
-  recentProducts: any[] = [
-    { id: 'P001', name: 'Produit 1', category: 'Électronique', price: 99.99, stock: 15 },
-    { id: 'P002', name: 'Produit 2', category: 'Mode', price: 29.99, stock: 8 },
-    { id: 'P003', name: 'Produit 3', category: 'Maison', price: 49.99, stock: 0 },
-    { id: 'P004', name: 'Produit 4', category: 'Sport', price: 59.99, stock: 3 }
-  ];
-  
-  // Commandes récentes
-  recentOrders: any[] = [
-    { id: 'C001', date: '2023-07-15', customer: 'Jean Dupont', total: 129.99, status: 'Livré' },
-    { id: 'C002', date: '2023-07-16', customer: 'Marie Martin', total: 89.99, status: 'En attente' },
-    { id: 'C003', date: '2023-07-17', customer: 'Pierre Durand', total: 159.99, status: 'Expédiée' },
-    { id: 'C004', date: '2023-07-18', customer: 'Sophie Petit', total: 99.99, status: 'En cours' }
-  ];
 
-  // Données de démonstration
+  // Données pour les graphiques
   salesData = {
-    labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
-    values: [1200, 1900, 1500, 2200, 1800, 2400]
+    labels: [] as string[],
+    values: [] as number[]
   };
 
   ordersData = {
-    labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
-    values: [25, 42, 35, 48, 38, 52]
+    labels: [] as string[],
+    values: [] as number[]
   };
 
-  constructor(private storeService: StoreService) { }
+  constructor(
+    private storeService: StoreService,
+    private orderService: OrderService
+  ) {
+    this.loadAmountsVisibility();
+  }
 
   ngOnInit() {
     this.loadStoreData();
   }
 
   ngAfterViewInit() {
-    this.initSalesChart();
-    this.initOrdersChart();
+    // Les graphiques seront initialisés une fois les données chargées
+  }
+
+  // Charger la configuration de visibilité des montants
+  private loadAmountsVisibility(): void {
+    try {
+      const savedConfig = localStorage.getItem(AMOUNTS_VISIBILITY_KEY);
+      if (savedConfig) {
+        const config: AmountsVisibilityConfig = JSON.parse(savedConfig);
+        
+        // Vérifier si la configuration n'est pas trop ancienne (24h)
+        const isExpired = Date.now() - config.lastUpdated > 24 * 60 * 60 * 1000;
+        
+        if (!isExpired) {
+          this._showAmounts = config.showAmounts;
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Erreur lors du chargement de la configuration de visibilité:', error);
+    }
+    
+    // Configuration par défaut : montants visibles si rien n'est enregistré
+    this._showAmounts = true;
+    this.saveAmountsVisibility(true);
+  }
+
+  // Sauvegarder la configuration de visibilité des montants
+  private saveAmountsVisibility(showAmounts: boolean): void {
+    try {
+      const config: AmountsVisibilityConfig = {
+        showAmounts,
+        lastUpdated: Date.now(),
+        storeId: this.storeInfo.url
+      };
+      
+      localStorage.setItem(AMOUNTS_VISIBILITY_KEY, JSON.stringify(config));
+    } catch (error) {
+      console.warn('Erreur lors de la sauvegarde de la configuration de visibilité:', error);
+    }
+  }
+
+  // Basculer l'affichage des montants
+  toggleAmounts(): void {
+    this.showAmounts = !this.showAmounts;
+    // Mettre à jour les graphiques
+    if (this.salesChart) {
+      this.salesChart.destroy();
+      this.initSalesChart();
+    }
+    if (this.ordersChart) {
+      this.ordersChart.destroy();
+      this.initOrdersChart();
+    }
+  }
+
+  // Formater le montant pour l'affichage
+  formatAmount(amount: number): string {
+    if (!this.showAmounts) {
+      return '••••••••';
+    }
+    return new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount) + ' FCFA';
   }
 
   private loadStoreData() {
-    console.log('Début du chargement des données de la boutique');
-    // Récupérer les informations de la boutique sélectionnée
-    this.storeService.getSelectedStore().subscribe(store => {
-      console.log('Données de la boutique reçues:', store);
-      if (store) {
-        this.storeInfo = {
-          ...this.storeInfo,
-          legalName: store.legalName,
-          storeName: store.storeName,
-          url: store.id?.split('_')[1] || '', // Récupère la partie après userId_
-        };
-        console.log('StoreInfo mis à jour:', this.storeInfo);
-      } else {
-        console.log('Aucune donnée de boutique reçue');
+    this.storeService.getSelectedStore().pipe(
+      switchMap(store => {
+        if (store) {
+          this.storeInfo.legalName = store.legalName;
+          this.storeInfo.storeName = store.storeName;
+          this.storeInfo.url = store.id?.split('_')[1] || '';
+          
+          // Charger les commandes de la boutique
+          return this.orderService.getOrdersByStore(this.storeInfo.url);
+        }
+        return [];
+      })
+    ).subscribe({
+      next: (orders: Order[]) => {
+        this.processOrders(orders);
+        this.initCharts();
+      },
+      error: error => {
+        console.error('Erreur lors du chargement des données:', error);
       }
-    }, error => {
-      console.error('Erreur lors du chargement des données de la boutique:', error);
     });
   }
 
+  private processOrders(orders: Order[]) {
+    const now = Date.now();
+    const oneDayAgo = now - 24 * 60 * 60 * 1000;
+    const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+    // Réinitialiser les compteurs
+    this.storeInfo.revenue = {
+      today: 0,
+      week: 0,
+      month: 0,
+      total: 0
+    };
+
+    this.storeInfo.orders = {
+      en_cours: 0,
+      valide: 0,
+      rejete: 0,
+      total: orders.length
+    };
+
+    // Préparer les données pour les graphiques
+    const last6Months = new Array(6).fill(0).map((_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      return {
+        label: date.toLocaleDateString('fr-FR', { month: 'short' }),
+        month: date.getMonth(),
+        year: date.getFullYear(),
+        sales: 0,
+        orders: 0
+      };
+    }).reverse();
+
+    // Traiter chaque commande
+    orders.forEach(order => {
+      // Mettre à jour les compteurs de statut
+      this.storeInfo.orders[order.status]++;
+
+      // Mettre à jour les revenus (uniquement pour les commandes validées)
+      if (order.status === 'valide') {
+        this.storeInfo.revenue.total += order.total;
+
+        if (order.createdAt >= oneDayAgo) {
+          this.storeInfo.revenue.today += order.total;
+        }
+        if (order.createdAt >= oneWeekAgo) {
+          this.storeInfo.revenue.week += order.total;
+        }
+        if (order.createdAt >= oneMonthAgo) {
+          this.storeInfo.revenue.month += order.total;
+        }
+
+        // Mettre à jour les données des graphiques
+        const orderDate = new Date(order.createdAt);
+        const monthIndex = last6Months.findIndex(m => 
+          m.month === orderDate.getMonth() && m.year === orderDate.getFullYear()
+        );
+
+        if (monthIndex !== -1) {
+          last6Months[monthIndex].sales += order.total;
+          last6Months[monthIndex].orders++;
+        }
+      }
+    });
+
+    // Mettre à jour les données des graphiques
+    this.salesData.labels = last6Months.map(m => m.label);
+    this.salesData.values = last6Months.map(m => m.sales);
+    this.ordersData.labels = last6Months.map(m => m.label);
+    this.ordersData.values = last6Months.map(m => m.orders);
+  }
+
   private initSalesChart() {
+    if (!this.salesChartRef) return;
+    
     const ctx = this.salesChartRef.nativeElement.getContext('2d');
     
     this.salesChart = new Chart(ctx, {
@@ -134,8 +287,11 @@ export class OverviewComponent implements OnInit, AfterViewInit {
             mode: 'index',
             intersect: false,
             callbacks: {
-              label: function(context) {
-                return context.parsed.y + ' €';
+              label: (context) => {
+                const value = context.parsed.y;
+                return this.showAmounts 
+                  ? value.toLocaleString('fr-FR') + ' FCFA'
+                  : '••••••••';
               }
             }
           }
@@ -147,8 +303,10 @@ export class OverviewComponent implements OnInit, AfterViewInit {
               color: 'rgba(0, 0, 0, 0.05)'
             },
             ticks: {
-              callback: function(value) {
-                return value + ' €';
+              callback: (value) => {
+                return this.showAmounts 
+                  ? value.toLocaleString('fr-FR') + ' FCFA'
+                  : '••••••••';
               }
             }
           },
@@ -163,6 +321,8 @@ export class OverviewComponent implements OnInit, AfterViewInit {
   }
 
   private initOrdersChart() {
+    if (!this.ordersChartRef) return;
+    
     const ctx = this.ordersChartRef.nativeElement.getContext('2d');
     
     this.ordersChart = new Chart(ctx, {
@@ -191,7 +351,12 @@ export class OverviewComponent implements OnInit, AfterViewInit {
           },
           tooltip: {
             mode: 'index',
-            intersect: false
+            intersect: false,
+            callbacks: {
+              label: (context) => {
+                return context.parsed.y.toString() + ' commande(s)';
+              }
+            }
           }
         },
         scales: {
@@ -199,6 +364,9 @@ export class OverviewComponent implements OnInit, AfterViewInit {
             beginAtZero: true,
             grid: {
               color: 'rgba(0, 0, 0, 0.05)'
+            },
+            ticks: {
+              stepSize: 1
             }
           },
           x: {
@@ -209,5 +377,10 @@ export class OverviewComponent implements OnInit, AfterViewInit {
         }
       }
     });
+  }
+
+  private initCharts() {
+    this.initSalesChart();
+    this.initOrdersChart();
   }
 } 

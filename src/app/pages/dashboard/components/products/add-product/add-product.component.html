@@ -1,19 +1,24 @@
 <div class="container-fluid py-4">
   <!-- En-tête -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div class="d-flex align-items-center gap-3">
+      <div class="section-icon">
+        <i class="bi bi-plus-square"></i>
+      </div>
     <div>
-      <h1 class="h3 mb-1">Ajouter un produit</h1>
+        <h1 class="h2 mb-0">Ajouter un produit</h1>
       <p class="text-muted mb-0">Créez un nouveau produit pour votre boutique</p>
+      </div>
     </div>
-    <div class="btn-group">
-      <button class="btn btn-outline-secondary" (click)="cancel()">
-        <i class="bi bi-x-lg me-2"></i>Annuler
+    <div class="btn-toolbar mb-2 mb-md-0">
+      <button class="btn btn-sm btn-outline-secondary me-2" (click)="cancel()">
+        <i class="bi bi-x-lg me-1"></i>Annuler
       </button>
-      <button class="btn btn-primary" 
+      <button class="btn btn-sm btn-primary" 
               (click)="onSubmit()" 
               [disabled]="!productForm || productForm.invalid || loading">
         <span class="spinner-border spinner-border-sm me-2" *ngIf="loading"></span>
-        <i class="bi bi-check-lg me-2" *ngIf="!loading"></i>
+        <i class="bi bi-check-lg me-1" *ngIf="!loading"></i>
         {{ loading ? 'Enregistrement...' : 'Enregistrer' }}
       </button>
     </div>
@@ -98,13 +103,60 @@
           <div class="row">
             <div class="col-md-6 mb-4">
               <label class="form-label">Catégorie*</label>
-              <select class="form-select" formControlName="category"
-                      [class.is-invalid]="isFieldInvalid('category')">
-                <option value="">Sélectionner une catégorie</option>
-                <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
-              </select>
+              <div class="category-selection">
+                <select class="form-select" formControlName="category"
+                        [class.is-invalid]="isFieldInvalid('category')">
+                  <option value="">Sélectionner une catégorie</option>
+                  <option *ngFor="let category of categories$ | async" [value]="category.id">
+                    {{ category.name }}
+                  </option>
+                </select>
+                <button type="button" 
+                        class="btn btn-sm btn-outline-primary ms-2" 
+                        (click)="toggleNewCategoryForm()">
+                  <i class="bi" [ngClass]="showNewCategoryForm ? 'bi-x' : 'bi-plus'"></i>
+                  {{ showNewCategoryForm ? 'Annuler' : 'Nouvelle' }}
+                </button>
+              </div>
               <div class="invalid-feedback" *ngIf="isFieldInvalid('category')">
                 {{ getErrorMessage('category') }}
+              </div>
+
+              <!-- Formulaire d'ajout de catégorie -->
+              <div class="new-category-form mt-3" *ngIf="showNewCategoryForm" [@slideInOut]>
+                <form [formGroup]="categoryForm" (ngSubmit)="saveNewCategory()" class="bg-light p-3 rounded">
+                  <div class="mb-3">
+                    <label class="form-label small">Nom de la catégorie*</label>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           formControlName="name"
+                           [class.is-invalid]="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched"
+                           placeholder="ex: Électronique">
+                    <div class="invalid-feedback" *ngIf="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched">
+                      Le nom de la catégorie est requis (minimum 2 caractères)
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small">Description (optionnelle)</label>
+                    <textarea class="form-control form-control-sm" 
+                              formControlName="description" 
+                              rows="2"
+                              placeholder="Description de la catégorie"></textarea>
+                  </div>
+                  <div class="d-flex justify-content-end gap-2">
+                    <button type="button" 
+                            class="btn btn-sm btn-light"
+                            (click)="toggleNewCategoryForm()">
+                      Annuler
+                    </button>
+                    <button type="submit" 
+                            class="btn btn-sm btn-primary"
+                            [disabled]="categoryForm.invalid || loading">
+                      <span class="spinner-border spinner-border-sm me-1" *ngIf="loading"></span>
+                      Ajouter
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
             <div class="col-md-6 mb-4">

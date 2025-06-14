@@ -1,118 +1,168 @@
+<!-- En-tête de la page -->
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Gestion des commandes</h1>
-  <div class="btn-toolbar mb-2 mb-md-0">
-    <div class="btn-group me-2">
-      <button type="button" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-printer me-1"></i> Imprimer
-      </button>
-      <button type="button" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-download me-1"></i> Exporter
-      </button>
+  <div class="d-flex align-items-center gap-3">
+    <div class="section-icon">
+      <i class="bi bi-cart3"></i>
     </div>
+    <div>
+      <h1 class="h2 mb-0">Gestion des commandes</h1>
+    <p class="text-muted mb-0">Gérez vos commandes et leur statut</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-outline-primary btn-sm me-2" (click)="exportOrders()">
+      <i class="bi bi-download me-1"></i> Exporter
+    </button>
+    <button class="btn btn-outline-secondary btn-sm" (click)="printOrders()">
+      <i class="bi bi-printer me-1"></i> Imprimer
+    </button>
   </div>
 </div>
 
 <!-- Filtres et recherche -->
-<div class="row mb-4">
-  <div class="col-md-6">
+<div class="filters-section">
+  <div class="search-box">
     <div class="input-group">
-      <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
-      <input type="text" class="form-control" placeholder="Rechercher une commande..." [(ngModel)]="searchTerm">
-      <button class="btn btn-outline-secondary" type="button" *ngIf="searchTerm" (click)="searchTerm = ''">
+      <span class="input-group-text border-0 bg-light">
+        <i class="bi bi-search"></i>
+      </span>
+      <input 
+        type="text" 
+        class="form-control border-0 bg-light" 
+        placeholder="Rechercher une commande..." 
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onSearch()">
+      <button 
+        *ngIf="searchTerm" 
+        class="btn btn-link text-secondary border-0" 
+        (click)="clearSearch()">
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
   </div>
-  <div class="col-md-6">
-    <div class="status-filter rounded-3 overflow-hidden">
-      <button *ngFor="let status of statuses" 
-              class="btn" 
-              [class.btn-primary]="selectedStatus === status"
-              [class.btn-outline-primary]="selectedStatus !== status"
-              (click)="filterByStatus(status)">
-        {{ status }}
-      </button>
-    </div>
+  
+  <div class="status-filters">
+    <button 
+      class="status-filter-btn" 
+      [class.active]="selectedStatus === 'tous'"
+      (click)="filterByStatus('tous')">
+      <span class="status-dot all"></span>
+      Toutes
+      <span class="count">{{ orders.length }}</span>
+    </button>
+    <button 
+      *ngFor="let status of statuses" 
+      class="status-filter-btn" 
+      [class.active]="selectedStatus === status"
+      (click)="filterByStatus(status)">
+      <span class="status-dot" [class]="status"></span>
+      {{ statusLabels[status] }}
+      <span class="count">{{ getOrdersCountByStatus(status) }}</span>
+    </button>
   </div>
 </div>
 
 <!-- Liste des commandes -->
-<div class="card shadow-sm mb-4 border-0 rounded-3 overflow-hidden">
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table orders-table align-middle mb-0">
-        <thead class="bg-light">
-          <tr>
-            <th scope="col" class="ps-3">Commande</th>
-            <th scope="col" class="text-center">Client</th>
-            <th scope="col" class="text-center">Articles</th>
-            <th scope="col" class="text-center">Total</th>
-            <th scope="col" class="text-center">Statut</th>
-            <th scope="col" class="text-end pe-3">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let order of filteredOrders; let i = index">
-            <td class="ps-3">
-              <div>
-                <strong>#{{ order.id }}</strong>
-                <div class="small text-muted">{{ order.date }}</div>
+<div class="orders-container">
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th class="ps-3">Commande</th>
+          <th>Client</th>
+          <th class="text-center">Articles</th>
+          <th class="text-center">Total</th>
+          <th class="text-center">Statut</th>
+          <th class="text-end pe-3">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of filteredOrders" class="order-row">
+          <td class="ps-3">
+            <div class="order-info">
+              <span class="order-id">#{{ order.id }}</span>
+              <span class="order-date">{{ formatDate(order.createdAt) }}</span>
+            </div>
+          </td>
+          <td>
+            <div class="customer-info">
+              <div class="avatar">{{ order.customerInfo.fullName.charAt(0) }}</div>
+              <div class="customer-details">
+                <div class="customer-name">{{ order.customerInfo.fullName }}</div>
+                <div class="customer-email">{{ order.customerInfo.email }}</div>
               </div>
-            </td>
-            <td>
-              <div class="d-flex align-items-center justify-content-center">
-                <div class="avatar-circle me-2">{{ order.customer.charAt(0) }}</div>
-                <div class="text-start">
-                  <div>{{ order.customer }}</div>
-                  <div class="small text-muted">{{ order.email }}</div>
-                </div>
-              </div>
-            </td>
-            <td class="text-center">
-              <span class="badge rounded-pill bg-light text-dark">
-                <i class="bi bi-box me-1"></i>{{ order.items }}
-              </span>
-            </td>
-            <td class="text-center fw-bold">{{ order.total }} €</td>
-            <td class="text-center">
-              <span class="status-badge" [ngClass]="getStatusBadgeClass(order.status)">
-                <i class="bi me-1" 
-                   [ngClass]="order.status === 'En attente' ? 'bi-hourglass-split' : 
-                              order.status === 'En cours' ? 'bi-arrow-repeat' : 
-                              order.status === 'Expédiée' ? 'bi-truck' : 'bi-check-circle'"></i>
-                {{ order.status }}
-              </span>
-            </td>
-            <td class="text-end pe-3">
-              <div class="btn-group">
-                <button class="btn btn-sm btn-light" title="Voir détails">
-                  <i class="bi bi-eye text-primary"></i>
-                </button>
-                <button class="btn btn-sm btn-light" title="Marquer comme livrée">
-                  <i class="bi bi-check-circle text-success"></i>
-                </button>
-                <button class="btn btn-sm btn-light" title="Imprimer facture">
-                  <i class="bi bi-printer text-secondary"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            </div>
+          </td>
+          <td class="text-center">
+            <span class="items-count">
+              <i class="bi bi-box me-1"></i>
+              {{ order.items.length }}
+            </span>
+          </td>
+          <td class="text-center">
+            <span class="order-total">{{ formatAmount(order.total) }}</span>
+          </td>
+          <td class="text-center">
+            <span class="status-badge" [ngClass]="getStatusBadgeClass(order.status)">
+              <i class="bi" [ngClass]="getStatusIcon(order.status)"></i>
+              {{ getStatusLabel(order.status) }}
+            </span>
+          </td>
+          <td class="text-end pe-3">
+            <div class="action-buttons">
+              <button 
+                class="btn btn-link text-primary" 
+                title="Voir les détails"
+                [routerLink]="['/dashboard/orders', order.id]">
+                <i class="bi bi-eye"></i>
+              </button>
+              <button 
+                *ngIf="order.status === 'en_cours'"
+                class="btn btn-link text-success" 
+                title="Valider la commande"
+                (click)="validateOrder(order)">
+                <i class="bi bi-check-lg"></i>
+              </button>
+              <button 
+                *ngIf="order.status === 'en_cours'"
+                class="btn btn-link text-danger" 
+                title="Rejeter la commande"
+                (click)="rejectOrder(order)">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        
+        <!-- État de chargement -->
+        <tr *ngIf="loading">
+          <td colspan="6" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Chargement...</span>
+            </div>
+          </td>
+        </tr>
+        
+        <!-- Aucune commande -->
+        <tr *ngIf="!loading && filteredOrders.length === 0">
+          <td colspan="6" class="text-center py-5">
+            <div class="empty-state">
+              <i class="bi bi-inbox display-4 text-muted"></i>
+              <p class="mt-3 mb-0">Aucune commande trouvée</p>
+              <small class="text-muted" *ngIf="searchTerm">
+                Essayez de modifier vos critères de recherche
+              </small>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
 <!-- Pagination -->
-<div class="d-flex justify-content-between align-items-center">
-  <div class="text-muted small">Affichage de 1 à {{ filteredOrders.length }} sur {{ filteredOrders.length }} commandes</div>
-  <nav aria-label="Page navigation">
-    <ul class="pagination pagination-sm">
-      <li class="page-item disabled"><a class="page-link" href="#">Précédent</a></li>
-      <li class="page-item active"><a class="page-link" href="#">1</a></li>
-      <li class="page-item"><a class="page-link" href="#">2</a></li>
-      <li class="page-item"><a class="page-link" href="#">3</a></li>
-      <li class="page-item"><a class="page-link" href="#">Suivant</a></li>
-    </ul>
-  </nav>
+<div class="d-flex justify-content-between align-items-center" *ngIf="filteredOrders.length > 0">
+  <div class="text-muted small">
+    Affichage de {{ filteredOrders.length }} commande(s)
+  </div>
 </div> 

@@ -1,0 +1,39 @@
+<div class="payment-container">
+  <div class="payment-card">
+    <div class="payment-header">
+      <h2>Abonnement Premium</h2>
+      <p class="price">29.99€<span>/mois</span></p>
+    </div>
+
+    <div class="payment-content">
+      <ul class="features-list">
+        <li>✓ Accès à toutes les fonctionnalités</li>
+        <li>✓ Support prioritaire</li>
+        <li>✓ Mises à jour en avant-première</li>
+        <li>✓ Statistiques avancées</li>
+      </ul>
+
+      <!-- Message de succès -->
+      <div *ngIf="paymentSuccess" class="status-message success">
+        <i class="fas fa-check-circle"></i>
+        <p>Votre abonnement est actif ! Profitez de toutes les fonctionnalités premium.</p>
+      </div>
+
+      <!-- Message d'annulation -->
+      <div *ngIf="paymentCanceled" class="status-message warning">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>Le paiement a été annulé. Vous pouvez réessayer quand vous voulez.</p>
+      </div>
+
+      <!-- Bouton de paiement -->
+      <button 
+        *ngIf="!paymentSuccess"
+        (click)="startSubscription()" 
+        [disabled]="loading"
+        class="payment-button">
+        <span *ngIf="!loading">S'abonner maintenant</span>
+        <span *ngIf="loading" class="spinner"></span>
+      </button>
+    </div>
+  </div>
+</div>

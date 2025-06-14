@@ -1,0 +1,186 @@
+<div class="order-details-page">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="header-content">
+      <button class="btn btn-link text-secondary p-0 mb-2" (click)="goBack()">
+        <i class="bi bi-arrow-left me-2"></i>
+        Retour aux commandes
+      </button>
+      <h1 class="mb-0">
+        <i class="bi bi-receipt me-2"></i>
+        Détails de la commande #{{ order?.id || '...' }}
+      </h1>
+      <p class="text-muted mb-0">Commande passée le {{ formatDate(order?.createdAt) }}</p>
+    </div>
+  </div>
+
+  <!-- État de chargement -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Chargement...</span>
+    </div>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div class="error-state" *ngIf="error">
+    <div class="alert alert-danger">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      Une erreur est survenue lors du chargement des détails de la commande.
+    </div>
+  </div>
+
+  <!-- Contenu principal -->
+  <div class="order-content" *ngIf="!loading && !error && order">
+    <!-- Statut de la commande -->
+    <div class="status-card mb-4">
+      <div class="current-status">
+        <span class="status-badge" [ngClass]="getStatusBadgeClass(order.status)">
+          <i class="bi" [ngClass]="order.status === 'en_cours' ? 'bi-hourglass-split' : 
+                                  order.status === 'valide' ? 'bi-check-circle' : 
+                                  'bi-x-circle'"></i>
+          {{ getStatusLabel(order.status) }}
+        </span>
+        <span class="status-date" *ngIf="order.updatedAt">
+          Dernière mise à jour : {{ formatDate(order.updatedAt) }}
+        </span>
+      </div>
+      <div class="rejection-reason" *ngIf="order.status === 'rejete' && order.rejectionReason">
+        <p class="mb-0">
+          <strong>Motif du rejet :</strong> {{ order.rejectionReason }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Informations client -->
+    <div class="info-card mb-4" *ngIf="order.customerInfo">
+      <h2 class="card-title">
+        <i class="bi bi-person me-2"></i>
+        Informations client
+      </h2>
+      <div class="customer-details">
+        <div class="customer-info">
+          <div class="avatar">{{ order.customerInfo.fullName.charAt(0) || '?' }}</div>
+          <div class="details">
+            <h3>{{ order.customerInfo.fullName }}</h3>
+            <p class="mb-0">{{ order.customerInfo.email }}</p>
+            <p class="mb-0">{{ order.customerInfo.phone || 'Non renseigné' }}</p>
+          </div>
+        </div>
+        <div class="address-info">
+          <h4>Adresse de livraison</h4>
+          <p class="mb-0">{{ order.customerInfo.address || 'Non renseignée' }}</p>
+          <p class="mb-0">{{ order.customerInfo.city || 'Non renseignée' }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Articles commandés -->
+    <div class="info-card mb-4">
+      <h2 class="card-title">
+        <i class="bi bi-cart me-2"></i>
+        Articles commandés
+      </h2>
+      <div class="table-responsive">
+        <table class="table items-table">
+          <thead>
+            <tr>
+              <th style="width: 50%">Article</th>
+              <th class="text-center" style="width: 15%">Quantité</th>
+              <th class="text-end" style="width: 15%">Prix unitaire</th>
+              <th class="text-end" style="width: 20%">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of order?.items">
+              <td>
+                <div class="product-info d-flex align-items-center">
+                  <img [src]="item.product.imageUrl || 'assets/images/placeholder.png'" 
+                       [alt]="item.product.name"
+                       class="product-image me-3"
+                       style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                  <div class="product-details">
+                    <h4 class="product-name mb-1">{{ item.product.name }}</h4>
+                    <p class="product-description text-muted mb-0" *ngIf="item.product.description">
+                      {{ item.product.description }}
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td class="text-center align-middle">
+                <span class="badge bg-secondary">{{ item.quantity }}</span>
+              </td>
+              <td class="text-end align-middle">{{ formatAmount(item.product.price) }}</td>
+              <td class="text-end align-middle">
+                <strong>{{ formatAmount(calculateItemTotal(item.product.price, item.quantity)) }}</strong>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot class="table-light">
+            <tr>
+              <td colspan="3" class="text-end">Sous-total</td>
+              <td class="text-end"><strong>{{ formatAmount(order && order.subtotal) }}</strong></td>
+            </tr>
+            <tr>
+              <td colspan="3" class="text-end">Frais de livraison</td>
+              <td class="text-end"><strong>{{ formatAmount(order && order.shippingFee) }}</strong></td>
+            </tr>
+            <tr class="table-active">
+              <td colspan="3" class="text-end"><strong>Total</strong></td>
+              <td class="text-end"><strong>{{ formatAmount(order && order.total) }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Notes et commentaires -->
+    <div class="info-card" *ngIf="order.notes">
+      <h2 class="card-title">
+        <i class="bi bi-chat-left-text me-2"></i>
+        Notes
+      </h2>
+      <p class="mb-0">{{ order.notes }}</p>
+    </div>
+  </div>
+
+  <!-- Barre d'actions fixe pour les commandes en cours -->
+  <div class="action-bar" *ngIf="order && order.status === 'en_cours'">
+    <div class="container">
+      <div class="action-bar-content">
+        <div class="order-summary">
+          <div class="status">
+            <span class="status-badge" [ngClass]="getStatusBadgeClass(order.status)">
+              <i class="bi bi-hourglass-split me-2"></i>
+              {{ getStatusLabel(order.status) }}
+            </span>
+          </div>
+          <div class="total">
+            Total: <strong>{{ formatAmount(order.total) }}</strong>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-outline-secondary me-3" (click)="goBack()">
+            <i class="bi bi-arrow-left me-2"></i>
+            Retour
+          </button>
+          <button class="btn btn-danger me-2" (click)="rejectOrder()">
+            <i class="bi bi-x-lg me-2"></i>
+            Rejeter la commande
+          </button>
+          <button class="btn btn-success" (click)="validateOrder()">
+            <i class="bi bi-check-lg me-2"></i>
+            Valider la commande
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bouton de retour pour les commandes déjà traitées -->
+  <div class="floating-back-button" *ngIf="order && order.status !== 'en_cours'">
+    <button class="btn btn-outline-secondary" (click)="goBack()">
+      <i class="bi bi-arrow-left me-2"></i>
+      Retour aux commandes
+    </button>
+  </div>
+</div>

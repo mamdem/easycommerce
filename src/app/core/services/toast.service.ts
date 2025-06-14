@@ -1,66 +1,41 @@
 import { Injectable } from '@angular/core';
-import { ToastrService } from 'ngx-toastr';
+import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ToastService {
+  constructor(private snackBar: MatSnackBar) {}
 
-  constructor(private toastr: ToastrService) {}
+  private showMessage(message: string, type: 'success' | 'error' | 'info' | 'warning', title?: string, duration: number = 3000): void {
+    const config: MatSnackBarConfig = {
+      duration: duration,
+      horizontalPosition: 'end',
+      verticalPosition: 'top',
+      panelClass: [`toast-${type}`]
+    };
 
-  /**
-   * Affiche une notification de succès
-   * @param message Le message à afficher
-   * @param title Le titre de la notification (optionnel)
-   */
-  success(message: string, title: string = 'Succès') {
-    this.toastr.success(message, title, {
-      timeOut: 3000,
-      positionClass: 'toast-top-right',
-      progressBar: true,
-      closeButton: true
-    });
+    const displayMessage = title ? `${title}: ${message}` : message;
+    this.snackBar.open(displayMessage, 'Fermer', config);
   }
 
-  /**
-   * Affiche une notification d'erreur
-   * @param message Le message à afficher
-   * @param title Le titre de la notification (optionnel)
-   */
-  error(message: string, title: string = 'Erreur') {
-    this.toastr.error(message, title, {
-      timeOut: 5000,
-      positionClass: 'toast-top-right',
-      progressBar: true,
-      closeButton: true
-    });
+  show(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info'): void {
+    this.showMessage(message, type);
   }
 
-  /**
-   * Affiche une notification d'information
-   * @param message Le message à afficher
-   * @param title Le titre de la notification (optionnel)
-   */
-  info(message: string, title: string = 'Information') {
-    this.toastr.info(message, title, {
-      timeOut: 3000,
-      positionClass: 'toast-top-right',
-      progressBar: true,
-      closeButton: true
-    });
+  success(message: string, title?: string): void {
+    this.showMessage(message, 'success', title);
   }
 
-  /**
-   * Affiche une notification d'avertissement
-   * @param message Le message à afficher
-   * @param title Le titre de la notification (optionnel)
-   */
-  warning(message: string, title: string = 'Attention') {
-    this.toastr.warning(message, title, {
-      timeOut: 4000,
-      positionClass: 'toast-top-right',
-      progressBar: true,
-      closeButton: true
-    });
+  error(message: string, title?: string): void {
+    this.showMessage(message, 'error', title);
+  }
+
+  warning(message: string, title?: string): void {
+    this.showMessage(message, 'warning', title);
+  }
+
+  info(message: string, title?: string): void {
+    this.showMessage(message, 'info', title);
   }
 } 

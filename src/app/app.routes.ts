@@ -10,6 +10,9 @@ export const routes: Routes = [
     path: 'boutique/:storeUrl',
     loadChildren: () => import('./store/pages/store-home/store-home.module').then(m => m.StoreHomeModule)
   },
-  { path: 'dashboard', loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent) },
+  { 
+    path: 'dashboard',
+    loadChildren: () => import('./pages/dashboard/dashboard.module').then(m => m.DashboardModule)
+  },
   { path: '**', redirectTo: '/home' }
 ];

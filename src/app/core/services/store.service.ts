@@ -75,6 +75,31 @@ export class StoreService {
   storeSettings$ = this.storeSettingsSource.asObservable();
   private selectedStore: Store | null = null;
 
+  private readonly storeData: Store = {
+    id: '1',
+    ownerId: 'owner123',
+    legalName: 'EasyCommerce SARL',
+    storeName: 'EasyCommerce',
+    storeDescription: 'Votre boutique en ligne facile et rapide',
+    storeCategory: 'E-commerce',
+    email: 'contact@easycommerce.fr',
+    phoneNumber: '+33 1 23 45 67 89',
+    address: '123 Rue du Commerce',
+    city: 'Paris',
+    country: 'France',
+    zipCode: '75001',
+    latitude: 48.856614,
+    longitude: 2.3522219,
+    logoUrl: '/assets/images/logo.png',
+    bannerUrl: '/assets/images/banner.jpg',
+    primaryColor: '#2196f3',
+    secondaryColor: '#1976d2',
+    taxId: 'FR123456789',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    status: 'active'
+  };
+
   constructor(
     private authService: AuthService,
     private toastService: ToastService,
@@ -253,19 +278,20 @@ export class StoreService {
    * Récupère les paramètres de la boutique pour l'utilisateur courant
    */
   getStoreSettings(): Observable<StoreSettings[]> {
+    console.log('Début de getStoreSettings');
     return this.authService.user$.pipe(
       switchMap(user => {
+        console.log('User dans getStoreSettings:', user);
         if (!user) {
+          console.log('Pas d\'utilisateur, retour tableau vide');
           return of([]);
         }
         
-        console.log('User:', user);
-        
-        // Accéder à la sous-collection "Stores" pour cet utilisateur
-        return this.firestore.collection('stores').doc(user.uid).collection('userStores')
+        // Accéder à la collection stores/{userId}/userStores
+        return this.firestore.collection(`stores/${user.uid}/userStores`)
           .valueChanges({ idField: 'id' }).pipe(
             map(stores => {
-              console.log('Boutiques trouvées:', stores);
+              console.log('Boutiques trouvées dans Firestore:', stores);
               if (stores && stores.length > 0) {
                 // Cast pour assurer la compatibilité avec l'interface StoreSettings
                 const typedStores = stores as unknown as StoreSettings[];
@@ -273,6 +299,7 @@ export class StoreService {
                 this.storeSettingsSource.next(typedStores[0]);
                 return typedStores;
               }
+              console.log('Aucune boutique trouvée');
               return [];
             }),
             catchError(error => {
@@ -466,22 +493,27 @@ export class StoreService {
   }
 
   getStoreById(storeId: string): Observable<StoreSettings | null> {
+    console.log('Début de getStoreById avec storeId:', storeId);
     return this.authService.user$.pipe(
       switchMap(user => {
+        console.log('User dans getStoreById:', user);
         if (!user) {
+          console.log('Pas d\'utilisateur, retour null');
           return of(null);
         }
         
-        // Accéder directement au document de la boutique dans la sous-collection Stores
-        return this.firestore.collection('stores').doc(user.uid).collection('userStores').doc(storeId)
+        // Accéder directement au document de la boutique dans la collection stores/{userId}/userStores
+        return this.firestore.collection(`stores/${user.uid}/userStores`).doc(storeId)
           .valueChanges().pipe(
             map(store => {
+              console.log('Boutique trouvée dans Firestore:', store);
               if (store) {
                 // Cast pour assurer la compatibilité avec l'interface StoreSettings
                 const typedStore = store as unknown as StoreSettings;
                 this.storeSettingsSource.next(typedStore);
                 return typedStore;
               }
+              console.log('Aucune boutique trouvée avec cet ID');
               return null;
             }),
             catchError(error => {
@@ -530,13 +562,42 @@ export class StoreService {
   /**
    * Récupère toutes les boutiques de l'utilisateur
    */
-  getUserStores(): Observable<Store[]> {
-    return from(Promise.resolve(this.authService.getCurrentUser())).pipe(
+  getUserStores(): Observable<StoreSettings[]> {
+    console.log('Récupération des boutiques de l\'utilisateur...');
+    return this.authService.user$.pipe(
       switchMap(user => {
-        if (!user) return of([]);
-        return this.firestore.collection<Store>('stores', ref => 
-          ref.where('ownerId', '==', user.uid)
-        ).valueChanges({ idField: 'id' });
+        if (!user) {
+          console.log('Aucun utilisateur connecté');
+          return of([]);
+        }
+        
+        console.log('Utilisateur connecté:', user.uid);
+        return this.firestore
+          .collection<StoreSettings>('stores')
+          .doc(user.uid)
+          .collection('userStores')
+          .valueChanges({ idField: 'id' })
+          .pipe(
+            map(stores => {
+              // Cast explicite vers StoreSettings[]
+              const typedStores = stores as unknown as StoreSettings[];
+              console.log('Boutiques trouvées:', typedStores);
+              
+              if (typedStores.length > 0) {
+                // Mettre à jour la boutique active si aucune n'est sélectionnée
+                const currentStore = this.storeSettingsSource.getValue();
+                if (!currentStore) {
+                  this.storeSettingsSource.next(typedStores[0]);
+                }
+              }
+              
+              return typedStores;
+            }),
+            catchError(error => {
+              console.error('Erreur lors de la récupération des boutiques:', error);
+              return of([]);
+            })
+          );
       })
     );
   }
@@ -635,5 +696,15 @@ export class StoreService {
     await this.updateStore(storeId, { logoUrl: uploadResult });
     
     return uploadResult;
+  }
+
+  getStoreInfo(): Observable<Store> {
+    // Simuler un appel API avec un délai de 500ms
+    return new Observable<Store>(observer => {
+      setTimeout(() => {
+        observer.next(this.storeData);
+        observer.complete();
+      }, 500);
+    });
   }
 } 

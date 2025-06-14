@@ -54,7 +54,8 @@
         <app-product-card 
           *ngFor="let product of products"
           [product]="product"
-          (addToCart)="onAddToCart($event)">
+          [storeUrl]="storeUrl"
+          [storeName]="storeName">
         </app-product-card>
       </div>
     </main>

@@ -16,6 +16,19 @@
       </div>
       
       <div class="navbar-end">
+        <!-- Sélecteur de boutiques -->
+        <div class="store-selector" *ngIf="isAuthenticated()">
+          <select class="form-select" (change)="onStoreSelect($event)" [disabled]="loading">
+            <option disabled selected *ngIf="!selectedStore">Sélectionner une boutique</option>
+            <option *ngFor="let store of userStores" 
+                    [value]="store.id" 
+                    [selected]="store.id === selectedStore?.id">
+              {{ store.storeName || store.legalName || 'Boutique sans nom' }}
+            </option>
+            <option value="new" class="new-store-option">+ Créer une nouvelle boutique</option>
+          </select>
+        </div>
+
         <div class="user-info" *ngIf="isAuthenticated()">
           <span class="user-name">{{ getUserName() }}</span>
           <div class="avatar">
@@ -30,3 +43,159 @@
     </div>
   </div>
 </nav>
+
+<style>
+.navbar {
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 0.75rem 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+.navbar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: var(--primary-color, #4f46e5);
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.navbar-menu {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.navbar-start, .navbar-end {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.navbar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: #4b5563;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.navbar-item:hover {
+  background: rgba(var(--primary-color-rgb, 79, 70, 229), 0.1);
+  color: var(--primary-color, #4f46e5);
+}
+
+.store-selector {
+  min-width: 200px;
+}
+
+.form-select {
+  width: 100%;
+  padding: 0.5rem 2.5rem 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background-color: white;
+  font-size: 0.875rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.form-select:hover {
+  border-color: var(--primary-color, #4f46e5);
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--primary-color, #4f46e5);
+  box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb, 79, 70, 229), 0.2);
+}
+
+.new-store-option {
+  color: var(--primary-color, #4f46e5);
+  font-weight: 600;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #374151;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.logout-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  color: #ef4444;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.logout-button:hover {
+  background: #fef2f2;
+}
+
+@media (max-width: 768px) {
+  .navbar-container {
+    padding: 0 0.5rem;
+  }
+
+  .brand-logo span,
+  .navbar-item span,
+  .user-name,
+  .logout-button span {
+    display: none;
+  }
+
+  .store-selector {
+    min-width: 150px;
+  }
+
+  .navbar-menu {
+    gap: 1rem;
+  }
+}
+</style>

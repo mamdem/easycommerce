@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CustomerInfo } from '../../../core/services/order.service';
+import { CustomerInfo } from '../../../core/models/order.model';
 
 @Component({
   selector: 'app-order-form',

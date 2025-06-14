@@ -8,7 +8,12 @@ import { Product } from '../../../core/models/product.model';
 @Component({
   selector: 'app-store-products',
   standalone: true,
-  imports: [CommonModule, MatProgressSpinnerModule, MatButtonModule, ProductCardComponent],
+  imports: [
+    CommonModule, 
+    MatProgressSpinnerModule, 
+    MatButtonModule, 
+    ProductCardComponent
+  ],
   template: `
     <div class="store-products">
       <div *ngIf="loading" class="loading-container">
@@ -24,7 +29,9 @@ import { Product } from '../../../core/models/product.model';
         <div *ngFor="let product of products" class="product-card-container">
           <app-product-card
             [product]="mapToProductCard(product)"
-            (addToCart)="onAddToCart($event)">
+            [storeUrl]="storeUrl"
+            [storeName]="storeName"
+            (addToCart)="onAddToCart(product)">
           </app-product-card>
         </div>
       </div>
@@ -74,7 +81,8 @@ import { Product } from '../../../core/models/product.model';
   `]
 })
 export class StoreProductsComponent implements OnInit {
-  @Input() storeId!: string;
+  @Input() storeUrl!: string;
+  @Input() storeName!: string;
   @Input() products: Product[] = [];
   @Input() loading: boolean = true;
 
@@ -89,8 +97,7 @@ export class StoreProductsComponent implements OnInit {
     };
   }
 
-  onAddToCart(product: Product) {
-    // TODO: Implémenter la logique du panier
-    console.log('Produit ajouté au panier:', product);
+  onAddToCart(product: Product): void {
+    // Gérer l'ajout au panier si nécessaire
   }
 } 

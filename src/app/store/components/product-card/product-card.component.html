@@ -1,0 +1,39 @@
+<div class="product-card" [class.out-of-stock]="product.stock === 0">
+  <div class="product-image">
+    <img [src]="product.images[0] || 'assets/default-product.svg'" 
+         [alt]="product.name"
+         (error)="onImageError($event)">
+    
+    <div class="product-badges" *ngIf="product.discountPrice && product.discountPrice < product.price">
+      <div class="discount-badge">
+        <i class="bi bi-tag-fill"></i>
+        -{{ getDiscountPercentage() }}%
+      </div>
+    </div>
+
+    <button class="cart-icon" 
+            (click)="onAddToCartClick()"
+            [class.in-cart]="isInCart"
+            [disabled]="isInCart || product.stock === 0">
+      <i class="bi" [class.bi-cart-plus]="!isInCart" [class.bi-cart-check]="isInCart"></i>
+    </button>
+  </div>
+
+  <div class="product-info">
+    <span class="category-tag" *ngIf="product.category">
+      <i class="bi bi-bookmark"></i>
+      {{ product.category }}
+    </span>
+
+    <h3 class="product-name">{{ product.name }}</h3>
+    
+    <div class="product-price">
+      <span class="current-price" [class.discounted]="product.discountPrice && product.discountPrice < product.price">
+        {{ product.price | number:'1.0-0' }} FCFA
+      </span>
+      <span class="discount-price" *ngIf="product.discountPrice && product.discountPrice < product.price">
+        {{ product.discountPrice | number:'1.0-0' }} FCFA
+      </span>
+    </div>
+  </div>
+</div> 

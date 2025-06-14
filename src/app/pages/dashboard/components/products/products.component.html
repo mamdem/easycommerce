@@ -1,9 +1,16 @@
-<div class="products-container">
   <!-- En-tête avec actions -->
-  <div class="header-actions">
-    <div class="left-actions">
-      <h1 class="mb-0">Produits</h1>
-      <button class="btn btn-primary" 
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <div class="d-flex align-items-center gap-3">
+    <div class="section-icon">
+      <i class="bi bi-box-seam"></i>
+    </div>
+    <div>
+      <h1 class="h2 mb-0">Gestion des produits</h1>
+      <p class="text-muted mb-0">Gérez votre catalogue de produits</p>
+    </div>
+  </div>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <button class="btn btn-sm btn-outline-primary me-2" 
               (click)="addProduct()" 
               [disabled]="actionLoading">
         <span class="spinner-border spinner-border-sm me-2" 
@@ -11,40 +18,176 @@
         <i class="bi bi-plus-lg" *ngIf="!actionLoading"></i>
         Ajouter un produit
       </button>
+  </div>
     </div>
     
-    <div class="right-actions">
-      <!-- Barre de recherche -->
-      <div class="search-bar">
+<!-- Gestion des catégories -->
+<div class="categories-management mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="section-header">
+      <h3 class="h5 mb-1">
+        <i class="bi bi-tags me-2"></i>
+        Catégories
+      </h3>
+      <p class="text-muted mb-0 small">Gérez les catégories de vos produits</p>
+    </div>
+    <button class="btn btn-sm btn-outline-secondary" 
+            (click)="toggleCategoryForm()"
+            [disabled]="actionLoading">
+      <i class="bi" [ngClass]="showCategoryForm ? 'bi-x-lg' : 'bi-plus-lg'"></i>
+      {{ showCategoryForm ? 'Annuler' : 'Ajouter' }}
+    </button>
+  </div>
+
+  <!-- Formulaire d'ajout/modification de catégorie -->
+  <div class="category-form bg-light p-3 rounded mb-4" *ngIf="showCategoryForm">
+    <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
+      <div class="mb-3">
+        <label for="categoryName" class="form-label small">
+          {{ editingCategoryId ? 'Modifier la catégorie' : 'Nouvelle catégorie' }}
+        </label>
         <input type="text" 
-               class="form-control" 
-               [(ngModel)]="searchTerm"
-               (ngModelChange)="onSearch()"
-               [disabled]="loading"
-               placeholder="Rechercher un produit...">
-        <i class="bi" [ngClass]="loading ? 'bi-hourglass-split' : 'bi-search'"></i>
+               class="form-control form-control-sm" 
+               id="categoryName" 
+               formControlName="name" 
+               placeholder="Ex: Électronique"
+               [attr.aria-label]="editingCategoryId ? 'Modifier le nom de la catégorie' : 'Nom de la nouvelle catégorie'">
+        <div class="form-text text-danger small" 
+             *ngIf="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched">
+          Le nom de la catégorie est requis (minimum 2 caractères)
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="categoryDescription" class="form-label small">Description (optionnelle)</label>
+        <textarea class="form-control form-control-sm" 
+                  id="categoryDescription" 
+                  formControlName="description" 
+                  rows="2"
+                  placeholder="Description de la catégorie"></textarea>
+      </div>
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" 
+                class="btn btn-sm btn-outline-secondary"
+                (click)="cancelEditing()"
+                [disabled]="actionLoading">
+          Annuler
+        </button>
+        <button type="submit" 
+                class="btn btn-sm btn-primary"
+                [disabled]="categoryForm.invalid || actionLoading">
+          <span class="spinner-border spinner-border-sm me-1" *ngIf="actionLoading"></span>
+          {{ editingCategoryId ? 'Enregistrer' : 'Ajouter' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Liste des catégories -->
+  <div class="categories-container position-relative">
+    <!-- Bouton de défilement gauche -->
+    <button class="scroll-button scroll-left" (click)="scrollCategories('left')" #scrollLeftBtn>
+      <i class="bi bi-chevron-left"></i>
+    </button>
+
+    <!-- Liste des catégories -->
+    <div class="categories-grid" #categoriesContainer>
+      <!-- Carte "Voir tout" -->
+      <div class="category-card view-all" 
+           *ngIf="(categories$ | async)?.length"
+           [class.active]="!selectedCategory"
+           (click)="filterByCategory(null)">
+        <div class="category-icon">
+          <i class="bi bi-grid"></i>
+        </div>
+        <div class="category-content">
+          <h4 class="category-name">Voir tout</h4>
+          <div class="category-description-wrapper">
+            <p class="category-description text-muted mb-0">
+              Afficher tous les produits
+            </p>
+          </div>
+        </div>
       </div>
 
-      <!-- Sélecteur de catégorie -->
+      <!-- Cartes des catégories -->
+      <div class="category-card" 
+           *ngFor="let category of categories$ | async"
+           [class.active]="selectedCategory === category.id"
+           (click)="filterByCategory(category)">
+        <div class="category-icon">
+          <i class="bi bi-folder"></i>
+        </div>
+        <div class="category-content">
+          <h4 class="category-name">{{ category.name }}</h4>
+          <div class="category-description-wrapper">
+            <p class="category-description text-muted mb-0" [class.empty]="!category.description">
+              {{ category.description || 'Aucune description' }}
+            </p>
+          </div>
+        </div>
+        <div class="category-actions">
+          <button class="btn btn-icon btn-light" 
+                  (click)="startEditingCategory(category); $event.stopPropagation()"
+                  [disabled]="actionLoading"
+                  title="Modifier la catégorie">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-icon btn-light text-danger" 
+                  (click)="deleteCategory(category); $event.stopPropagation()"
+                  [disabled]="actionLoading"
+                  title="Supprimer la catégorie">
+            <i class="bi" [ngClass]="actionLoading ? 'spinner-border spinner-border-sm' : 'bi-trash'"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bouton de défilement droit -->
+    <button class="scroll-button scroll-right" (click)="scrollCategories('right')" #scrollRightBtn>
+      <i class="bi bi-chevron-right"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Filtres et recherche -->
+<div class="filters-section">
+  <div class="search-box">
+    <div class="input-group">
+      <span class="input-group-text border-0 bg-light">
+        <i class="bi bi-search"></i>
+      </span>
+      <input 
+        type="text" 
+        class="form-control border-0 bg-light" 
+        placeholder="Rechercher un produit..." 
+               [(ngModel)]="searchTerm"
+        (ngModelChange)="onSearch()">
+      <button 
+        *ngIf="searchTerm" 
+        class="btn btn-link text-secondary border-0" 
+        (click)="clearSearch()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+      </div>
+
       <div class="category-selector">
         <select class="form-select" 
                 [(ngModel)]="selectedCategory" 
                 (ngModelChange)="onCategoryChange($event)"
                 [disabled]="loading">
           <option [ngValue]="null">Toutes les catégories</option>
-          <option *ngFor="let category of categories" [value]="category">
-            {{ category }}
+          <option *ngFor="let category of categories$ | async" [value]="category.id">
+            {{ category.name }}
           </option>
         </select>
       </div>
 
-      <!-- Toggle vue grille/liste -->
       <button class="btn btn-outline-secondary" 
               (click)="toggleViewMode()"
               [disabled]="loading">
         <i class="bi" [ngClass]="viewMode === 'grid' ? 'bi-list' : 'bi-grid'"></i>
       </button>
-    </div>
   </div>
 
   <!-- Message de chargement -->
@@ -108,7 +251,7 @@
         <!-- Informations du produit -->
         <div class="product-info">
           <h3 class="product-name">{{ product.name }}</h3>
-          <p class="product-category">{{ product.category }}</p>
+          <p class="product-category">{{ getCategoryName(product.category) }}</p>
           
           <div class="product-price">
             <span class="current-price" [class.discounted]="product.discountPrice && product.discountPrice < product.price">
@@ -132,6 +275,70 @@
       </div>
     </div>
   </ng-container>
+
+<!-- Popup de confirmation -->
+<div class="simple-popup" *ngIf="showConfirmPopup" [@fadeInOut]>
+  <div class="popup-content">
+    <button class="close-btn" (click)="closeConfirmPopup()">
+      <i class="bi bi-x"></i>
+    </button>
+    
+    <div class="popup-body">
+      <h3>{{ confirmTitle }}</h3>
+      <p>{{ confirmMessage }}</p>
+      
+      <div class="popup-actions">
+        <button class="btn btn-light" (click)="closeConfirmPopup()">
+          {{ confirmCancelText }}
+        </button>
+        <button [class]="'btn btn-' + confirmType" (click)="confirmAction()">
+          {{ confirmActionText }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup pour toutes les catégories -->
+<div class="simple-popup" *ngIf="showAllCategoriesPopup" [@fadeInOut]>
+  <div class="popup-content categories-popup">
+    <button class="close-btn" (click)="closeAllCategoriesPopup()">
+      <i class="bi bi-x"></i>
+    </button>
+    
+    <div class="popup-body">
+      <h3>Toutes les catégories</h3>
+      
+      <div class="categories-list">
+        <div class="category-item" 
+             *ngFor="let category of categories$ | async"
+             [class.active]="selectedCategory === category.id"
+             (click)="selectCategoryAndClose(category)">
+          <div class="category-icon">
+            <i class="bi bi-folder"></i>
+          </div>
+          <div class="category-info">
+            <h4>{{ category.name }}</h4>
+            <p class="text-muted mb-0">{{ category.description || 'Aucune description' }}</p>
+          </div>
+          <div class="category-actions">
+            <button class="btn btn-icon btn-light" 
+                    (click)="startEditingCategory(category); $event.stopPropagation(); closeAllCategoriesPopup()"
+                    [disabled]="actionLoading"
+                    title="Modifier la catégorie">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-icon btn-light text-danger" 
+                    (click)="deleteCategory(category); $event.stopPropagation(); closeAllCategoriesPopup()"
+                    [disabled]="actionLoading"
+                    title="Supprimer la catégorie">
+              <i class="bi" [ngClass]="actionLoading ? 'spinner-border spinner-border-sm' : 'bi-trash'"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -370,6 +577,67 @@
 
   .list-view .product-image {
     width: 100%;
+  }
+}
+
+/* Nouveaux styles pour la gestion des catégories */
+.categories-management {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.category-form {
+  border: 1px solid #e9ecef;
+}
+
+.category-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.category-card:hover {
+  background: #e9ecef;
+}
+
+.category-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.category-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.category-description {
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-actions {
+  margin-left: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .categories-management {
+    padding: 1rem;
+  }
+
+  .category-form {
+    padding: 1rem;
   }
 }
 </style> 

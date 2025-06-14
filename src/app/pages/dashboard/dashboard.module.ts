@@ -3,6 +3,10 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared.module';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 
 import { DashboardRoutingModule } from './dashboard-routing.module';
 import { DashboardComponent } from './dashboard.component';
@@ -13,7 +17,9 @@ import { SettingsComponent } from './components/settings/settings.component';
 import { CustomersComponent } from './components/customers/customers.component';
 import { StatisticsComponent } from './components/statistics/statistics.component';
 import { OrdersComponent } from './components/orders/orders.component';
+import { OrderDetailsComponent } from './components/orders/order-details/order-details.component';
 import { OverviewComponent } from './components/overview/overview.component';
+import { RejectOrderDialogComponent } from './components/orders/reject-order-dialog/reject-order-dialog.component';
 
 @NgModule({
   declarations: [
@@ -21,11 +27,9 @@ import { OverviewComponent } from './components/overview/overview.component';
     ProductsComponent,
     AddProductComponent,
     EditProductComponent,
-    SettingsComponent,
     StatisticsComponent,
     OverviewComponent,
-    OrdersComponent,
-    CustomersComponent
+    OrdersComponent
   ],
   imports: [
     CommonModule,
@@ -34,26 +38,14 @@ import { OverviewComponent } from './components/overview/overview.component';
     ReactiveFormsModule,
     DashboardRoutingModule,
     SharedModule,
-    RouterModule.forChild([
-      {
-        path: '',
-        component: DashboardComponent,
-        children: [
-          {
-            path: 'products',
-            component: ProductsComponent
-          },
-          {
-            path: 'products/add',
-            component: AddProductComponent
-          },
-          {
-            path: 'products/edit/:id',
-            component: EditProductComponent
-          }
-        ]
-      }
-    ])
+    MatDialogModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    OrderDetailsComponent,
+    RejectOrderDialogComponent,
+    CustomersComponent,
+    SettingsComponent
   ]
 })
 export class DashboardModule { }

@@ -78,27 +78,11 @@ export class ProductService {
    * Récupère les produits d'une boutique
    */
   getStoreProducts(storeId: string): Observable<Product[]> {
-    // Extraire l'ID de l'utilisateur du storeId
-    const userId = storeId.split('_')[0];
-    
-    console.log('Recherche des produits pour la boutique:', storeId);
-    console.log('UserId:', userId);
-
     return this.firestore
-      .collection('stores')
-      .doc(userId)
-      .collection('userStores')
-      .doc(storeId)
-      .collection<Product>('products', ref => 
+      .collection<Product>(`${this.getProductsPath(storeId)}`, ref => 
         ref.orderBy('createdAt', 'desc')
       )
-      .valueChanges({ idField: 'id' })
-      .pipe(
-        map(products => {
-          console.log('Produits trouvés:', products);
-          return products;
-        })
-      );
+      .valueChanges({ idField: 'id' });
   }
 
   /**
@@ -179,22 +163,24 @@ export class ProductService {
    * Recherche des produits par nom ou description
    */
   searchProducts(storeId: string, query: string): Observable<Product[]> {
-    return this.firestore
-      .collection<Product>(this.getProductsPath(storeId), ref => 
-        ref.orderBy('name')
-           .startAt(query.toLowerCase())
-           .endAt(query.toLowerCase() + '\uf8ff')
-      )
-      .valueChanges({ idField: 'id' });
+    return this.getStoreProducts(storeId).pipe(
+      map(products => {
+        const searchLower = query.toLowerCase();
+        return products.filter(product =>
+          product.name.toLowerCase().includes(searchLower) ||
+          product.description.toLowerCase().includes(searchLower)
+        );
+      })
+    );
   }
 
   /**
    * Filtre les produits par catégorie
    */
-  getProductsByCategory(storeId: string, category: string): Observable<Product[]> {
+  getProductsByCategory(storeId: string, categoryId: string): Observable<Product[]> {
     return this.firestore
       .collection<Product>(this.getProductsPath(storeId), ref => 
-        ref.where('category', '==', category)
+        ref.where('categoryId', '==', categoryId)
            .orderBy('createdAt', 'desc')
       )
       .valueChanges({ idField: 'id' });

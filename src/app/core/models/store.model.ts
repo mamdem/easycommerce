@@ -21,4 +21,7 @@ export interface Store {
   createdAt: number;
   updatedAt: number;
   status?: 'active' | 'inactive' | 'pending';
+  openingHours?: {
+    [key: string]: string; // Format: "Lundi": "9h00 - 18h00"
+  };
 } 

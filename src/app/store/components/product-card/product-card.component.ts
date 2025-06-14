@@ -1,208 +1,61 @@
-import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Product } from '../../../core/models/product.model';
 import { CartService } from '../../../core/services/cart.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-product-card',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div class="product-card">
-      <div class="product-image">
-        <img [src]="product.images[0] || 'assets/default-product.svg'" 
-             [alt]="product.name"
-             (error)="onImageError($event)">
-        
-        <div class="discount-badge" *ngIf="product.discountPrice && product.discountPrice < product.price">
-          -{{ getDiscountPercentage() }}%
-        </div>
-      </div>
-
-      <div class="product-info">
-        <h3 class="product-name">{{ product.name }}</h3>
-        <p class="product-category">{{ product.category }}</p>
-        
-        <div class="product-price">
-          <span class="current-price" [class.discounted]="product.discountPrice && product.discountPrice < product.price">
-            {{ product.price | number:'1.0-0' }} FCFA
-          </span>
-          <span class="discount-price" *ngIf="product.discountPrice && product.discountPrice < product.price">
-            {{ product.discountPrice | number:'1.0-0' }} FCFA
-          </span>
-        </div>
-
-        <div class="product-stock" [class.out-of-stock]="product.stock === 0">
-          <i class="bi" [class.bi-check-circle]="product.stock > 0" [class.bi-x-circle]="product.stock === 0"></i>
-          {{ product.stock > 0 ? product.stock + ' en stock' : 'Rupture de stock' }}
-        </div>
-
-        <button class="btn w-100" 
-                [class.in-cart]="isInCart"
-                (click)="onAddToCartClick()"
-                [disabled]="product.stock === 0">
-          <i class="bi" [class.bi-cart-plus]="!isInCart" [class.bi-cart-check]="isInCart"></i>
-          {{ isInCart ? 'Déjà dans le panier' : 'Ajouter au panier' }}
-        </button>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .product-card {
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .product-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
-    .product-image {
-      position: relative;
-      aspect-ratio: 1;
-      background: #f8f9fa;
-    }
-
-    .product-image img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .discount-badge {
-      position: absolute;
-      top: 1rem;
-      left: 1rem;
-      background: var(--store-primary-color);
-      color: white;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-weight: bold;
-    }
-
-    .product-info {
-      padding: 1rem;
-    }
-
-    .product-name {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin: 0;
-      color: var(--store-primary-color);
-    }
-
-    .product-category {
-      color: var(--store-secondary-color);
-      font-size: 0.9rem;
-      margin: 0.5rem 0;
-    }
-
-    .product-price {
-      margin: 0.5rem 0;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .current-price {
-      font-weight: 600;
-      font-size: 1.2rem;
-      color: var(--store-primary-color);
-    }
-
-    .current-price.discounted {
-      text-decoration: line-through;
-      color: var(--store-secondary-color);
-      font-size: 1rem;
-    }
-
-    .discount-price {
-      color: var(--store-primary-color);
-      font-weight: 600;
-      font-size: 1.2rem;
-    }
-
-    .product-stock {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: var(--store-primary-color);
-      font-size: 0.9rem;
-      margin-bottom: 1rem;
-    }
-
-    .product-stock.out-of-stock {
-      color: #dc3545;
-    }
-
-    .btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.75rem;
-      border: none;
-      border-radius: 6px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      background-color: var(--store-primary-color);
-      color: white;
-    }
-
-    .btn:hover:not(:disabled) {
-      background: var(--store-primary-dark);
-    }
-
-    .btn.in-cart {
-      background-color: var(--store-secondary-color);
-    }
-
-    .btn:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-    }
-  `]
+  templateUrl: './product-card.component.html',
+  styleUrls: ['./product-card.component.scss']
 })
-export class ProductCardComponent implements OnInit {
+export class ProductCardComponent implements OnInit, OnDestroy {
   @Input() product!: Product;
   @Input() storeUrl!: string;
-  @Output() addToCart = new EventEmitter<Product>();
+  @Input() storeName!: string;
+  @Output() addToCart = new EventEmitter<void>();
+  
   isInCart = false;
+  private cartStateSubscription?: Subscription;
 
   constructor(private cartService: CartService) {}
 
   ngOnInit() {
     this.checkIfInCart();
+    this.cartStateSubscription = this.cartService.cartState$.subscribe(() => {
+      this.checkIfInCart();
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.cartStateSubscription) {
+      this.cartStateSubscription.unsubscribe();
+    }
   }
 
   getDiscountPercentage(): number {
-    if (!this.product.discountPrice || !this.product.price) return 0;
-    return Math.round(((this.product.price - this.product.discountPrice) / this.product.price) * 100);
+    if (this.product.price && this.product.discountPrice) {
+      return Math.round(((this.product.price - this.product.discountPrice) / this.product.price) * 100);
+    }
+    return 0;
   }
 
   onImageError(event: Event): void {
     const img = event.target as HTMLImageElement;
-    if (img) {
-      img.src = 'assets/default-product.svg';
-    }
+    img.src = 'assets/default-product.svg';
   }
 
   checkIfInCart(): void {
     if (this.product.id && this.storeUrl) {
-      const cartItems = this.cartService.getCartItemsByStore(this.storeUrl);
-      this.isInCart = cartItems.some(item => item.product.id === this.product.id);
+      this.isInCart = this.cartService.isProductInCart(this.product.id, this.storeUrl);
     }
   }
 
   onAddToCartClick(): void {
     if (!this.isInCart) {
-      this.addToCart.emit(this.product);
-      this.isInCart = true;
+      this.addToCart.emit();
     }
   }
 } 

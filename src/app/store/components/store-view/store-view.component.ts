@@ -5,6 +5,9 @@ import { Product } from '../../../core/models/product.model';
 import { ToastService } from '../../../core/services/toast.service';
 import { CartService } from '../../../core/services/cart.service';
 import { CartComponent } from '../cart/cart.component';
+import { Store } from '../../../services/store.service';
+import { StoreService } from '../../../services/store.service';
+import { map } from 'rxjs/operators';
 
 @Component({
   selector: 'app-store-view',
@@ -15,7 +18,7 @@ export class StoreViewComponent implements OnInit {
   @ViewChild('cartComponent') cartComponent!: CartComponent;
   
   storeUrl: string = '';
-  storeData: any = null;
+  storeData: Store | null = null;
   products: Product[] = [];
   loading: boolean = true;
   error: string | null = null;
@@ -27,15 +30,14 @@ export class StoreViewComponent implements OnInit {
     private storeProductsService: StoreProductsService,
     private cartService: CartService,
     private toastService: ToastService,
-    private router: Router
+    private router: Router,
+    private storeService: StoreService
   ) {}
 
   ngOnInit() {
     this.route.params.subscribe(params => {
       this.storeUrl = params['storeUrl'];
-      this.storeName = params['storeName'];
-      this.loadStoreProducts();
-      this.updateCartCount();
+      this.loadStoreData();
     });
 
     this.cartService.cartItems$.subscribe(() => {
@@ -43,26 +45,46 @@ export class StoreViewComponent implements OnInit {
     });
   }
 
-  private updateCartCount() {
-    this.cartItemsCount = this.cartService.getCartItemsCount(this.storeUrl);
-  }
-
-  private loadStoreProducts() {
+  private loadStoreData() {
     this.loading = true;
-    this.error = null;
-
-    this.storeProductsService.getProductsByStoreUrl(this.storeUrl)
-      .subscribe({
-        next: (products) => {
-          this.products = products;
-          this.loading = false;
-        },
-        error: (err) => {
-          console.error('Erreur lors du chargement des produits:', err);
-          this.error = 'Une erreur est survenue lors du chargement des produits.';
+    this.storeService.getStores(this.storeUrl).pipe(
+      map(stores => stores.find(store => store.id === this.storeUrl))
+    ).subscribe({
+      next: (store: Store | undefined) => {
+        if (store) {
+          this.storeData = store;
+          this.storeName = store.name;
+          this.loadProducts();
+          this.updateCartCount();
+        } else {
+          this.error = 'Boutique non trouvée';
           this.loading = false;
         }
-      });
+      },
+      error: (error: Error) => {
+        console.error('Erreur lors du chargement de la boutique:', error);
+        this.error = 'Erreur lors du chargement de la boutique';
+        this.loading = false;
+      }
+    });
+  }
+
+  private loadProducts() {
+    this.storeProductsService.getProductsByStoreUrl(this.storeUrl).subscribe({
+      next: (products: Product[]) => {
+        this.products = products;
+        this.loading = false;
+      },
+      error: (error: Error) => {
+        console.error('Erreur lors du chargement des produits:', error);
+        this.error = 'Erreur lors du chargement des produits';
+        this.loading = false;
+      }
+    });
+  }
+
+  private updateCartCount() {
+    this.cartItemsCount = this.cartService.getCartItemsCount(this.storeUrl);
   }
 
   onImageError(event: Event) {
@@ -77,19 +99,8 @@ export class StoreViewComponent implements OnInit {
   }
 
   onAddToCart(product: Product) {
-    if (!product.id) {
-      this.toastService.error('Produit invalide');
-      return;
-    }
-
-    const cartProduct = {
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      imageUrl: product.imageUrl
-    };
-    
-    this.cartService.addToCart(cartProduct, this.storeUrl, this.storeName);
+    this.cartService.addToCart(product, this.storeUrl, this.storeName);
+    this.updateCartCount();
     this.toastService.success('Produit ajouté au panier');
   }
 

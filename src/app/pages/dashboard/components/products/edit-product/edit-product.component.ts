@@ -4,6 +4,7 @@ import { AddProductComponent } from '../add-product/add-product.component';
 import { ProductService } from '../../../../../core/services/product.service';
 import { StoreService } from '../../../../../core/services/store.service';
 import { ToastService } from '../../../../../core/services/toast.service';
+import { CategoryService } from '../../../../../core/services/category.service';
 import { FormBuilder } from '@angular/forms';
 import { Product } from '../../../../../core/models/product.model';
 import { firstValueFrom } from 'rxjs';
@@ -22,10 +23,11 @@ export class EditProductComponent extends AddProductComponent implements OnInit 
     protected override router: Router,
     protected override storeService: StoreService,
     protected override productService: ProductService,
+    protected override categoryService: CategoryService,
     protected override toastService: ToastService,
     private route: ActivatedRoute
   ) {
-    super(fb, router, storeService, productService, toastService);
+    super(fb, router, storeService, productService, categoryService, toastService);
   }
 
   override async ngOnInit(): Promise<void> {

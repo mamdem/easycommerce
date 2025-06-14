@@ -3,12 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { StoreService, StoreData } from '../../core/services/store.service';
+import { StoreService, StoreData, StoreSettings } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
 import { NavbarComponent } from '../../shared/navbar/navbar.component';
-import { map } from 'rxjs/operators';
+import { map, switchMap } from 'rxjs/operators';
 import { Store } from '../../core/models/store.model';
 import { User } from '../../core/services/auth.service';
+import { CartService } from '../../core/services/cart.service';
+import { Observable, of } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -37,7 +39,7 @@ export class DashboardComponent implements OnInit {
   };
   
   // Boutique sélectionnée
-  selectedStore: Store | null = null;
+  selectedStore: StoreSettings | null = null;
   selectedStoreId: string | null = null;
   loading: boolean = true;
   
@@ -65,24 +67,36 @@ export class DashboardComponent implements OnInit {
   hasStoreStatus: boolean = false;
 
   // Ajouter une propriété pour stocker les boutiques de l'utilisateur
-  userStores: Store[] = [];
+  userStores: StoreSettings[] = [];
 
   // Ajouter la propriété userMenuOpen
   userMenuOpen: boolean = false;
 
   currentUser: User | null = null;
 
+  cartItemsCount = 0;
+  storeUrl: string = '';
+
+  notificationsCount = 0;
+
   private authService = inject(AuthService);
   private storeService = inject(StoreService);
   private toastService = inject(ToastService);
   private router = inject(Router);
+  private cartService = inject(CartService);
 
   ngOnInit(): void {
     this.checkUserStatus();
     this.updateUserStatus();
     this.loadSelectedStore();
-    this.loadUserStores(); // Charger les boutiques de l'utilisateur
+    this.loadUserStores();
     this.loadUserData();
+    this.loadNotifications();
+
+    // S'abonner aux changements du panier
+    this.cartService.cartItems$.subscribe(items => {
+      this.cartItemsCount = items.reduce((total, item) => total + item.quantity, 0);
+    });
   }
   
   /**
@@ -331,30 +345,36 @@ export class DashboardComponent implements OnInit {
    * Charge toutes les boutiques de l'utilisateur
    */
   loadUserStores(): void {
-    console.log('Chargement des boutiques de l\'utilisateur...');
+    console.log('Chargement des boutiques dans le dashboard...');
     this.loading = true;
     
-    this.storeService.getStoreSettings().subscribe({
+    // Obtenir l'utilisateur courant
+    const currentUser = this.authService.getCurrentUser();
+    console.log('Utilisateur courant:', currentUser);
+
+    if (!currentUser) {
+      console.log('Aucun utilisateur connecté');
+      this.loading = false;
+      this.toastService.error('Utilisateur non connecté');
+      return;
+    }
+
+    // Utiliser getUserStores pour la cohérence avec la navbar
+    this.storeService.getUserStores().subscribe({
       next: (stores) => {
-        console.log('Boutiques récupérées:', stores);
-        this.userStores = stores as unknown as Store[];
+        console.log('Boutiques récupérées dans le dashboard:', stores);
+        this.userStores = stores;
         
-        // Si aucune boutique n'est sélectionnée mais qu'il y en a au moins une disponible
-        if (!this.selectedStore && stores.length > 0) {
-          // Vérifier s'il y a un ID de boutique sauvegardé
+        // Si aucune boutique n'est sélectionnée
+        if (!this.selectedStore) {
           const savedStoreId = localStorage.getItem('selectedStoreId');
+          console.log('ID de boutique sauvegardé:', savedStoreId);
           
-          if (savedStoreId) {
-            // Chercher la boutique sauvegardée parmi les boutiques disponibles
-            const savedStore = stores.find(store => store.id === savedStoreId);
-            if (savedStore) {
+          if (savedStoreId && stores.some(store => store.id === savedStoreId)) {
+            console.log('Sélection de la boutique sauvegardée:', savedStoreId);
               this.selectStore(savedStoreId);
-            } else {
-              // Si la boutique sauvegardée n'existe plus, sélectionner la première
-              this.selectStore(stores[0].id || '');
-            }
-          } else {
-            // Pas d'ID sauvegardé, sélectionner la première boutique
+          } else if (stores.length > 0) {
+            console.log('Sélection de la première boutique:', stores[0].id);
             this.selectStore(stores[0].id || '');
           }
         }
@@ -398,7 +418,7 @@ export class DashboardComponent implements OnInit {
       next: (store) => {
         if (store) {
           console.log('Boutique sélectionnée:', store);
-          this.selectedStore = store as unknown as Store;
+          this.selectedStore = store;
           this.selectedStoreId = storeId;
           
           // Sauvegarder l'ID pour les visites futures
@@ -475,9 +495,22 @@ export class DashboardComponent implements OnInit {
   onImageError(event: Event) {
     const img = event.target as HTMLImageElement;
     if (img.classList.contains('store-logo')) {
-      img.src = 'assets/default-store-logo.png';
+      img.src = 'assets/default-store-logo.svg';
     } else if (img.classList.contains('user-avatar')) {
-      img.src = 'assets/default-avatar.png';
+      img.src = 'assets/default-avatar.svg';
     }
+  }
+
+  /**
+   * Charge les notifications (à implémenter avec votre service de notifications)
+   */
+  private loadNotifications(): void {
+    // Exemple : définir un nombre fixe de notifications pour le moment
+    this.notificationsCount = 3;
+    
+    // TODO: Implémenter la logique réelle de chargement des notifications
+    // this.notificationService.getUnreadCount().subscribe(count => {
+    //   this.notificationsCount = count;
+    // });
   }
 } 

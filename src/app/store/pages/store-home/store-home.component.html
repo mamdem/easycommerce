@@ -1,198 +1,230 @@
-<!-- Menu de navigation fixe -->
-<nav class="store-nav" [style]="storeStyle">
-  <div class="nav-container">
-    <div class="nav-brand">
-      <button class="menu-toggle" (click)="toggleMenu()" *ngIf="isMobile">
-        <i class="bi bi-list"></i>
-      </button>
-      <img [src]="(store$ | async)?.logoUrl || 'assets/default-store-logo.png'" 
-           [alt]="(store$ | async)?.legalName" 
-           class="nav-logo">
-      <span class="nav-title">{{ (store$ | async)?.legalName }}</span>
-    </div>
+<app-store-navbar [store]="store$ | async" [storeUrl]="storeUrl" [storeStyle]="storeStyle"></app-store-navbar>
 
-    <!-- Menu desktop -->
-    <div class="nav-menu" *ngIf="!isMobile">
-      <a class="nav-link" href="#products">
-        <i class="bi bi-grid-3x3-gap-fill"></i>
-        Produits
-      </a>
-      <a class="nav-link" href="#categories">
-        <i class="bi bi-collection"></i>
-        Catégories
-      </a>
-      <a class="nav-link" href="#about">
-        <i class="bi bi-info-circle"></i>
-        À propos
-      </a>
-      <a class="btn btn-primary cart-btn" [routerLink]="['cart']">
-        <i class="bi bi-cart3"></i>
-        Panier
-        <span class="cart-count" *ngIf="cartItemsCount > 0">{{ cartItemsCount }}</span>
-      </a>
-    </div>
-  </div>
-</nav>
-
-<!-- Menu mobile drawer -->
-<div class="drawer-menu" [class.open]="isMenuOpen && isMobile" [style]="storeStyle">
-  <div class="drawer-content">
-    <div class="drawer-header">
-      <h3>Menu</h3>
-      <button (click)="closeMenu()">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
-    
-    <!-- Navigation principale -->
-    <div class="drawer-links">
-      <a href="#products" (click)="closeMenu()">
-        <i class="bi bi-grid-3x3-gap-fill"></i>
-        Produits
-      </a>
-      <a href="#categories" (click)="closeMenu()">
-        <i class="bi bi-collection"></i>
-        Catégories
-      </a>
-      <a (click)="viewCart(); closeMenu()">
-        <i class="bi bi-cart3"></i>
-        Panier
-        <span class="badge" *ngIf="cartItemsCount > 0">{{ cartItemsCount }}</span>
-      </a>
-    </div>
-
-    <!-- Séparateur -->
-    <div class="drawer-divider"></div>
-
-    <!-- Section À propos -->
-    <div class="drawer-about" *ngIf="store$ | async as store">
-      <h4>
-        <i class="bi bi-info-circle"></i>
-        À propos
-      </h4>
-      <p>{{ store.storeDescription }}</p>
-      <div class="about-contact">
-        <div class="contact-item">
-          <i class="bi bi-geo-alt"></i>
-          {{ store.city }}, {{ store.country }}
-        </div>
-        <div class="contact-item">
-          <i class="bi bi-telephone"></i>
-          {{ store.phoneNumber }}
-        </div>
-        <div class="contact-item">
-          <i class="bi bi-envelope"></i>
-          {{ store.email }}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="store-container" [style]="storeStyle">
+<!-- Contenu principal -->
+<main class="store-main" role="main">
   <!-- Message d'erreur -->
-  <div class="alert alert-danger" *ngIf="error">
+  <div class="alert alert-danger" 
+       *ngIf="error" 
+       role="alert"
+       aria-live="polite">
+    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
     {{ error }}
   </div>
 
   <!-- En-tête de la boutique -->
   <ng-container *ngIf="store$ | async as store">
-    <header class="store-header">
-      <div class="store-banner" [style.backgroundImage]="'url(' + (store.bannerUrl || 'assets/default-store-banner.svg') + ')'">
-        <div class="store-info">
-          <img [src]="store.logoUrl || 'assets/default-store-logo.png'" 
-               [alt]="store.legalName" 
-               class="store-logo">
-          <div class="store-details">
-            <h1>{{ store.legalName }}</h1>
-            <p>{{ store.storeDescription }}</p>
+    <header class="store-header" role="banner">
+      <div class="store-banner" 
+           [style.backgroundImage]="'url(' + (store.bannerUrl || 'assets/default-store-banner.svg') + ')'"
+           role="img" 
+           [attr.aria-label]="'Bannière de ' + store.legalName">
+        <div class="banner-overlay">
+          <div class="banner-content">
+            <div class="store-logo">
+              <img [src]="store.logoUrl || 'assets/default-store-logo.png'" 
+                   [alt]="store.legalName + ' logo'"
+                   loading="eager">
+            </div>
+            <div class="store-details">
+              <h1>{{ store.legalName }}</h1>
+              <p>{{ store.storeDescription }}</p>
+              <div class="store-badges" role="list">
+                <div class="badge" role="listitem">
+                  <i class="bi bi-geo-alt" aria-hidden="true"></i>
+                  <span>{{ store.city }}</span>
+                </div>
+                <div class="badge" role="listitem">
+                  <i class="bi bi-telephone" aria-hidden="true"></i>
+                  <span>{{ store.phoneNumber }}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </header>
 
-    <!-- Contenu principal -->
-    <main class="store-content">
-      <!-- Section À propos -->
-      <section id="about" class="store-section" *ngIf="!isMobile">
-        <div class="section-header">
-          <h2>À propos de la boutique</h2>
+    <!-- Section À propos -->
+    <section id="about" class="store-section" *ngIf="!isMobile">
+      <div class="section-header">
+        <h2>
+          <i class="bi bi-info-circle" aria-hidden="true"></i>
+          À propos de la boutique
+        </h2>
+      </div>
+      <div class="about-content">
+        <div class="store-description">
+          <p>{{ store.storeDescription }}</p>
         </div>
-        <div class="about-content">
-          <div class="store-description">
-            <p>{{ store.storeDescription }}</p>
+        <div class="store-info-grid" role="list">
+          <div class="info-item" role="listitem">
+            <i class="bi bi-geo-alt" aria-hidden="true"></i>
+            <span>{{ store.city }}, {{ store.country }}</span>
           </div>
-          <div class="store-info-grid">
-            <div class="info-item">
-              <i class="bi bi-geo-alt"></i>
-              <span>{{ store.city }}, {{ store.country }}</span>
+          <div class="info-item" role="listitem">
+            <i class="bi bi-telephone" aria-hidden="true"></i>
+            <span>{{ store.phoneNumber }}</span>
+          </div>
+          <div class="info-item" role="listitem">
+            <i class="bi bi-envelope" aria-hidden="true"></i>
+            <span>{{ store.email }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Produits avec Sidebar -->
+    <div class="store-content-wrapper">
+      <!-- Sidebar des catégories -->
+      <aside class="categories-sidebar" role="navigation" aria-label="Catégories de produits">
+        <div class="sidebar-header">
+          <h3>
+            <i class="bi bi-grid-3x3-gap-fill"></i>
+            Catégories
+          </h3>
+        </div>
+
+        <div class="categories-list">
+          <!-- Catégorie "Tous les produits" -->
+          <div class="category-item" 
+               [class.active]="!selectedCategory"
+               (click)="selectCategory(null)"
+               role="button"
+               tabindex="0">
+            <div class="category-icon">
+              <i class="bi bi-grid-3x3-gap"></i>
             </div>
-            <div class="info-item">
-              <i class="bi bi-telephone"></i>
-              <span>{{ store.phoneNumber }}</span>
+            <div class="category-info">
+              <span class="category-name">Tous les produits</span>
+              <span class="category-count" *ngIf="(products$ | async) as products">
+                ({{ products.length }})
+              </span>
             </div>
-            <div class="info-item">
-              <i class="bi bi-envelope"></i>
-              <span>{{ store.email }}</span>
+          </div>
+
+          <!-- Liste des catégories -->
+          <div class="category-item" 
+               *ngFor="let category of categories$ | async"
+               [class.active]="selectedCategory?.id === category.id"
+               (click)="selectCategory(category)"
+               role="button"
+               tabindex="0">
+            <div class="category-icon">
+              <i [class]="category.icon || 'bi bi-grid'"></i>
             </div>
+            <div class="category-info">
+              <span class="category-name">{{ category.name }}</span>
+              <span class="category-count" *ngIf="category.productCount">
+                ({{ category.productCount }})
+              </span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Section des produits -->
+      <section id="products" class="store-section products-section">
+        <div class="section-header">
+          <div class="header-main">
+            <h2>
+              <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
+              {{ selectedCategory?.name || 'Tous les produits' }}
+            </h2>
+            <div class="products-count" role="status" aria-live="polite">
+              {{ (filteredProducts$ | async)?.length || 0 }} produits
+            </div>
+          </div>
+          <div class="filters-bar">
+            <div class="search-box">
+              <i class="bi bi-search" aria-hidden="true"></i>
+              <input type="text" 
+                     [(ngModel)]="searchQuery" 
+                     (ngModelChange)="onSearch()"
+                     placeholder="Rechercher un produit..."
+                     [attr.aria-label]="'Rechercher un produit'">
+            </div>
+            
+            <!-- Filtre de prix -->
+            <div class="price-filter">
+              <div class="price-inputs">
+                <div class="price-input">
+                  <span class="price-label">Min</span>
+                  <input type="number" 
+                         [(ngModel)]="priceRange.min" 
+                         (ngModelChange)="onPriceRangeChange()"
+                         [min]="minPrice"
+                         [max]="priceRange.max"
+                         [attr.aria-label]="'Prix minimum'">
+                  <span class="currency">€</span>
+                </div>
+                <div class="price-separator">-</div>
+                <div class="price-input">
+                  <span class="price-label">Max</span>
+                  <input type="number" 
+                         [(ngModel)]="priceRange.max" 
+                         (ngModelChange)="onPriceRangeChange()"
+                         [min]="priceRange.min"
+                         [max]="maxPrice"
+                         [attr.aria-label]="'Prix maximum'">
+                  <span class="currency">€</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="sort-options">
+              <select [(ngModel)]="sortOption" 
+                      (change)="onSort()"
+                      [attr.aria-label]="'Trier les produits'">
+                <option value="name">Nom (A-Z)</option>
+                <option value="-name">Nom (Z-A)</option>
+                <option value="price">Prix croissant</option>
+                <option value="-price">Prix décroissant</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="filteredProducts$ | async as products">
+          <div *ngIf="products.length > 0" 
+               class="products-grid"
+               role="grid">
+            <app-product-card 
+              *ngFor="let product of products"
+              [product]="product"
+              [storeUrl]="storeUrl"
+              [storeName]="storeName"
+              (addToCart)="onAddToCart(product)"
+              role="gridcell">
+            </app-product-card>
+          </div>
+
+          <div *ngIf="products.length === 0" 
+               class="no-products"
+               role="status"
+               aria-live="polite">
+            <i class="bi bi-box-seam" aria-hidden="true"></i>
+            <p>Aucun produit disponible dans cette catégorie</p>
+            <small>Essayez une autre catégorie ou revenez plus tard</small>
           </div>
         </div>
       </section>
-
-      <!-- Section Produits -->
-      <section id="products" class="store-section">
-        <div class="section-header">
-          <h2>Nos produits</h2>
-          <div class="products-count">{{ (products$ | async)?.length || 0 }} produits</div>
-        </div>
-
-        <div class="filters-bar">
-          <div class="search-box">
-            <i class="bi bi-search"></i>
-            <input type="text" 
-                   [(ngModel)]="searchQuery" 
-                   (ngModelChange)="onSearch()"
-                   placeholder="Rechercher un produit...">
-          </div>
-          <div class="sort-options">
-            <select [(ngModel)]="sortOption" (change)="onSort()">
-              <option value="name">Nom (A-Z)</option>
-              <option value="-name">Nom (Z-A)</option>
-              <option value="price">Prix croissant</option>
-              <option value="-price">Prix décroissant</option>
-            </select>
-          </div>
-        </div>
-
-        <ng-container *ngIf="products$ | async as products">
-          <div *ngIf="products.length > 0" class="products-grid">
-          <app-product-card 
-            *ngFor="let product of products"
-            [product]="product"
-            (addToCart)="onAddToCart($event)">
-          </app-product-card>
-        </div>
-
-          <div *ngIf="products.length === 0" class="no-products">
-            <i class="bi bi-box-seam"></i>
-            <p>Aucun produit disponible pour le moment</p>
-          </div>
-      </ng-container>
-      </section>
-    </main>
+    </div>
   </ng-container>
 
   <!-- Router outlet pour les routes enfants (panier) -->
   <router-outlet></router-outlet>
 
   <!-- Template de chargement -->
-  <div class="loading-spinner" *ngIf="loading">
-    <div class="spinner-border text-primary" role="status">
+  <div class="loading-spinner" 
+       *ngIf="loading"
+       role="status"
+       aria-live="polite">
+    <div class="spinner-border text-primary" role="progressbar">
       <span class="visually-hidden">Chargement...</span>
     </div>
     <p>Chargement de la boutique...</p>
   </div>
-</div>
+</main>
 
 <style>
 .store-nav {
@@ -204,6 +236,12 @@
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   z-index: 1000;
   padding: 0.75rem 0;
+  transform: translateY(0);
+  transition: transform 0.3s ease;
+}
+
+.nav-hidden {
+  transform: translateY(-100%);
 }
 
 .nav-container {
@@ -415,6 +453,143 @@
 
   .sort-options select {
     width: 100%;
+  }
+}
+
+/* Ajout des nouveaux styles pour la sidebar et le layout */
+.store-content-wrapper {
+  display: flex;
+  gap: 2rem;
+  padding: 2rem;
+  background: var(--store-bg-light, #f8f9fa);
+}
+
+.categories-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--store-bg-color, white);
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  height: fit-content;
+  position: sticky;
+  top: calc(var(--navbar-height, 70px) + 2rem);
+  transition: all 0.3s ease;
+}
+
+.sidebar-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--store-border-color, #e2e8f0);
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--store-text-color, #1a202c);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.categories-list {
+  padding: 1rem;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 0.5rem;
+  color: var(--store-text-color, #334155);
+}
+
+.category-item:hover {
+  background: rgba(var(--store-primary-rgb), 0.08);
+  transform: translateX(4px);
+}
+
+.category-item.active {
+  background: rgba(var(--store-primary-rgb), 0.12);
+  color: var(--store-primary-color);
+}
+
+.category-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--store-bg-light, #f1f5f9);
+  color: var(--store-primary-color);
+  font-size: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.category-item:hover .category-icon,
+.category-item.active .category-icon {
+  background: var(--store-primary-color);
+  color: white;
+  transform: scale(1.1);
+}
+
+.category-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.category-name {
+  font-weight: 500;
+}
+
+.category-count {
+  font-size: 0.875rem;
+  color: var(--store-text-muted, #64748b);
+}
+
+.products-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .store-content-wrapper {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .categories-sidebar {
+    width: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .store-content-wrapper {
+    flex-direction: column;
+  }
+
+  .categories-sidebar {
+    width: 100%;
+    position: static;
+    margin-bottom: 1rem;
+  }
+
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
   }
 }
 </style> 

@@ -9,14 +9,10 @@ import { StoreLayoutComponent } from './layouts/store-layout/store-layout.compon
 import { SharedModule } from '../shared/shared.module';
 import { ProductCardComponent } from './components/product-card/product-card.component';
 import { StoreProductsComponent } from './components/store-products/store-products.component';
-import { CartComponent } from './components/cart/cart.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 
 @NgModule({
-  declarations: [
-    StoreHomeComponent
-  ],
   imports: [
     CommonModule,
     FormsModule,
@@ -24,12 +20,7 @@ import { MatButtonModule } from '@angular/material/button';
     StoreRoutingModule,
     SharedModule,
     MatProgressSpinnerModule,
-    MatButtonModule,
-    StoreLayoutComponent,
-    CartPageComponent,
-    ProductCardComponent,
-    StoreProductsComponent,
-    CartComponent
+    MatButtonModule
   ],
   providers: []
 })

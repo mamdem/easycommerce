@@ -1,11 +1,26 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Vue d'ensemble</h1>
-  <div class="btn-toolbar mb-2 mb-md-0">
-    <button type="button" class="btn btn-sm btn-outline-primary me-2">
-      <i class="bi bi-plus-lg me-1"></i> Ajouter un produit
+  <div class="d-flex align-items-center gap-3">
+    <div class="section-icon">
+      <i class="bi bi-grid-1x2-fill"></i>
+    </div>
+    <div>
+      <h1 class="h2 mb-0">Vue d'ensemble</h1>
+      <p class="text-muted mb-0">Aperçu général de votre boutique</p>
+    </div>
+    <button class="visibility-toggle ms-3" 
+            (click)="toggleAmounts()" 
+            [class.active]="showAmounts"
+            title="Afficher/Masquer les montants">
+      <i class="bi" [ngClass]="showAmounts ? 'bi-eye-slash-fill' : 'bi-eye-fill'"></i>
+      <span class="toggle-label" [class.active]="showAmounts">
+        {{ showAmounts ? 'Masquer les montants' : 'Afficher les montants' }}
+      </span>
     </button>
-    <button type="button" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-download me-1"></i> Exporter
+  </div>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <button class="btn btn-sm btn-outline-primary" [routerLink]="['/dashboard/products/add']">
+      <i class="bi bi-plus-lg me-1"></i>
+      Ajouter un produit
     </button>
   </div>
 </div>
@@ -14,25 +29,25 @@
 <!-- Section Statistiques -->
 <div class="stats-overview">
   <div class="stats-grid">
-    <!-- Stat card - Commandes en attente -->
+    <!-- Stat card - Commandes en cours -->
     <div class="stat-card">
       <div class="stat-icon">
         <i class="bi bi-clock-history"></i>
       </div>
       <div class="stat-info">
-        <h3>{{ storeInfo.orders.pending }}</h3>
-        <p>Commandes en attente</p>
+        <h3>{{ storeInfo.orders.en_cours }}</h3>
+        <p>Commandes en cours</p>
       </div>
     </div>
     
-    <!-- Stat card - Commandes du jour -->
+    <!-- Stat card - Commandes validées -->
     <div class="stat-card">
       <div class="stat-icon">
-        <i class="bi bi-bag-check"></i>
+        <i class="bi bi-check-circle"></i>
       </div>
       <div class="stat-info">
-        <h3>{{ storeInfo.orders.processing }}</h3>
-        <p>Commandes aujourd'hui</p>
+        <h3>{{ storeInfo.orders.valide }}</h3>
+        <p>Commandes validées</p>
       </div>
     </div>
     
@@ -42,19 +57,19 @@
         <i class="bi bi-wallet2"></i>
       </div>
       <div class="stat-info">
-        <h3>{{ storeInfo.revenue.month }}€</h3>
+        <h3>{{ formatAmount(storeInfo.revenue.month) }}</h3>
         <p>CA mensuel</p>
       </div>
     </div>
     
-    <!-- Stat card - Produits -->
+    <!-- Stat card - Commandes rejetées -->
     <div class="stat-card">
       <div class="stat-icon">
-        <i class="bi bi-shop"></i>
+        <i class="bi bi-x-circle"></i>
       </div>
       <div class="stat-info">
-        <h3>{{ storeInfo.productsCount }}</h3>
-        <p>Produits actifs</p>
+        <h3>{{ storeInfo.orders.rejete }}</h3>
+        <p>Commandes rejetées</p>
       </div>
     </div>
   </div>
@@ -88,8 +103,8 @@
             <span class="badge bg-success">{{ storeInfo.status }}</span>
           </div>
           <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
-            <span><i class="bi bi-box-seam me-2"></i>Produits</span>
-            <span class="fw-bold">{{ storeInfo.productsCount }}</span>
+            <span><i class="bi bi-box-seam me-2"></i>Total commandes</span>
+            <span class="fw-bold">{{ storeInfo.orders.total }}</span>
           </div>
         </div>
       </div>
@@ -98,31 +113,33 @@
   <div class="col-md-6">
     <div class="card h-100">
       <div class="card-body">
-        <h5 class="card-title">Revenus</h5>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="card-title mb-0">Revenus</h5>
+        </div>
         <div class="row mt-4">
           <div class="col-6 mb-4">
             <h6 class="text-muted">
               <i class="bi bi-calendar-day me-2"></i>Aujourd'hui
             </h6>
-            <p class="h5">{{ storeInfo.revenue.today }} €</p>
+            <p class="h5">{{ formatAmount(storeInfo.revenue.today) }}</p>
           </div>
           <div class="col-6 mb-4">
             <h6 class="text-muted">
               <i class="bi bi-calendar-week me-2"></i>Cette semaine
             </h6>
-            <p class="h5">{{ storeInfo.revenue.week }} €</p>
+            <p class="h5">{{ formatAmount(storeInfo.revenue.week) }}</p>
           </div>
           <div class="col-6">
             <h6 class="text-muted">
               <i class="bi bi-calendar-month me-2"></i>Ce mois
             </h6>
-            <p class="h5">{{ storeInfo.revenue.month }} €</p>
+            <p class="h5">{{ formatAmount(storeInfo.revenue.month) }}</p>
           </div>
           <div class="col-6">
             <h6 class="text-muted">
               <i class="bi bi-cash-stack me-2"></i>Total
             </h6>
-            <p class="h5">{{ storeInfo.revenue.total }} €</p>
+            <p class="h5">{{ formatAmount(storeInfo.revenue.total) }}</p>
           </div>
         </div>
       </div>
@@ -138,7 +155,9 @@
       <div class="chart-card">
         <div class="chart-header">
           <h3>Chiffre d'affaires</h3>
-          <span class="text-success">+12% ce mois</span>
+          <span class="text-success" *ngIf="salesData.values.length >= 2">
+            {{ ((salesData.values[salesData.values.length - 1] - salesData.values[salesData.values.length - 2]) / salesData.values[salesData.values.length - 2] * 100) | number:'1.0-1' }}% ce mois
+          </span>
         </div>
         <div class="chart-container">
           <canvas #salesChart></canvas>
@@ -151,7 +170,9 @@
       <div class="chart-card">
         <div class="chart-header">
           <h3>Commandes</h3>
-          <span class="text-primary">+8% ce mois</span>
+          <span class="text-primary" *ngIf="ordersData.values.length >= 2">
+            {{ ((ordersData.values[ordersData.values.length - 1] - ordersData.values[ordersData.values.length - 2]) / ordersData.values[ordersData.values.length - 2] * 100) | number:'1.0-1' }}% ce mois
+          </span>
         </div>
         <div class="chart-container">
           <canvas #ordersChart></canvas>
@@ -254,5 +275,52 @@
 .chart-container {
   height: 300px;
   position: relative;
+}
+
+.visibility-toggle {
+  border: none;
+  background: none;
+  height: 36px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  transition: all 0.2s ease;
+  color: #6c757d;
+  font-size: 1.1rem;
+  background-color: rgba(108, 117, 125, 0.1);
+}
+
+.visibility-toggle:hover {
+  background-color: rgba(33, 150, 243, 0.15);
+  color: #2196f3;
+}
+
+.visibility-toggle.active {
+  color: #2196f3;
+  background-color: rgba(33, 150, 243, 0.15);
+}
+
+.visibility-toggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.25);
+}
+
+.visibility-toggle i {
+  transition: transform 0.2s ease;
+}
+
+.visibility-toggle:hover i {
+  transform: scale(1.1);
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.toggle-label.active {
+  color: #2196f3;
 }
 </style>

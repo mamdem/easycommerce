@@ -1,10 +1,14 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { StoreService, Store } from '../../../../services/store.service';
 
 @Component({
   selector: 'app-settings',
   templateUrl: './settings.component.html',
-  styleUrls: ['./settings.component.scss']
+  styleUrls: ['./settings.component.scss'],
+  standalone: true,
+  imports: [CommonModule, FormsModule]
 })
 export class SettingsComponent implements OnInit {
   // Onglet actif

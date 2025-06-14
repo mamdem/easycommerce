@@ -41,7 +41,6 @@ import { StoreModule } from './pages/store/store.module';
     RouterModule,
     CoreModule,
     HttpClientModule,
-    DashboardModule,
     StoreCreationModule,
     StoreModule,
     ImageCropperModule,

@@ -1,165 +1,182 @@
 import { Component, Inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
+import { CommonModule } from '@angular/common';
 
 export interface ConfirmDialogData {
   title: string;
   message: string;
-  confirmText?: string;
-  cancelText?: string;
-  type?: 'danger' | 'warning' | 'info';
+  confirmText: string;
+  cancelText: string;
+  type: 'danger' | 'warning' | 'info';
 }
 
 @Component({
   selector: 'app-confirm-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule],
   template: `
-    <div class="confirm-dialog" [class]="data.type">
-      <!-- En-tête -->
-      <div class="dialog-header">
-        <div class="icon-wrapper">
-          <i class="bi" [class]="getIconClass()"></i>
+    <div class="popup-dialog" [class]="data.type">
+      <div class="popup-header">
+        <div class="popup-icon" [class]="data.type">
+          <i class="bi" [ngClass]="{
+            'bi-exclamation-triangle': data.type === 'warning',
+            'bi-exclamation-circle': data.type === 'danger',
+            'bi-info-circle': data.type === 'info'
+          }"></i>
         </div>
         <h2>{{ data.title }}</h2>
+        <button class="close-btn" (click)="onCancel()">
+          <i class="bi bi-x"></i>
+        </button>
       </div>
-
-      <!-- Corps -->
-      <div class="dialog-content">
+      
+      <div class="popup-content">
         <p>{{ data.message }}</p>
       </div>
-
-      <!-- Actions -->
-      <div class="dialog-actions">
-        <button type="button"
-                (click)="onCancel()"
-                class="btn btn-light">
-          <i class="bi bi-x me-2"></i>
-          {{ data.cancelText || 'Annuler' }}
+      
+      <div class="popup-actions">
+        <button 
+          type="button" 
+          class="btn btn-sm btn-light" 
+          (click)="onCancel()">
+          {{ data.cancelText }}
         </button>
-        <button type="button"
-                (click)="onConfirm()"
-                [class]="'btn btn-' + getBtnClass()">
-          <i class="bi" [class]="getBtnIconClass()"></i>
-          {{ data.confirmText || 'Confirmer' }}
+        <button 
+          type="button" 
+          [class]="'btn btn-sm btn-' + getBtnClass()"
+          (click)="onConfirm()">
+          {{ data.confirmText }}
         </button>
       </div>
     </div>
   `,
   styles: [`
-    .confirm-dialog {
+    .popup-dialog {
       background: white;
-      border-radius: 12px;
+      border-radius: 8px;
+      width: 320px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      position: relative;
       overflow: hidden;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
     }
 
-    .dialog-header {
-      padding: 1.5rem;
-      text-align: center;
+    .popup-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
       position: relative;
     }
 
-    .icon-wrapper {
-      width: 64px;
-      height: 64px;
+    .popup-icon {
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 1rem;
-      font-size: 2rem;
+      flex-shrink: 0;
+
+      i {
+        font-size: 1rem;
+      }
+
+      &.danger {
+        background-color: #fee2e2;
+        color: #dc2626;
+      }
+
+      &.warning {
+        background-color: #fef3c7;
+        color: #d97706;
+      }
+
+      &.info {
+        background-color: #e0f2fe;
+        color: #0284c7;
+      }
     }
 
-    .danger .icon-wrapper {
-      background: rgba(220, 53, 69, 0.1);
-      color: #dc3545;
-    }
+    .close-btn {
+      position: absolute;
+      right: 0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #6b7280;
+      transition: all 0.2s;
 
-    .warning .icon-wrapper {
-      background: rgba(255, 193, 7, 0.1);
-      color: #ffc107;
-    }
+      &:hover {
+        background: #e5e7eb;
+        color: #374151;
+      }
 
-    .info .icon-wrapper {
-      background: rgba(13, 202, 240, 0.1);
-      color: #0dcaf0;
+      i {
+        font-size: 1.25rem;
+      }
     }
 
     h2 {
       margin: 0;
-      font-size: 1.25rem;
+      font-size: 1rem;
       font-weight: 600;
-      color: #2c3e50;
+      color: #1f2937;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .dialog-content {
-      padding: 0 1.5rem;
-      color: #6c757d;
-      text-align: center;
+    .popup-content {
+      padding: 1rem;
+
+      p {
+        margin: 0;
+        color: #4b5563;
+        font-size: 0.875rem;
+        line-height: 1.4;
+      }
     }
 
-    .dialog-content p {
-      margin: 0;
-      line-height: 1.5;
-    }
-
-    .dialog-actions {
-      padding: 1.5rem;
+    .popup-actions {
+      padding: 0.75rem;
       display: flex;
-      justify-content: center;
-      gap: 1rem;
-      border-top: 1px solid #e9ecef;
-      margin-top: 1.5rem;
-    }
-
-    .btn {
-      min-width: 120px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      justify-content: flex-end;
       gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
+      background: #f8f9fa;
+      border-top: 1px solid #e9ecef;
 
-    .btn:hover {
-      transform: translateY(-1px);
-    }
-
-    .btn:active {
-      transform: translateY(0);
-    }
-
-    .btn i {
-      font-size: 1.1em;
-    }
-
-    .danger .btn-danger {
-      background: #dc3545;
-      border-color: #dc3545;
-    }
-
-    .warning .btn-warning {
-      background: #ffc107;
-      border-color: #ffc107;
-      color: #000;
-    }
-
-    .info .btn-info {
-      background: #0dcaf0;
-      border-color: #0dcaf0;
-      color: #000;
-    }
-
-    @media (max-width: 576px) {
-      .dialog-actions {
-        flex-direction: column;
+      button {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+        min-width: 80px;
       }
+    }
 
-      .btn {
-        width: 100%;
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
       }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    :host {
+      display: block;
+      animation: popIn 0.2s ease-out;
     }
   `]
 })
@@ -168,21 +185,15 @@ export class ConfirmDialogComponent {
     public dialogRef: MatDialogRef<ConfirmDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: ConfirmDialogData
   ) {
-    // Configurer le dialogue pour être centré
-    dialogRef.addPanelClass('dialog-center');
+    this.dialogRef.addPanelClass('popup-overlay');
   }
 
-  getIconClass(): string {
-    switch (this.data.type) {
-      case 'warning':
-        return 'bi-exclamation-triangle-fill';
-      case 'danger':
-        return 'bi-exclamation-circle-fill';
-      case 'info':
-        return 'bi-info-circle-fill';
-      default:
-        return 'bi-info-circle-fill';
-    }
+  onConfirm(): void {
+    this.dialogRef.close(true);
+  }
+
+  onCancel(): void {
+    this.dialogRef.close(false);
   }
 
   getBtnClass(): string {
@@ -192,30 +203,9 @@ export class ConfirmDialogComponent {
       case 'warning':
         return 'warning';
       case 'info':
-        return 'info';
+        return 'primary';
       default:
         return 'primary';
     }
-  }
-
-  getBtnIconClass(): string {
-    switch (this.data.type) {
-      case 'danger':
-        return 'bi-trash me-2';
-      case 'warning':
-        return 'bi-exclamation-circle me-2';
-      case 'info':
-        return 'bi-check me-2';
-      default:
-        return 'bi-check me-2';
-    }
-  }
-
-  onConfirm(): void {
-    this.dialogRef.close(true);
-  }
-
-  onCancel(): void {
-    this.dialogRef.close(false);
   }
 } 

@@ -24,26 +24,28 @@
     <div class="navbar-center">
       <div class="store-selector">
         <select class="form-select" (change)="onStoreSelect($event)">
-          <option [value]="selectedStore.id" selected>
-            {{ selectedStore.legalName || 'Sélectionner une boutique' }}
+          <option disabled selected *ngIf="!selectedStore">Sélectionner une boutique</option>
+          <option *ngFor="let store of userStores" 
+                  [value]="store.id" 
+                  [selected]="store.id === selectedStore.id">
+            {{ store.legalName || 'Boutique sans nom' }}
           </option>
-          <option *ngFor="let store of userStores" [value]="store.id" [selected]="store.id === selectedStore.id">
-            {{ store.legalName }}
-          </option>
-          <option value="new" class="new-store-option">+ Nouvelle boutique</option>
+          <option value="new" class="new-store-option">+ Créer une nouvelle boutique</option>
         </select>
       </div>
     </div>
     
     <div class="navbar-right">
       <div class="action-buttons">
-        <button class="btn btn-outline-primary" title="Voir la boutique" (click)="viewStore()">
-          <i class="bi bi-eye"></i>
-          <span class="d-none d-md-inline ms-1">Voir</span>
+        <button class="btn btn-outline-primary" [routerLink]="['/dashboard/payment']">
+          <i class="bi bi-credit-card"></i>
+          <span class="d-none d-md-inline ms-1">Abonnement</span>
         </button>
-        <button class="btn btn-outline-primary" title="Paramètres" [routerLink]="['/dashboard/settings']">
-          <i class="bi bi-gear"></i>
-          <span class="d-none d-md-inline ms-1">Paramètres</span>
+        
+        <button class="btn btn-outline-primary" title="Notifications">
+          <i class="bi bi-bell"></i>
+          <span class="d-none d-md-inline ms-1">Notifications</span>
+          <div class="badge" *ngIf="notificationsCount > 0">{{ notificationsCount }}</div>
         </button>
         
         <div class="user-menu dropdown">

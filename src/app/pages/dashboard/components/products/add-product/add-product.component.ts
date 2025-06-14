@@ -1,44 +1,52 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { trigger, transition, style, animate } from '@angular/animations';
 import { StoreService } from '../../../../../core/services/store.service';
 import { ProductService } from '../../../../../core/services/product.service';
+import { CategoryService } from '../../../../../core/services/category.service';
 import { ToastService } from '../../../../../core/services/toast.service';
+import { Category } from '../../../../../core/models/category.model';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-add-product',
   templateUrl: './add-product.component.html',
-  styleUrls: ['./add-product.component.scss']
+  styleUrls: ['./add-product.component.scss'],
+  animations: [
+    trigger('slideInOut', [
+      transition(':enter', [
+        style({ opacity: 0, height: 0, transform: 'translateY(-10px)' }),
+        animate('200ms ease-out', style({ opacity: 1, height: '*', transform: 'translateY(0)' }))
+      ]),
+      transition(':leave', [
+        animate('200ms ease-in', style({ opacity: 0, height: 0, transform: 'translateY(-10px)' }))
+      ])
+    ])
+  ]
 })
 export class AddProductComponent implements OnInit {
   productForm!: FormGroup;
+  categoryForm!: FormGroup;
   loading = false;
   currentStep = 1;
   totalSteps = 3;
   previewUrls: string[] = [];
   selectedFiles: File[] = [];
   protected currentStore: any;
+  categories$!: Observable<Category[]>;
+  showNewCategoryForm = false;
   
-  categories = [
-    'Vêtements',
-    'Chaussures',
-    'Accessoires',
-    'Électronique',
-    'Maison',
-    'Sport',
-    'Beauté',
-    'Alimentation',
-    'Autres'
-  ];
-
   constructor(
     protected fb: FormBuilder,
     protected router: Router,
     protected storeService: StoreService,
     protected productService: ProductService,
+    protected categoryService: CategoryService,
     protected toastService: ToastService
   ) {
     this.initForm();
+    this.initCategoryForm();
   }
 
   ngOnInit(): void {
@@ -51,8 +59,22 @@ export class AddProductComponent implements OnInit {
           return;
         }
         this.currentStore = store;
+        this.loadCategories();
       }
     );
+  }
+
+  protected loadCategories(): void {
+    if (this.currentStore) {
+      this.categories$ = this.categoryService.getStoreCategories(this.currentStore.id);
+    }
+  }
+
+  protected initCategoryForm(): void {
+    this.categoryForm = this.fb.group({
+      name: ['', [Validators.required, Validators.minLength(2)]],
+      description: ['']
+    });
   }
 
   protected initForm(): void {
@@ -75,6 +97,38 @@ export class AddProductComponent implements OnInit {
       specifications: [''],
       isActive: [true]
     });
+  }
+
+  toggleNewCategoryForm(): void {
+    this.showNewCategoryForm = !this.showNewCategoryForm;
+    if (!this.showNewCategoryForm) {
+      this.categoryForm.reset();
+    }
+  }
+
+  async saveNewCategory(): Promise<void> {
+    if (this.categoryForm.invalid) {
+      return;
+    }
+
+    this.loading = true;
+    try {
+      const categoryData = this.categoryForm.value;
+      const newCategory = await this.categoryService.addCategory(this.currentStore.id, categoryData);
+      
+      // Select the new category
+      this.productForm.patchValue({
+        category: newCategory.id
+      });
+      
+      this.toastService.success('Catégorie ajoutée avec succès');
+      this.toggleNewCategoryForm();
+      this.loadCategories();
+    } catch (error) {
+      this.toastService.error('Erreur lors de l\'ajout de la catégorie');
+    } finally {
+      this.loading = false;
+    }
   }
 
   // Gestion des images

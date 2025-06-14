@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { Product } from '../models/product.model';
 
 export interface CartItem {
@@ -22,7 +22,10 @@ export class CartService {
   private readonly CART_STORAGE_KEY = 'cart_items';
   private readonly DEFAULT_PRODUCT_IMAGE = 'assets/default-product.svg';
   private cartItemsSubject = new BehaviorSubject<CartItem[]>([]);
+  private cartStateSubject = new BehaviorSubject<{[key: string]: boolean}>({});
+
   cartItems$ = this.cartItemsSubject.asObservable();
+  cartState$ = this.cartStateSubject.asObservable();
 
   constructor() {
     this.loadCartFromStorage();
@@ -34,6 +37,7 @@ export class CartService {
       if (storedItems) {
         const items = JSON.parse(storedItems);
         this.cartItemsSubject.next(items);
+        this.updateCartState(items);
       }
     } catch (e) {
       console.error('Erreur lors du chargement du panier:', e);
@@ -45,9 +49,23 @@ export class CartService {
     try {
       localStorage.setItem(this.CART_STORAGE_KEY, JSON.stringify(items));
       this.cartItemsSubject.next(items);
+      this.updateCartState(items);
     } catch (e) {
       console.error('Erreur lors de la sauvegarde du panier:', e);
     }
+  }
+
+  private updateCartState(items: CartItem[]) {
+    const state: {[key: string]: boolean} = {};
+    items.forEach(item => {
+      state[`${item.storeUrl}-${item.product.id}`] = true;
+    });
+    this.cartStateSubject.next(state);
+  }
+
+  isProductInCart(productId: string, storeUrl: string): boolean {
+    const state = this.cartStateSubject.value;
+    return !!state[`${storeUrl}-${productId}`];
   }
 
   private getProductImage(product: Product): string {
@@ -112,11 +130,19 @@ export class CartService {
     return this.cartItemsSubject.value.filter(item => item.storeUrl === storeUrl);
   }
 
+  getCartSubtotal(storeUrl: string): number {
+    const items = this.getCartItemsByStore(storeUrl);
+    return items.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+  }
+
+  getShippingFee(storeUrl: string): number {
+    // For now, we'll use a fixed shipping fee of 1000 FCFA
+    // This could be made configurable per store or based on order weight/distance in the future
+    return 1000;
+  }
+
   getCartTotal(storeUrl: string): number {
-    return this.getCartItemsByStore(storeUrl).reduce(
-      (total, item) => total + (item.product.price * item.quantity),
-      0
-    );
+    return this.getCartSubtotal(storeUrl) + this.getShippingFee(storeUrl);
   }
 
   getCartItemsCount(storeUrl: string): number {

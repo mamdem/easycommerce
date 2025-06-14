@@ -239,22 +239,22 @@ $secondary-color: var(--secondary-color);
 
       &.active {
         .step-number {
-          background-color: var(--primary-color);
+          background-color: var(--secondary-color);
           color: white;
         }
         .step-label {
-          color: var(--primary-color);
+          color: var(--secondary-color);
           font-weight: 600;
         }
       }
 
       &.completed {
         .step-number {
-          background-color: #28a745;
+          background-color: var(--secondary-color);
           color: white;
         }
         .step-label {
-          color: #28a745;
+          color: var(--secondary-color);
         }
       }
     }
@@ -269,7 +269,7 @@ $secondary-color: var(--secondary-color);
     margin: 0 3rem;
 
     .progress-bar {
-      background-color: var(--primary-color);
+      background-color: var(--secondary-color);
       transition: width 0.3s ease;
     }
   }
@@ -647,5 +647,55 @@ $secondary-color: var(--secondary-color);
         }
       }
     }
+  }
+}
+
+.section-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: rgba(33, 150, 243, 0.1);
+  color: #2196f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.category-selection {
+  display: flex;
+  align-items: start;
+  gap: 0.5rem;
+
+  .form-select {
+    flex: 1;
+  }
+
+  .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    
+    i {
+      font-size: 0.875rem;
+      margin-right: 0.25rem;
+    }
+  }
+}
+
+.new-category-form {
+  overflow: hidden;
+  
+  form {
+    border: 1px solid #e9ecef;
+  }
+
+  .form-control-sm {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .form-label.small {
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
   }
 }
