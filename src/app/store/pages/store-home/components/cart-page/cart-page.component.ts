@@ -85,6 +85,7 @@ export class CartPageComponent implements OnInit {
   }
 
   onCheckoutConfirmed(customerInfo: CustomerInfo) {
+    if (this.submitting) return;
     this.submitting = true;
 
     this.orderService.createOrder(

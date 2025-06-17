@@ -13,6 +13,10 @@ const routes: Routes = [
     loadChildren: () => import('./pages/auth/auth.module').then(m => m.AuthModule) 
   },
   { 
+    path: 'payment',
+    loadComponent: () => import('./pages/payment/payment.component').then(m => m.PaymentComponent)
+  },
+  { 
     path: 'store/:id', 
     loadChildren: () => import('./pages/store/store.module').then(m => m.StoreModule)
     // Guards désactivés

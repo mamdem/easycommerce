@@ -2,8 +2,10 @@ import { Injectable } from '@angular/core';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { CartService } from './cart.service';
 import { Observable, from, throwError, forkJoin, of } from 'rxjs';
-import { map, catchError, mergeMap } from 'rxjs/operators';
+import { map, catchError, mergeMap, switchMap } from 'rxjs/operators';
 import { Order, CustomerInfo, OrderStatus } from '../models/order.model';
+import { NotificationService } from './notification.service';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +13,9 @@ import { Order, CustomerInfo, OrderStatus } from '../models/order.model';
 export class OrderService {
   constructor(
     private firestore: AngularFirestore,
-    private cartService: CartService
+    private cartService: CartService,
+    private notificationService: NotificationService,
+    private authService: AuthService
   ) {}
 
   createOrder(storeUrl: string, storeName: string, customerInfo: CustomerInfo): Observable<string> {
@@ -41,11 +45,21 @@ export class OrderService {
       quantity: item.quantity
     }));
 
+    // Nettoyer les données du client
+    const cleanCustomerInfo: CustomerInfo = {
+      fullName: customerInfo.fullName || '',
+      email: customerInfo.email || '',
+      phone: customerInfo.phone || '',
+      address: customerInfo.address || '',
+      city: customerInfo.city || '',
+      deliveryInstructions: customerInfo.deliveryInstructions || ''
+    };
+
     const order: Order = {
       storeUrl,
       storeName,
       items: orderItems,
-      customerInfo,
+      customerInfo: cleanCustomerInfo,
       subtotal,
       shippingFee,
       total,
@@ -55,7 +69,13 @@ export class OrderService {
 
     console.log('Création de la commande avec les données:', order);
 
-    // Utiliser la nouvelle structure de collection
+    // Récupérer le userId pour la structure de notification
+    const userId = this.authService.getCurrentUser()?.uid;
+    if (!userId) {
+      return throwError(() => new Error('Utilisateur non connecté'));
+    }
+
+    // Créer la commande et la notification
     return from(
       this.firestore
         .collection('orders')
@@ -63,9 +83,35 @@ export class OrderService {
         .collection('orders')
         .add(order)
     ).pipe(
-      map(docRef => {
-        console.log('Commande créée avec succès, ID:', docRef.id);
-        return docRef.id;
+      switchMap(docRef => {
+        // Créer la notification dans le bon chemin: stores/{userId}/userStores/{userId_storeUrl}/notifications
+        const notification = {
+          title: 'Nouvelle commande reçue',
+          message: 'Il y a 5 minutes',
+          icon: 'shopping_cart',
+          type: 'ORDER',
+          isRead: false,
+          createdAt: Date.now(),
+          data: {
+            orderId: docRef.id,
+            orderAmount: total,
+            customerName: cleanCustomerInfo.fullName,
+            customerEmail: cleanCustomerInfo.email,
+            customerPhone: cleanCustomerInfo.phone
+          }
+        };
+
+        return from(
+          this.firestore
+            .collection('stores')
+            .doc(userId)
+            .collection('userStores')
+            .doc(`${userId}_${storeUrl}`)
+            .collection('notifications')
+            .add(notification)
+        ).pipe(
+          map(() => docRef.id)
+        );
       }),
       catchError(error => {
         console.error('Erreur lors de la création de la commande:', error);

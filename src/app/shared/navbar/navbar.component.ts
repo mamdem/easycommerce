@@ -4,6 +4,9 @@ import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { StoreService, StoreSettings } from '../../core/services/store.service';
 import { ToastService } from '../../core/services/toast.service';
+import { SubscriptionService, SubscriptionStatus } from '../../core/services/subscription.service';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-navbar',
@@ -17,13 +20,25 @@ export class NavbarComponent implements OnInit {
   userStores: StoreSettings[] = [];
   selectedStore: StoreSettings | null = null;
   loading = false;
+  subscriptionStatus$: Observable<SubscriptionStatus>;
   
   constructor(
     private authService: AuthService,
     private storeService: StoreService,
     private router: Router,
-    private toastService: ToastService
-  ) {}
+    private toastService: ToastService,
+    private subscriptionService: SubscriptionService
+  ) {
+    console.log('🟡 NavbarComponent initialized');
+    this.subscriptionStatus$ = this.subscriptionService.getSubscriptionStatus().pipe(
+      tap(status => {
+        console.log('🟡 Raw subscription status in navbar:', JSON.stringify(status, null, 2));
+        console.log('🟡 Status type:', status?.status);
+        console.log('🟡 Is in trial:', status?.isInTrial);
+        console.log('🟡 Days left in trial:', status?.daysLeftInTrial);
+      })
+    );
+  }
   
   ngOnInit(): void {
     this.loadStores();
@@ -102,5 +117,82 @@ export class NavbarComponent implements OnInit {
   logout(): void {
     this.authService.signOut();
     this.router.navigate(['/auth/login']);
+  }
+
+  getSubscriptionIcon(status: SubscriptionStatus): string {
+    if (!status) return 'bi-cart-plus';
+    
+    switch (status.status) {
+      case 'trialing':
+        return 'bi-hourglass-split';
+      case 'active':
+        return 'bi-check-circle-fill';
+      case 'past_due':
+        return 'bi-exclamation-triangle-fill';
+      case 'canceled':
+        return 'bi-x-circle-fill';
+      case 'unpaid':
+        return 'bi-exclamation-circle-fill';
+      default:
+        return 'bi-cart-plus';
+    }
+  }
+
+  getSubscriptionStatusText(status: SubscriptionStatus): string {
+    console.log('🟡 getSubscriptionStatusText called with:', JSON.stringify(status, null, 2));
+    if (!status?.status) {
+      console.log('🟡 No status or status.status is null/undefined, returning "S\'abonner"');
+      return 'S\'abonner';
+    }
+    
+    const statusLower = status.status.toLowerCase();
+    console.log('🟡 Status after toLowerCase:', statusLower);
+    
+    switch (statusLower) {
+      case 'trialing':
+        const days = status.daysLeftInTrial || 30;
+        console.log('🟡 Trialing status detected, days left:', days);
+        return `Essai gratuit (${days}j)`;
+      case 'active':
+        console.log('🟡 Active status detected');
+        return 'Abonné';
+      case 'past_due':
+        console.log('🟡 Past due status detected');
+        return 'Paiement en retard';
+      case 'canceled':
+        console.log('🟡 Canceled status detected');
+        return 'Abonnement annulé';
+      case 'unpaid':
+        console.log('🟡 Unpaid status detected');
+        return 'Paiement requis';
+      default:
+        console.log('🟡 Unknown status:', statusLower);
+        return 'S\'abonner';
+    }
+  }
+
+  getSubscriptionStatusClass(status: SubscriptionStatus): string {
+    console.log('🟡 getSubscriptionStatusClass called with:', JSON.stringify(status, null, 2));
+    if (!status?.status) {
+      console.log('🟡 No status, returning btn-primary');
+      return 'btn-primary';
+    }
+    
+    const statusLower = status.status.toLowerCase();
+    console.log('🟡 Status class for:', statusLower);
+    
+    switch (statusLower) {
+      case 'trialing':
+        return 'btn-info';
+      case 'active':
+        return 'btn-success';
+      case 'past_due':
+      case 'unpaid':
+        return 'btn-warning';
+      case 'canceled':
+        return 'btn-danger';
+      default:
+        return 'btn-primary';
+    }
   }
 }

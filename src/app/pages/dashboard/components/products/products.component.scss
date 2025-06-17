@@ -1,3 +1,5 @@
+@import '../shared/dashboard.scss';
+
 // Styles spécifiques au composant de gestion des produits
 .product-img-small {
   width: 40px;
@@ -75,18 +77,6 @@
     background-color: #4f46e5;
     border-color: #4f46e5;
   }
-} 
-
-.section-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background-color: rgba(33, 150, 243, 0.1);
-  color: #2196f3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
 }
 
 .filters-section {
@@ -669,5 +659,57 @@
         }
       }
     }
+  }
+}
+
+.product-badges {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 2;
+}
+
+.discount-badge {
+  background: #dc3545;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  i {
+    font-size: 0.75rem;
+  }
+}
+
+.product-price {
+  margin: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .current-price {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #2c3e50;
+
+    &.discounted {
+      text-decoration: line-through;
+      color: #6c757d;
+      font-size: 0.9rem;
+      font-weight: normal;
+    }
+  }
+
+  .discount-price {
+    color: #dc3545;
+    font-weight: 600;
+    font-size: 1.1rem;
   }
 } 

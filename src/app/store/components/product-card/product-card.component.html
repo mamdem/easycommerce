@@ -4,7 +4,8 @@
          [alt]="product.name"
          (error)="onImageError($event)">
     
-    <div class="product-badges" *ngIf="product.discountPrice && product.discountPrice < product.price">
+    <!-- Badge de promotion -->
+    <div class="product-badges" *ngIf="activePromotion">
       <div class="discount-badge">
         <i class="bi bi-tag-fill"></i>
         -{{ getDiscountPercentage() }}%
@@ -28,11 +29,11 @@
     <h3 class="product-name">{{ product.name }}</h3>
     
     <div class="product-price">
-      <span class="current-price" [class.discounted]="product.discountPrice && product.discountPrice < product.price">
+      <span class="current-price" [class.discounted]="discountedPrice">
         {{ product.price | number:'1.0-0' }} FCFA
       </span>
-      <span class="discount-price" *ngIf="product.discountPrice && product.discountPrice < product.price">
-        {{ product.discountPrice | number:'1.0-0' }} FCFA
+      <span class="discount-price" *ngIf="discountedPrice">
+        {{ discountedPrice | number:'1.0-0' }} FCFA
       </span>
     </div>
   </div>

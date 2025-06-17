@@ -1,0 +1,127 @@
+<div class="container-fluid py-4">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex align-items-center">
+          <button class="btn btn-link text-secondary me-3" [routerLink]="['/dashboard/promotions']">
+            <i class="bi bi-arrow-left"></i>
+          </button>
+          <h5 class="mb-0">Créer une promotion</h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="promotionForm" (ngSubmit)="onSubmit()">
+            <!-- Type de promotion -->
+            <div class="mb-3">
+              <label class="form-label">Type de promotion</label>
+              <select class="form-select" formControlName="type">
+                <option value="CODE_PROMO">Code promo</option>
+                <option value="REDUCTION_PRODUIT">Réduction produit</option>
+                <option value="OFFRE_LIMITEE">Offre limitée</option>
+              </select>
+            </div>
+
+            <!-- Nom de la promotion -->
+            <div class="mb-3">
+              <label class="form-label">Nom de la promotion</label>
+              <input type="text" class="form-control" formControlName="nom" placeholder="Ex: Soldes d'été">
+            </div>
+
+            <!-- Code promo (si type CODE_PROMO) -->
+            <div class="mb-3" *ngIf="promotionForm.get('type')?.value === 'CODE_PROMO'">
+              <label class="form-label">Code promo</label>
+              <input type="text" class="form-control" formControlName="code" placeholder="Ex: SUMMER2024">
+            </div>
+
+            <!-- Scope d'application (pour CODE_PROMO) -->
+            <div class="mb-3" *ngIf="promotionForm.get('type')?.value === 'CODE_PROMO'">
+              <label class="form-label">Application de la promotion</label>
+              <select class="form-select" formControlName="applicationScope">
+                <option value="PANIER_ENTIER">Panier entier</option>
+                <option value="CATEGORIES">Catégories spécifiques</option>
+                <option value="PRODUITS">Produits spécifiques</option>
+              </select>
+            </div>
+
+            <!-- Sélection des produits -->
+            <div class="mb-3" *ngIf="(promotionForm.get('type')?.value === 'REDUCTION_PRODUIT' || 
+                                    (promotionForm.get('type')?.value === 'CODE_PROMO' && 
+                                     promotionForm.get('applicationScope')?.value === 'PRODUITS'))">
+              <label class="form-label">Sélectionner les produits</label>
+              <select multiple class="form-select" formControlName="produitIds">
+                <option *ngFor="let product of products$ | async" [value]="product.id">
+                  {{product.name}}
+                </option>
+              </select>
+            </div>
+
+            <!-- Sélection des catégories -->
+            <div class="mb-3" *ngIf="promotionForm.get('type')?.value === 'CODE_PROMO' && 
+                                    promotionForm.get('applicationScope')?.value === 'CATEGORIES'">
+              <label class="form-label">Sélectionner les catégories</label>
+              <select multiple class="form-select" formControlName="categorieIds">
+                <option *ngFor="let category of categories$ | async" [value]="category.id">
+                  {{category.name}}
+                </option>
+              </select>
+            </div>
+
+            <!-- Pourcentage de réduction -->
+            <div class="mb-3">
+              <label class="form-label">Pourcentage de réduction</label>
+              <input type="number" class="form-control" formControlName="reduction" min="0" max="100">
+            </div>
+
+            <!-- Dates -->
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Date de début</label>
+                <input type="date" class="form-control" formControlName="dateDebut">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Date de fin</label>
+                <input type="date" class="form-control" formControlName="dateFin">
+              </div>
+            </div>
+
+            <!-- Montant minimum d'achat -->
+            <div class="mb-3">
+              <label class="form-label">Montant minimum d'achat (optionnel)</label>
+              <div class="input-group">
+                <input type="number" class="form-control" formControlName="minimumAchat" min="0">
+                <span class="input-group-text">FCFA</span>
+              </div>
+            </div>
+
+            <!-- Nombre maximum d'utilisations -->
+            <div class="mb-3">
+              <label class="form-label">Nombre maximum d'utilisations (optionnel)</label>
+              <input type="number" class="form-control" formControlName="utilisationsMax" min="1">
+            </div>
+
+            <!-- Affichage automatique -->
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" formControlName="afficherAutomatiquement" id="afficherAuto">
+              <label class="form-check-label" for="afficherAuto">
+                Afficher automatiquement pendant la période de validité
+              </label>
+            </div>
+
+            <!-- Actif -->
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" formControlName="actif" id="actif">
+              <label class="form-check-label" for="actif">
+                Promotion active
+              </label>
+            </div>
+
+            <!-- Submit button -->
+            <button type="submit" class="btn btn-primary" [disabled]="promotionForm.invalid || isLoading">
+              <span class="spinner-border spinner-border-sm me-2" *ngIf="isLoading"></span>
+              Créer la promotion
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

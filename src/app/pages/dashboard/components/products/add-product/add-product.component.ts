@@ -85,7 +85,6 @@ export class AddProductComponent implements OnInit {
       brand: [''],
       tags: [''],
       price: ['', [Validators.required, Validators.min(0)]],
-      discountPrice: [''],
       stock: ['', [Validators.required, Validators.min(0)]],
       sku: [''],
       weight: [''],

@@ -10,7 +10,6 @@ import { StatisticsComponent } from './components/statistics/statistics.componen
 import { SettingsComponent } from './components/settings/settings.component';
 import { OverviewComponent } from './components/overview/overview.component';
 import { OrderDetailsComponent } from './components/orders/order-details/order-details.component';
-import { PaymentComponent } from '../../dashboard/components/payment/payment.component';
 
 const routes: Routes = [
   {
@@ -59,8 +58,8 @@ const routes: Routes = [
         component: SettingsComponent
       },
       {
-        path: 'payment',
-        component: PaymentComponent
+        path: 'promotions',
+        loadChildren: () => import('./components/promotions/promotions.module').then(m => m.PromotionsModule)
       }
     ]
   }

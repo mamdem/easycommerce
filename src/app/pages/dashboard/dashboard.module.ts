@@ -20,11 +20,10 @@ import { OrdersComponent } from './components/orders/orders.component';
 import { OrderDetailsComponent } from './components/orders/order-details/order-details.component';
 import { OverviewComponent } from './components/overview/overview.component';
 import { RejectOrderDialogComponent } from './components/orders/reject-order-dialog/reject-order-dialog.component';
+import { PromotionsComponent } from './components/promotions/promotions.component';
 
 @NgModule({
   declarations: [
-    DashboardComponent,
-    ProductsComponent,
     AddProductComponent,
     EditProductComponent,
     StatisticsComponent,
@@ -45,7 +44,9 @@ import { RejectOrderDialogComponent } from './components/orders/reject-order-dia
     OrderDetailsComponent,
     RejectOrderDialogComponent,
     CustomersComponent,
-    SettingsComponent
+    SettingsComponent,
+    PromotionsComponent,
+    ProductsComponent
   ]
 })
 export class DashboardModule { }

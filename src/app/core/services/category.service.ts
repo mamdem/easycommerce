@@ -16,18 +16,16 @@ export class CategoryService {
 
   private getCategoriesPath(storeId: string): string {
     const userId = this.authService.getCurrentUser()?.uid;
-    if (!userId) throw new Error('User not authenticated');
+    if (!userId) throw new Error('Utilisateur non connecté');
     return `stores/${userId}/userStores/${storeId}/categories`;
   }
 
   getStoreCategories(storeId: string): Observable<Category[]> {
     return this.firestore
-      .collection<Category>(this.getCategoriesPath(storeId), ref => 
-        ref.orderBy('createdAt', 'desc')
-      )
+      .collection<Category>(this.getCategoriesPath(storeId))
       .valueChanges({ idField: 'id' })
       .pipe(
-        map(categories => categories)
+        map(categories => categories.sort((a, b) => a.name.localeCompare(b.name)))
       );
   }
 

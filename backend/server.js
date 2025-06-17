@@ -2,9 +2,20 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const admin = require('firebase-admin');
+const serviceAccount = require('./config/serviceAccountKey.json');
+
+// Initialisation de Firebase Admin
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 // Vérification des variables d'environnement requises
-const requiredEnvVars = ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID', 'FRONTEND_URL'];
+const requiredEnvVars = [
+  'STRIPE_SECRET_KEY', 
+  'STRIPE_PRICE_ID', 
+  'FRONTEND_URL'
+];
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
@@ -47,14 +58,42 @@ app.post('/api/payments/create-subscription-session', async (req, res) => {
         price: process.env.STRIPE_PRICE_ID,
         quantity: 1,
       }],
+      subscription_data: {
+        trial_period_days: 30,
+      },
       success_url: `${process.env.FRONTEND_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/dashboard?canceled=true`,
       allow_promotion_codes: true,
       customer_email: req.body.email,
       metadata: {
-        userId: req.body.userId
+        userId: req.body.userId,
+        trialEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       }
     });
+
+    // Créer immédiatement l'abonnement dans Firebase
+    const trialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    
+    // Créer/Mettre à jour le document dans la collection subscriptions
+    await admin.firestore().collection('subscriptions').doc(req.body.userId).set({
+      userId: req.body.userId,
+      email: req.body.email,
+      subscriptionId: session.id,
+      subscriptionStatus: 'trialing',
+      trialEnd: trialEndDate,
+      isInTrial: true,
+      daysLeftInTrial: 30,
+      currentPeriodEnd: trialEndDate,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    // Mettre à jour également le document utilisateur
+    await admin.firestore().collection('users').doc(req.body.userId).set({
+      hasSubscription: true,
+      subscriptionStatus: 'trialing',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
 
     console.log('Session de paiement créée avec succès:', session.id);
     res.json({ sessionId: session.id });
@@ -88,15 +127,66 @@ app.post('/webhook', async (request, response) => {
       case 'checkout.session.completed':
         const session = event.data.object;
         console.log('Paiement réussi pour la session:', session.id);
+        
+        // Récupérer l'abonnement pour avoir plus de détails
+        const subscription = await stripe.subscriptions.retrieve(session.subscription);
+        
+        // Calculer les jours restants dans l'essai
+        const trialEnd = subscription.trial_end ? new Date(subscription.trial_end * 1000) : null;
+        const now = new Date();
+        const daysLeftInTrial = trialEnd ? Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        
+        // Mettre à jour la collection subscriptions
+        await admin.firestore().collection('subscriptions').doc(session.metadata.userId).set({
+          subscriptionId: session.subscription,
+          stripeCustomerId: subscription.customer,
+          subscriptionStatus: subscription.status,
+          trialEnd: trialEnd,
+          isInTrial: subscription.status === 'trialing',
+          daysLeftInTrial: daysLeftInTrial,
+          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        // Mettre à jour le document utilisateur
+        await admin.firestore().collection('users').doc(session.metadata.userId).set({
+          hasSubscription: true,
+          subscriptionStatus: subscription.status,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
         break;
-      case 'customer.subscription.created':
-        const subscription = event.data.object;
-        console.log('Nouvel abonnement créé:', subscription.id);
-        break;
+
+      case 'customer.subscription.updated':
       case 'customer.subscription.deleted':
-        const canceledSubscription = event.data.object;
-        console.log('Abonnement annulé:', canceledSubscription.id);
+        const updatedSubscription = event.data.object;
+        const userId = updatedSubscription.metadata.userId;
+        
+        if (userId) {
+          // Calculer les jours restants dans l'essai
+          const updatedTrialEnd = updatedSubscription.trial_end ? new Date(updatedSubscription.trial_end * 1000) : null;
+          const currentDate = new Date();
+          const updatedDaysLeft = updatedTrialEnd ? 
+            Math.ceil((updatedTrialEnd.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+          // Mettre à jour la collection subscriptions
+          await admin.firestore().collection('subscriptions').doc(userId).set({
+            subscriptionStatus: updatedSubscription.status,
+            currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000),
+            trialEnd: updatedTrialEnd,
+            isInTrial: updatedSubscription.status === 'trialing',
+            daysLeftInTrial: updatedDaysLeft,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+
+          // Mettre à jour le document utilisateur
+          await admin.firestore().collection('users').doc(userId).set({
+            hasSubscription: updatedSubscription.status !== 'canceled',
+            subscriptionStatus: updatedSubscription.status,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        }
         break;
+
       default:
         console.log(`Événement non géré: ${event.type}`);
     }
@@ -131,6 +221,28 @@ app.post('/api/payments/cancel-subscription', async (req, res) => {
     res.json({ status: subscription.status });
   } catch (error) {
     console.error('Erreur lors de l\'annulation:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Route pour vérifier le statut d'un abonnement et sa période d'essai
+app.get('/api/payments/subscription-details/:subscriptionId', async (req, res) => {
+  try {
+    console.log('Vérification des détails de l\'abonnement:', req.params.subscriptionId);
+    const subscription = await stripe.subscriptions.retrieve(req.params.subscriptionId);
+    
+    const response = {
+      status: subscription.status,
+      trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+      isInTrial: subscription.status === 'trialing',
+      daysLeftInTrial: subscription.trial_end ? 
+        Math.ceil((subscription.trial_end * 1000 - Date.now()) / (1000 * 60 * 60 * 24)) : 0,
+      currentPeriodEnd: new Date(subscription.current_period_end * 1000)
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Erreur lors de la vérification des détails de l\'abonnement:', error);
     res.status(500).json({ error: error.message });
   }
 });

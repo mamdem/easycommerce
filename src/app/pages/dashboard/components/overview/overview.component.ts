@@ -10,6 +10,7 @@ import { Order, OrderStatus } from '../../../../core/models/order.model';
 import { environment } from '../../../../../environments/environment';
 import { map, switchMap } from 'rxjs/operators';
 import { forkJoin } from 'rxjs';
+import { SubscriptionService, SubscriptionStatus } from '../../../../core/services/subscription.service';
 
 Chart.register(...registerables);
 
@@ -78,15 +79,19 @@ export class OverviewComponent implements OnInit, AfterViewInit {
     values: [] as number[]
   };
 
+  subscriptionStatus: SubscriptionStatus | null = null;
+
   constructor(
     private storeService: StoreService,
-    private orderService: OrderService
+    private orderService: OrderService,
+    private subscriptionService: SubscriptionService
   ) {
     this.loadAmountsVisibility();
   }
 
   ngOnInit() {
     this.loadStoreData();
+    this.loadSubscriptionStatus();
   }
 
   ngAfterViewInit() {
@@ -382,5 +387,76 @@ export class OverviewComponent implements OnInit, AfterViewInit {
   private initCharts() {
     this.initSalesChart();
     this.initOrdersChart();
+  }
+
+  private loadSubscriptionStatus() {
+    this.subscriptionService.getSubscriptionStatus().subscribe({
+      next: (status) => {
+        console.log('🟣 Subscription status loaded in overview:', status);
+        this.subscriptionStatus = status;
+      },
+      error: (error) => {
+        console.error('Error loading subscription status:', error);
+        this.subscriptionStatus = null;
+      }
+    });
+  }
+
+  getSubscriptionStatusText(): string {
+    console.log('🟣 Getting subscription status text for:', this.subscriptionStatus);
+    if (!this.subscriptionStatus?.status) return 'Non abonné';
+    
+    switch (this.subscriptionStatus.status.toLowerCase()) {
+      case 'trialing':
+        const days = this.subscriptionStatus.daysLeftInTrial || 30;
+        return `Essai gratuit (${days}j)`;
+      case 'active':
+        return 'Abonné';
+      case 'past_due':
+        return 'Paiement en retard';
+      case 'canceled':
+        return 'Abonnement annulé';
+      case 'unpaid':
+        return 'Paiement requis';
+      default:
+        return 'Non abonné';
+    }
+  }
+
+  getSubscriptionStatusClass(): string {
+    if (!this.subscriptionStatus?.status) return 'bg-secondary';
+    
+    switch (this.subscriptionStatus.status.toLowerCase()) {
+      case 'trialing':
+        return 'bg-info';
+      case 'active':
+        return 'bg-success';
+      case 'past_due':
+      case 'unpaid':
+        return 'bg-warning';
+      case 'canceled':
+        return 'bg-danger';
+      default:
+        return 'bg-secondary';
+    }
+  }
+
+  getSubscriptionIcon(): string {
+    if (!this.subscriptionStatus?.status) return 'bi-cart-plus';
+    
+    switch (this.subscriptionStatus.status.toLowerCase()) {
+      case 'trialing':
+        return 'bi-hourglass-split';
+      case 'active':
+        return 'bi-check-circle-fill';
+      case 'past_due':
+        return 'bi-exclamation-triangle-fill';
+      case 'canceled':
+        return 'bi-x-circle-fill';
+      case 'unpaid':
+        return 'bi-exclamation-circle-fill';
+      default:
+        return 'bi-cart-plus';
+    }
   }
 } 

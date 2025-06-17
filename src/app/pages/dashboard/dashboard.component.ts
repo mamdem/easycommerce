@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -11,9 +11,14 @@ import { Store } from '../../core/models/store.model';
 import { User } from '../../core/services/auth.service';
 import { CartService } from '../../core/services/cart.service';
 import { Observable, of } from 'rxjs';
+import { SubscriptionService, SubscriptionStatus } from '../../core/services/subscription.service';
+import { NotificationService } from '../../core/services/notification.service';
+import { NotificationDrawerComponent } from '../../dashboard/components/notification-drawer/notification-drawer.component';
 
 @Component({
   selector: 'app-dashboard',
+  standalone: true,
+  imports: [CommonModule, RouterModule, NotificationDrawerComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
@@ -79,19 +84,56 @@ export class DashboardComponent implements OnInit {
 
   notificationsCount = 0;
 
-  private authService = inject(AuthService);
-  private storeService = inject(StoreService);
-  private toastService = inject(ToastService);
-  private router = inject(Router);
-  private cartService = inject(CartService);
+  subscriptionStatus$: Observable<SubscriptionStatus>;
+
+  isNotificationDrawerOpen = false;
+  notifications: any[] = [
+    {
+      id: 1,
+      type: 'order',
+      icon: 'bi-cart-check',
+      message: 'Nouvelle commande reçue',
+      time: 'Il y a 5 minutes',
+      isUnread: true
+    },
+    {
+      id: 2,
+      type: 'review',
+      icon: 'bi-star',
+      message: 'Nouvel avis client',
+      time: 'Il y a 2 heures',
+      isUnread: false
+    },
+    {
+      id: 3,
+      type: 'stock',
+      icon: 'bi-box-seam',
+      message: 'Stock faible pour "Produit X"',
+      time: 'Il y a 1 jour',
+      isUnread: false
+    }
+  ];
+
+  constructor(
+    private authService: AuthService,
+    private storeService: StoreService,
+    private toastService: ToastService,
+    private router: Router,
+    private cartService: CartService,
+    private subscriptionService: SubscriptionService,
+    private notificationService: NotificationService
+  ) {
+    this.subscriptionStatus$ = this.subscriptionService.getSubscriptionStatus();
+    this.loadUserData();
+  }
 
   ngOnInit(): void {
     this.checkUserStatus();
     this.updateUserStatus();
     this.loadSelectedStore();
     this.loadUserStores();
-    this.loadUserData();
     this.loadNotifications();
+    this.loadNotificationsCount();
 
     // S'abonner aux changements du panier
     this.cartService.cartItems$.subscribe(items => {
@@ -505,12 +547,95 @@ export class DashboardComponent implements OnInit {
    * Charge les notifications (à implémenter avec votre service de notifications)
    */
   private loadNotifications(): void {
-    // Exemple : définir un nombre fixe de notifications pour le moment
-    this.notificationsCount = 3;
+    // Pour l'instant, on compte juste les notifications non lues
+    this.notificationsCount = this.notifications.filter(n => n.isUnread).length;
+  }
+
+  getSubscriptionStatusText(status: SubscriptionStatus): string {
+    console.log('🟣 Getting subscription status text for:', status);
+    if (!status?.status) return 'S\'abonner';
     
-    // TODO: Implémenter la logique réelle de chargement des notifications
-    // this.notificationService.getUnreadCount().subscribe(count => {
-    //   this.notificationsCount = count;
-    // });
+    switch (status.status.toLowerCase()) {
+      case 'trialing':
+        const days = status.daysLeftInTrial || 30;
+        return `Essai gratuit (${days}j)`;
+      case 'active':
+        return 'Abonné';
+      case 'past_due':
+        return 'Paiement en retard';
+      case 'canceled':
+        return 'Renouveler';
+      case 'unpaid':
+        return 'Paiement requis';
+      default:
+        return 'S\'abonner';
+    }
+  }
+
+  getSubscriptionStatusClass(status: SubscriptionStatus): string {
+    if (!status?.status) return 'btn-primary';
+    
+    switch (status.status.toLowerCase()) {
+      case 'trialing':
+        return 'btn-info';
+      case 'active':
+        return 'btn-success';
+      case 'past_due':
+      case 'unpaid':
+        return 'btn-warning';
+      case 'canceled':
+        return 'btn-danger';
+      default:
+        return 'btn-primary';
+    }
+  }
+
+  getSubscriptionIcon(status: SubscriptionStatus): string {
+    if (!status?.status) return 'bi-cart-plus';
+    
+    switch (status.status.toLowerCase()) {
+      case 'trialing':
+        return 'bi-hourglass-split';
+      case 'active':
+        return 'bi-check-circle-fill';
+      case 'past_due':
+        return 'bi-exclamation-triangle-fill';
+      case 'canceled':
+        return 'bi-arrow-clockwise';
+      case 'unpaid':
+        return 'bi-exclamation-circle-fill';
+      default:
+        return 'bi-cart-plus';
+    }
+  }
+
+  goToSubscriptionPage(): void {
+    console.log('🟣 Navigation vers la page d\'abonnement');
+    this.router.navigate(['/payment']);
+  }
+
+  toggleNotificationDrawer() {
+    this.isNotificationDrawerOpen = !this.isNotificationDrawerOpen;
+    // Empêcher le défilement du body quand le drawer est ouvert
+    document.body.style.overflow = this.isNotificationDrawerOpen ? 'hidden' : '';
+  }
+
+  markAllNotificationsAsRead() {
+    this.notifications = this.notifications.map(notification => ({
+      ...notification,
+      isUnread: false
+    }));
+    this.notificationsCount = 0;
+    this.toastService.success('Toutes les notifications ont été marquées comme lues');
+  }
+
+  private loadNotificationsCount() {
+    if (this.selectedStore?.id) {
+      this.notificationService.getUnreadCount(this.selectedStore.id).subscribe(
+        count => {
+          this.notificationsCount = count;
+        }
+      );
+    }
   }
 } 

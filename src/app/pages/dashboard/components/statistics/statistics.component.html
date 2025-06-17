@@ -1,261 +1,275 @@
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-  <h1 class="h2">Statistiques</h1>
-  <div class="btn-toolbar mb-2 mb-md-0">
-    <div class="btn-group me-2">
-      <button type="button" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-download me-1"></i> Exporter
-      </button>
-      <button type="button" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-printer me-1"></i> Imprimer
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Filtres période -->
-<div class="card shadow-sm border-0 rounded-3 mb-4">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center">
-      <h6 class="mb-0">Évolution des ventes</h6>
-      <div class="btn-group">
-        <button type="button" class="btn" 
-                [class.btn-primary]="selectedPeriod === 'daily'"
-                [class.btn-outline-primary]="selectedPeriod !== 'daily'"
-                (click)="changePeriod('daily')">
-          Journalier
-        </button>
-        <button type="button" class="btn" 
-                [class.btn-primary]="selectedPeriod === 'weekly'"
-                [class.btn-outline-primary]="selectedPeriod !== 'weekly'"
-                (click)="changePeriod('weekly')">
-          Hebdomadaire
-        </button>
-        <button type="button" class="btn" 
-                [class.btn-primary]="selectedPeriod === 'monthly'"
-                [class.btn-outline-primary]="selectedPeriod !== 'monthly'"
-                (click)="changePeriod('monthly')">
-          Mensuel
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Graphique principal et KPIs -->
-<div class="row mb-4">
-  <!-- Graphique principal -->
-  <div class="col-lg-8 mb-4 mb-lg-0">
-    <div class="card shadow-sm border-0 rounded-3 h-100">
-      <div class="card-body">
-        <div class="chart-container">
-          <!-- Placeholder pour le graphique (à intégrer avec une librairie comme Chart.js ou ngx-charts) -->
-          <div class="chart-placeholder">
-            <div class="chart-bars">
-              <div *ngFor="let value of currentData; let i = index" 
-                   class="chart-bar" 
-                   [style.height.%]="getBarHeight(value)"
-                   [style.backgroundColor]="'rgba(79, 70, 229, ' + (0.3 + (i / currentData.length) * 0.7) + ')'">
-              </div>
-            </div>
-            <div class="chart-labels">
-              <div *ngFor="let label of currentLabels" class="chart-label">
-                {{ label }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- KPIs -->
-  <div class="col-lg-4">
-    <div class="row">
-      <div class="col-md-6 col-lg-12 mb-4">
-        <div class="card stat-card border-0 shadow-sm rounded-3">
-          <div class="card-body">
-            <h6 class="text-muted mb-1">Chiffre d'affaires total</h6>
-            <div class="d-flex align-items-center">
-              <div class="stat-value me-3">{{ globalStats.totalRevenue }} €</div>
-              <div class="stat-badge bg-success-light">
-                <i class="bi bi-graph-up text-success"></i>
-                <span>+12.5%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6 col-lg-12 mb-4">
-        <div class="card stat-card border-0 shadow-sm rounded-3">
-          <div class="card-body">
-            <h6 class="text-muted mb-1">Nombre de commandes</h6>
-            <div class="d-flex align-items-center">
-              <div class="stat-value me-3">{{ globalStats.totalOrders }}</div>
-              <div class="stat-badge bg-success-light">
-                <i class="bi bi-graph-up text-success"></i>
-                <span>+8.2%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6 col-lg-12 mb-4">
-        <div class="card stat-card border-0 shadow-sm rounded-3">
-          <div class="card-body">
-            <h6 class="text-muted mb-1">Valeur moyenne des commandes</h6>
-            <div class="d-flex align-items-center">
-              <div class="stat-value me-3">{{ globalStats.averageOrderValue }} €</div>
-              <div class="stat-badge bg-success-light">
-                <i class="bi bi-graph-up text-success"></i>
-                <span>+3.8%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6 col-lg-12 mb-4">
-        <div class="card stat-card border-0 shadow-sm rounded-3">
-          <div class="card-body">
-            <h6 class="text-muted mb-1">Taux de conversion</h6>
-            <div class="d-flex align-items-center">
-              <div class="stat-value me-3">{{ globalStats.conversionRate }}%</div>
-              <div class="stat-badge bg-warning-light">
-                <i class="bi bi-graph-down text-warning"></i>
-                <span>-0.5%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Produits populaires et clients fidèles -->
-<div class="row mb-4">
-  <!-- Top produits -->
-  <div class="col-lg-6 mb-4 mb-lg-0">
-    <div class="card shadow-sm border-0 rounded-3 h-100">
-      <div class="card-header bg-white border-0">
-        <h5 class="mb-0">Produits les plus vendus</h5>
-      </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table mb-0">
-            <thead class="bg-light">
-              <tr>
-                <th scope="col">Produit</th>
-                <th scope="col" class="text-center">Quantité</th>
-                <th scope="col" class="text-end">Revenu</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let product of topProducts">
-                <td>{{ product.name }}</td>
-                <td class="text-center">{{ product.quantity }}</td>
-                <td class="text-end fw-bold">{{ product.revenue }} €</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Top clients -->
-  <div class="col-lg-6">
-    <div class="card shadow-sm border-0 rounded-3 h-100">
-      <div class="card-header bg-white border-0">
-        <h5 class="mb-0">Meilleurs clients</h5>
-      </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table mb-0">
-            <thead class="bg-light">
-              <tr>
-                <th scope="col">Client</th>
-                <th scope="col" class="text-center">Commandes</th>
-                <th scope="col" class="text-end">Montant total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let customer of topCustomers">
-                <td>{{ customer.name }}</td>
-                <td class="text-center">{{ customer.orders }}</td>
-                <td class="text-end fw-bold">{{ customer.spent }} €</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Résumé des performances -->
-<div class="row mb-4">
-  <div class="col-md-4 mb-4 mb-md-0">
-    <div class="card perf-card border-0 shadow-sm rounded-3 h-100">
-      <div class="card-body">
-        <div class="d-flex align-items-center mb-3">
-          <div class="icon-circle bg-primary-light me-3">
-            <i class="bi bi-people-fill text-primary"></i>
+<div class="container-fluid py-2">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-3 border-bottom">
+        <div class="d-flex align-items-center gap-3">
+          <div class="section-icon">
+            <i class="bi bi-graph-up"></i>
           </div>
           <div>
-            <h6 class="mb-1">Clients fidèles</h6>
-            <p class="text-muted small mb-0">Pourcentage des clients récurrents</p>
+            <h1 class="h2 mb-0">Statistiques</h1>
+            <p class="text-muted mb-0">Analysez les performances de votre boutique</p>
           </div>
         </div>
-        <div class="text-center">
-          <div class="display-4 fw-bold">{{ globalStats.returningCustomers }}%</div>
-          <div class="progress mt-2 mb-2">
-            <div class="progress-bar bg-primary" role="progressbar" [style.width.%]="globalStats.returningCustomers" aria-valuenow="42" aria-valuemin="0" aria-valuemax="100"></div>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-download me-1"></i> Exporter
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-printer me-1"></i> Imprimer
+            </button>
           </div>
-          <p class="text-muted small mb-0">Augmentation de 8% par rapport au mois dernier</p>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-md-4 mb-4 mb-md-0">
-    <div class="card perf-card border-0 shadow-sm rounded-3 h-100">
-      <div class="card-body">
-        <div class="d-flex align-items-center mb-3">
-          <div class="icon-circle bg-success-light me-3">
-            <i class="bi bi-box-seam text-success"></i>
-          </div>
-          <div>
-            <h6 class="mb-1">Produit vedette</h6>
-            <p class="text-muted small mb-0">Produit le plus vendu ce mois-ci</p>
-          </div>
-        </div>
-        <div class="text-center">
-          <div class="best-product-name">{{ globalStats.topSellingProduct }}</div>
-          <div class="best-product-img mt-3 mb-3 mx-auto"></div>
-          <p class="text-muted small mb-0">128 unités vendues ce mois-ci</p>
         </div>
       </div>
-    </div>
-  </div>
-  
-  <div class="col-md-4">
-    <div class="card perf-card border-0 shadow-sm rounded-3 h-100">
-      <div class="card-body">
-        <div class="d-flex align-items-center mb-3">
-          <div class="icon-circle bg-info-light me-3">
-            <i class="bi bi-graph-up text-info"></i>
-          </div>
-          <div>
-            <h6 class="mb-1">Objectif de vente</h6>
-            <p class="text-muted small mb-0">Progression vers l'objectif mensuel</p>
+
+      <!-- Filtres période -->
+      <div class="card shadow-sm border-0 rounded-3 mb-4">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Évolution des ventes</h6>
+            <div class="btn-group">
+              <button type="button" class="btn" 
+                      [class.btn-primary]="selectedPeriod === 'daily'"
+                      [class.btn-outline-primary]="selectedPeriod !== 'daily'"
+                      (click)="changePeriod('daily')">
+                Journalier
+              </button>
+              <button type="button" class="btn" 
+                      [class.btn-primary]="selectedPeriod === 'weekly'"
+                      [class.btn-outline-primary]="selectedPeriod !== 'weekly'"
+                      (click)="changePeriod('weekly')">
+                Hebdomadaire
+              </button>
+              <button type="button" class="btn" 
+                      [class.btn-primary]="selectedPeriod === 'monthly'"
+                      [class.btn-outline-primary]="selectedPeriod !== 'monthly'"
+                      (click)="changePeriod('monthly')">
+                Mensuel
+              </button>
+            </div>
           </div>
         </div>
-        <div class="text-center">
-          <div class="display-4 fw-bold">{{ globalStats.productsSold }}/2000</div>
-          <div class="progress mt-2 mb-2">
-            <div class="progress-bar bg-info" role="progressbar" [style.width.%]="(globalStats.productsSold / 2000) * 100" aria-valuenow="92.5" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+
+      <!-- Graphique principal et KPIs -->
+      <div class="row mb-4">
+        <!-- Graphique principal -->
+        <div class="col-lg-8 mb-4 mb-lg-0">
+          <div class="card shadow-sm border-0 rounded-3 h-100">
+            <div class="card-body">
+              <div class="chart-container">
+                <!-- Placeholder pour le graphique (à intégrer avec une librairie comme Chart.js ou ngx-charts) -->
+                <div class="chart-placeholder">
+                  <div class="chart-bars">
+                    <div *ngFor="let value of currentData; let i = index" 
+                         class="chart-bar" 
+                         [style.height.%]="getBarHeight(value)"
+                         [style.backgroundColor]="'rgba(79, 70, 229, ' + (0.3 + (i / currentData.length) * 0.7) + ')'">
+                    </div>
+                  </div>
+                  <div class="chart-labels">
+                    <div *ngFor="let label of currentLabels" class="chart-label">
+                      {{ label }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <p class="text-muted small mb-0">92.5% de l'objectif atteint</p>
+        </div>
+        
+        <!-- KPIs -->
+        <div class="col-lg-4">
+          <div class="row">
+            <div class="col-md-6 col-lg-12 mb-4">
+              <div class="card stat-card border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                  <h6 class="text-muted mb-1">Chiffre d'affaires total</h6>
+                  <div class="d-flex align-items-center">
+                    <div class="stat-value me-3">{{ globalStats.totalRevenue }} €</div>
+                    <div class="stat-badge bg-success-light">
+                      <i class="bi bi-graph-up text-success"></i>
+                      <span>+12.5%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-12 mb-4">
+              <div class="card stat-card border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                  <h6 class="text-muted mb-1">Nombre de commandes</h6>
+                  <div class="d-flex align-items-center">
+                    <div class="stat-value me-3">{{ globalStats.totalOrders }}</div>
+                    <div class="stat-badge bg-success-light">
+                      <i class="bi bi-graph-up text-success"></i>
+                      <span>+8.2%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-12 mb-4">
+              <div class="card stat-card border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                  <h6 class="text-muted mb-1">Valeur moyenne des commandes</h6>
+                  <div class="d-flex align-items-center">
+                    <div class="stat-value me-3">{{ globalStats.averageOrderValue }} €</div>
+                    <div class="stat-badge bg-success-light">
+                      <i class="bi bi-graph-up text-success"></i>
+                      <span>+3.8%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-12 mb-4">
+              <div class="card stat-card border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                  <h6 class="text-muted mb-1">Taux de conversion</h6>
+                  <div class="d-flex align-items-center">
+                    <div class="stat-value me-3">{{ globalStats.conversionRate }}%</div>
+                    <div class="stat-badge bg-warning-light">
+                      <i class="bi bi-graph-down text-warning"></i>
+                      <span>-0.5%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Produits populaires et clients fidèles -->
+      <div class="row mb-4">
+        <!-- Top produits -->
+        <div class="col-lg-6 mb-4 mb-lg-0">
+          <div class="card shadow-sm border-0 rounded-3 h-100">
+            <div class="card-header bg-white border-0">
+              <h5 class="mb-0">Produits les plus vendus</h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th scope="col">Produit</th>
+                      <th scope="col" class="text-center">Quantité</th>
+                      <th scope="col" class="text-end">Revenu</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let product of topProducts">
+                      <td>{{ product.name }}</td>
+                      <td class="text-center">{{ product.quantity }}</td>
+                      <td class="text-end fw-bold">{{ product.revenue }} €</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Top clients -->
+        <div class="col-lg-6">
+          <div class="card shadow-sm border-0 rounded-3 h-100">
+            <div class="card-header bg-white border-0">
+              <h5 class="mb-0">Meilleurs clients</h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th scope="col">Client</th>
+                      <th scope="col" class="text-center">Commandes</th>
+                      <th scope="col" class="text-end">Montant total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let customer of topCustomers">
+                      <td>{{ customer.name }}</td>
+                      <td class="text-center">{{ customer.orders }}</td>
+                      <td class="text-end fw-bold">{{ customer.spent }} €</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Résumé des performances -->
+      <div class="row mb-4">
+        <div class="col-md-4 mb-4 mb-md-0">
+          <div class="card perf-card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-body">
+              <div class="d-flex align-items-center mb-3">
+                <div class="icon-circle bg-primary-light me-3">
+                  <i class="bi bi-people-fill text-primary"></i>
+                </div>
+                <div>
+                  <h6 class="mb-1">Clients fidèles</h6>
+                  <p class="text-muted small mb-0">Pourcentage des clients récurrents</p>
+                </div>
+              </div>
+              <div class="text-center">
+                <div class="display-4 fw-bold">{{ globalStats.returningCustomers }}%</div>
+                <div class="progress mt-2 mb-2">
+                  <div class="progress-bar bg-primary" role="progressbar" [style.width.%]="globalStats.returningCustomers" aria-valuenow="42" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <p class="text-muted small mb-0">Augmentation de 8% par rapport au mois dernier</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4 mb-4 mb-md-0">
+          <div class="card perf-card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-body">
+              <div class="d-flex align-items-center mb-3">
+                <div class="icon-circle bg-success-light me-3">
+                  <i class="bi bi-box-seam text-success"></i>
+                </div>
+                <div>
+                  <h6 class="mb-1">Produit vedette</h6>
+                  <p class="text-muted small mb-0">Produit le plus vendu ce mois-ci</p>
+                </div>
+              </div>
+              <div class="text-center">
+                <div class="best-product-name">{{ globalStats.topSellingProduct }}</div>
+                <div class="best-product-img mt-3 mb-3 mx-auto"></div>
+                <p class="text-muted small mb-0">128 unités vendues ce mois-ci</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card perf-card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-body">
+              <div class="d-flex align-items-center mb-3">
+                <div class="icon-circle bg-info-light me-3">
+                  <i class="bi bi-graph-up text-info"></i>
+                </div>
+                <div>
+                  <h6 class="mb-1">Objectif de vente</h6>
+                  <p class="text-muted small mb-0">Progression vers l'objectif mensuel</p>
+                </div>
+              </div>
+              <div class="text-center">
+                <div class="display-4 fw-bold">{{ globalStats.productsSold }}/2000</div>
+                <div class="progress mt-2 mb-2">
+                  <div class="progress-bar bg-info" role="progressbar" [style.width.%]="(globalStats.productsSold / 2000) * 100" aria-valuenow="92.5" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <p class="text-muted small mb-0">92.5% de l'objectif atteint</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

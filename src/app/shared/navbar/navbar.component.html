@@ -13,6 +13,14 @@
           <i class="bi bi-speedometer2"></i>
           <span>Tableau de bord</span>
         </a>
+        <div class="subscription-status" *ngIf="subscriptionStatus$ | async as status">
+          <a [routerLink]="['/dashboard/subscription']" 
+             [class]="'btn subscription-btn ' + getSubscriptionStatusClass(status)"
+             [title]="status.isInTrial ? 'Votre période d\'essai se termine le ' + (status.trialEnd | date) : ''">
+            <i [class]="'bi ' + getSubscriptionIcon(status)"></i>
+            <span>{{ getSubscriptionStatusText(status) }}</span>
+          </a>
+        </div>
       </div>
       
       <div class="navbar-end">
@@ -176,6 +184,55 @@
 
 .logout-button:hover {
   background: #fef2f2;
+}
+
+.subscription-status {
+  margin-left: 1rem;
+  list-style: none;
+}
+
+.subscription-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  border-radius: 20px;
+  text-decoration: none;
+  color: white;
+  transition: all 0.3s ease;
+  border: none;
+  font-size: 0.9rem;
+}
+
+.subscription-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.subscription-btn i {
+  font-size: 1.1rem;
+}
+
+.bg-info {
+  background-color: #0dcaf0;
+}
+
+.bg-success {
+  background-color: #198754;
+}
+
+.bg-warning {
+  background-color: #ffc107;
+  color: #000;
+}
+
+.bg-danger {
+  background-color: #dc3545;
+}
+
+.bg-secondary {
+  background-color: #6c757d;
 }
 
 @media (max-width: 768px) {

@@ -1,3 +1,5 @@
+@import '../shared/dashboard.scss';
+
 // Styles spécifiques au composant de gestion des commandes
 .avatar-circle {
   width: 38px;
@@ -375,16 +377,4 @@
   i {
     opacity: 0.5;
   }
-} 
-
-.section-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background-color: rgba(33, 150, 243, 0.1);
-  color: #2196f3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
 } 

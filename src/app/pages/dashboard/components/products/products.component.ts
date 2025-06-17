@@ -1,22 +1,34 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, map, firstValueFrom } from 'rxjs';
+import { Observable, map, firstValueFrom, combineLatest } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { take } from 'rxjs/operators';
+
 import { Product } from '../../../../core/models/product.model';
 import { Category } from '../../../../core/models/category.model';
 import { ProductService } from '../../../../core/services/product.service';
 import { StoreService } from '../../../../core/services/store.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { PriceService } from '../../../../core/services/price.service';
+import { PromotionService, Promotion } from '../../../../core/services/promotion.service';
+import { ProductCardComponent, ProductWithPromotion } from '../../../../shared/components/product-card/product-card.component';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { take } from 'rxjs/operators';
 
 @Component({
   selector: 'app-products',
   templateUrl: './products.component.html',
   styleUrls: ['./products.component.scss'],
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    ProductCardComponent
+  ],
   animations: [
     trigger('fadeInOut', [
       transition(':enter', [
@@ -34,9 +46,10 @@ export class ProductsComponent implements OnInit {
   @ViewChild('scrollLeftBtn') scrollLeftBtn!: ElementRef;
   @ViewChild('scrollRightBtn') scrollRightBtn!: ElementRef;
   
-  products$!: Observable<Product[]>;
+  products$!: Observable<ProductWithPromotion[]>;
   categories$!: Observable<Category[]>;
-  categoryMap: Map<string, string> = new Map(); // Map pour stocker les noms des catégories
+  promotions$!: Observable<Promotion[]>;
+  categoryMap: Map<string, string> = new Map();
   loading = true;
   actionLoading = false;
   searchTerm = '';
@@ -61,6 +74,8 @@ export class ProductsComponent implements OnInit {
     private productService: ProductService,
     private storeService: StoreService,
     private categoryService: CategoryService,
+    private promotionService: PromotionService,
+    private priceService: PriceService,
     private toastService: ToastService,
     private router: Router,
     private dialog: MatDialog,
@@ -90,17 +105,23 @@ export class ProductsComponent implements OnInit {
         return;
       }
       
-      // Récupérer tous les produits
-      this.products$ = this.productService.getStoreProducts(store.id!).pipe(
-        map(products => {
-          // Si une catégorie est sélectionnée, filtrer les produits
-      if (this.selectedCategory) {
-            return products.filter(product => product.category === this.selectedCategory);
-      }
-          // Sinon retourner tous les produits
-          return products;
+      // Charger les promotions et les produits
+      this.promotions$ = this.promotionService.getPromotions(store.id!);
+      const products$ = this.productService.getStoreProducts(store.id!);
+
+      // Combiner les produits avec leurs promotions
+      this.products$ = combineLatest([products$, this.promotions$]).pipe(
+        map(([products, promotions]) => {
+          return products
+            .filter(product => !this.selectedCategory || product.category === this.selectedCategory)
+            .map(product => ({
+              ...product,
+              discountedPrice: this.priceService.calculateDiscountedPrice(product, promotions),
+              activePromotion: this.priceService.getApplicablePromotion(product, promotions)
+            }));
         })
       );
+
       this.loading = false;
     });
   }
@@ -297,16 +318,9 @@ export class ProductsComponent implements OnInit {
     );
   }
 
-  getDiscountPercentage(product: Product): number {
-    if (!product.discountPrice || !product.price) return 0;
-    return Math.round(((product.price - product.discountPrice) / product.price) * 100);
-  }
-
   onImageError(event: Event): void {
     const img = event.target as HTMLImageElement;
-    if (img) {
-      img.src = 'assets/default-product.svg';
-    }
+    img.src = 'assets/default-product.svg';
   }
 
   clearSearch(): void {
@@ -315,7 +329,7 @@ export class ProductsComponent implements OnInit {
   }
 
   getCategoryName(categoryId: string): string {
-    return this.categoryMap.get(categoryId) || categoryId;
+    return this.categoryMap.get(categoryId) || 'Non catégorisé';
   }
 
   filterByCategory(category: Category | null): void {
@@ -381,5 +395,10 @@ export class ProductsComponent implements OnInit {
   selectCategoryAndClose(category: Category): void {
     this.filterByCategory(category);
     this.closeAllCategoriesPopup();
+  }
+
+  getDiscountPercentage(product: Product & { activePromotion?: Promotion | null }): number {
+    if (!product.activePromotion) return 0;
+    return product.activePromotion.reduction;
   }
 } 

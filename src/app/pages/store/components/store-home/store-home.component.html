@@ -1,0 +1,79 @@
+<!-- Message de chargement -->
+<div class="loading-spinner" *ngIf="loading">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Chargement...</span>
+  </div>
+  <p>Chargement des produits...</p>
+</div>
+
+<!-- Liste des produits -->
+<ng-container *ngIf="products$ | async as products">
+  <!-- Message si aucun produit -->
+  <div class="no-products" *ngIf="products.length === 0">
+    <i class="bi bi-box-seam"></i>
+    <h3>Aucun produit disponible</h3>
+    <p>Cette boutique n'a pas encore de produits</p>
+  </div>
+
+  <!-- Grille de produits -->
+  <div class="products-grid" *ngIf="products.length > 0">
+    <app-product-card
+      *ngFor="let product of products"
+      [product]="product"
+      [categoryName]="getCategoryName(product.category)">
+      
+      <!-- Bouton Ajouter au panier -->
+      <div slot="additional-actions" class="add-to-cart-action">
+        <button class="btn btn-primary w-100"
+                [disabled]="product.stock === 0"
+                (click)="addToCart(product)">
+          <i class="bi bi-cart-plus me-2"></i>
+          {{ product.stock > 0 ? 'Ajouter au panier' : 'Rupture de stock' }}
+        </button>
+      </div>
+    </app-product-card>
+  </div>
+</ng-container>
+
+<style>
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.no-products {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.no-products i {
+  font-size: 3rem;
+  color: #6c757d;
+  margin-bottom: 1rem;
+}
+
+.add-to-cart-action {
+  margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+  }
+}
+</style> 
