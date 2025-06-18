@@ -222,24 +222,24 @@
         [product]="product"
         [categoryName]="getCategoryName(product.category)"
         [showDescription]="viewMode === 'list'">
-        
-        <!-- Actions rapides -->
+
+          <!-- Actions rapides -->
         <div slot="actions" class="quick-actions">
-          <button class="btn btn-light btn-sm" 
-                  (click)="editProduct(product)"
-                  [disabled]="actionLoading">
-            <span class="spinner-border spinner-border-sm" 
-                  *ngIf="actionLoading"></span>
-            <i class="bi bi-pencil" *ngIf="!actionLoading"></i>
-          </button>
-          <button class="btn btn-light btn-sm" 
-                  (click)="deleteProduct(product)"
-                  [disabled]="actionLoading">
-            <span class="spinner-border spinner-border-sm" 
-                  *ngIf="actionLoading"></span>
-            <i class="bi bi-trash" *ngIf="!actionLoading"></i>
-          </button>
-        </div>
+            <button class="btn btn-light btn-sm" 
+                    (click)="editProduct(product)"
+                    [disabled]="actionLoading">
+              <span class="spinner-border spinner-border-sm" 
+                    *ngIf="actionLoading"></span>
+              <i class="bi bi-pencil" *ngIf="!actionLoading"></i>
+            </button>
+            <button class="btn btn-light btn-sm" 
+                    (click)="deleteProduct(product)"
+                    [disabled]="actionLoading">
+              <span class="spinner-border spinner-border-sm" 
+                    *ngIf="actionLoading"></span>
+              <i class="bi bi-trash" *ngIf="!actionLoading"></i>
+            </button>
+          </div>
       </app-product-card>
     </div>
   </ng-container>
