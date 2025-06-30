@@ -12,8 +12,8 @@ import { DashboardModule } from './pages/dashboard/dashboard.module';
 import { ImageCropperModule } from 'ngx-image-cropper';
 import { MatDialogModule } from '@angular/material/dialog';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { ImageCropperModalComponent } from './shared/components/image-cropper-modal/image-cropper-modal.component';
 import { SharedModule } from './shared/shared.module';
+import { LOCALE_ID } from '@angular/core';
 
 // Firebase imports
 import { AngularFireModule } from '@angular/fire/compat';
@@ -29,8 +29,7 @@ import { StoreModule } from './pages/store/store.module';
 
 @NgModule({
   declarations: [
-    AppComponent,
-    ImageCropperModalComponent
+    AppComponent
   ],
   imports: [
     BrowserModule,
@@ -41,6 +40,7 @@ import { StoreModule } from './pages/store/store.module';
     RouterModule,
     CoreModule,
     HttpClientModule,
+    DashboardModule,
     StoreCreationModule,
     StoreModule,
     ImageCropperModule,
@@ -58,7 +58,8 @@ import { StoreModule } from './pages/store/store.module';
     })
   ],
   providers: [
-    provideAnimations()
+    provideAnimations(),
+    { provide: LOCALE_ID, useValue: 'fr-FR' }
   ],
   bootstrap: [AppComponent]
 })

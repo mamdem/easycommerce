@@ -1,19 +1,15 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Routes } from '@angular/router';
-import { StoreComponent } from './store.component';
-
-const routes: Routes = [
-  { path: '', component: StoreComponent }
-];
+import { RouterModule } from '@angular/router';
+import { SharedModule } from '../../shared/shared.module';
 
 @NgModule({
-  declarations: [
-    StoreComponent
-  ],
+  declarations: [],
   imports: [
     CommonModule,
-    RouterModule.forChild(routes)
-  ]
+    RouterModule,
+    SharedModule
+  ],
+  exports: []
 })
-export class StoreModule { }
+export class StoreModule { } 

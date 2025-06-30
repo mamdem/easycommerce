@@ -1,46 +1,18 @@
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
-# Environment variables
-.env
-.env.*
-
-# Google Cloud
-**/serviceAccountKey.json
-
-# Dependencies
-/node_modules
-/backend/node_modules
-/frontend/node_modules
-
-# Build files
-/dist
-/build
-/.next
-
-# Logs
-*.log
-npm-debug.log*
-
-# IDE
-.idea
-.vscode
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
 # Compiled output
+/dist
 /tmp
 /out-tsc
 /bazel-out
 
 # Node
+/node_modules
 npm-debug.log
 yarn-error.log
 
 # IDEs and editors
+.idea/
 .project
 .classpath
 .c9/
@@ -64,3 +36,7 @@ yarn-error.log
 /libpeerconnection.log
 testem.log
 /typings
+
+# System files
+.DS_Store
+Thumbs.db

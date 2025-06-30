@@ -8,7 +8,6 @@ import { CartService } from './services/cart.service';
 import { ToastService } from './services/toast.service';
 import { MatDialogModule } from '@angular/material/dialog';
 import { ImageCropperModule } from 'ngx-image-cropper';
-import { SharedModule } from '../shared/shared.module';
 
 @NgModule({
   declarations: [],
@@ -16,8 +15,7 @@ import { SharedModule } from '../shared/shared.module';
     CommonModule,
     HttpClientModule,
     MatDialogModule,
-    ImageCropperModule,
-    SharedModule
+    ImageCropperModule
   ],
   providers: [
     AuthService,

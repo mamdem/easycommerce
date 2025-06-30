@@ -1,0 +1,335 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <div class="d-flex align-items-center gap-3">
+    <div class="section-icon">
+      <i class="bi bi-grid-1x2-fill"></i>
+    </div>
+    <div>
+      <h1 class="h2 mb-0">Vue d'ensemble</h1>
+      <p class="text-muted mb-0">Aperçu général de votre boutique</p>
+    </div>
+    <button class="visibility-toggle ms-3" 
+            (click)="toggleAmounts()" 
+            [class.active]="showAmounts"
+            title="Afficher/Masquer les montants">
+      <i class="bi" [ngClass]="showAmounts ? 'bi-eye-slash-fill' : 'bi-eye-fill'"></i>
+      <span class="toggle-label" [class.active]="showAmounts">
+        {{ showAmounts ? 'Masquer les montants' : 'Afficher les montants' }}
+      </span>
+    </button>
+  </div>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <button class="btn btn-sm btn-outline-primary" [routerLink]="['/dashboard/products/add']">
+      <i class="bi bi-plus-lg me-1"></i>
+      Ajouter un produit
+    </button>
+  </div>
+</div>
+
+<!-- Loading state -->
+<app-loading-spinner *ngIf="loading"
+                    text="Chargement du tableau de bord..."
+                    [showProgress]="true"
+                    [fullPage]="true">
+</app-loading-spinner>
+
+<!-- Content when not loading -->
+<div *ngIf="!loading">
+  <!-- Section Statistiques -->
+  <div class="stats-overview">
+    <div class="stats-grid">
+      <!-- Stat card - Commandes en cours -->
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="bi bi-clock-history"></i>
+        </div>
+        <div class="stat-info">
+          <h3>{{ storeInfo.orders.en_cours }}</h3>
+          <p>Commandes en cours</p>
+        </div>
+      </div>
+      
+      <!-- Stat card - Commandes validées -->
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="stat-info">
+          <h3>{{ storeInfo.orders.valide }}</h3>
+          <p>Commandes validées</p>
+        </div>
+      </div>
+      
+      <!-- Stat card - Chiffre d'affaires -->
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="bi bi-wallet2"></i>
+        </div>
+        <div class="stat-info">
+          <h3>{{ formatAmount(storeInfo.revenue.month) }}</h3>
+          <p>CA mensuel</p>
+        </div>
+      </div>
+      
+      <!-- Stat card - Commandes rejetées -->
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="bi bi-x-circle"></i>
+        </div>
+        <div class="stat-info">
+          <h3>{{ storeInfo.orders.rejete }}</h3>
+          <p>Commandes rejetées</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Informations de la boutique et revenus -->
+  <div class="row mb-4">
+    <div class="col-md-6 mb-4 mb-md-0">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Informations de la boutique</h5>
+          <div class="list-group list-group-flush mt-3">
+            <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
+              <span><i class="bi bi-shop me-2"></i>Nom</span>
+              <span class="fw-bold">{{storeInfo.legalName }}</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
+              <span><i class="bi bi-link-45deg me-2"></i>URL</span>
+              <div class="d-flex align-items-center">
+                <span class="fw-bold me-2">/{{ storeInfo.url }}</span>
+                <a [href]="storeBaseUrl + '/' + storeInfo.url" 
+                   target="_blank" 
+                   class="btn btn-sm btn-outline-primary"
+                   title="Voir la boutique">
+                  <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+              </div>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
+              <span><i class="bi bi-circle-fill me-2 text-success"></i>Statut</span>
+              <span class="badge bg-success">{{ storeInfo.status }}</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
+              <span><i class="bi bi-box-seam me-2"></i>Total commandes</span>
+              <span class="fw-bold">{{ storeInfo.orders.total }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="card-title mb-0">Revenus</h5>
+          </div>
+          <div class="row mt-4">
+            <div class="col-6 mb-4">
+              <h6 class="text-muted">
+                <i class="bi bi-calendar-day me-2"></i>Aujourd'hui
+              </h6>
+              <p class="h5">{{ formatAmount(storeInfo.revenue.today) }}</p>
+            </div>
+            <div class="col-6 mb-4">
+              <h6 class="text-muted">
+                <i class="bi bi-calendar-week me-2"></i>Cette semaine
+              </h6>
+              <p class="h5">{{ formatAmount(storeInfo.revenue.week) }}</p>
+            </div>
+            <div class="col-6">
+              <h6 class="text-muted">
+                <i class="bi bi-calendar-month me-2"></i>Ce mois
+              </h6>
+              <p class="h5">{{ formatAmount(storeInfo.revenue.month) }}</p>
+            </div>    
+            <div class="col-6">
+              <h6 class="text-muted">
+                <i class="bi bi-cash-stack me-2"></i>Total
+              </h6>
+              <p class="h5">{{ formatAmount(storeInfo.revenue.total) }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section des graphiques -->
+  <div class="charts-section mt-5">
+    <div class="row">
+      <!-- Graphique du chiffre d'affaires -->
+      <div class="col-md-6">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Chiffre d'affaires</h3>
+            <span class="text-success" *ngIf="salesData.values.length >= 2">
+              {{ ((salesData.values[salesData.values.length - 1] - salesData.values[salesData.values.length - 2]) / salesData.values[salesData.values.length - 2] * 100) | number:'1.0-1' }}% ce mois
+            </span>
+          </div>
+          <div class="chart-container">
+            <canvas #salesChart></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Graphique des commandes -->
+      <div class="col-md-6">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Commandes</h3>
+            <span class="text-primary" *ngIf="ordersData.values.length >= 2">
+              {{ ((ordersData.values[ordersData.values.length - 1] - ordersData.values[ordersData.values.length - 2]) / ordersData.values[ordersData.values.length - 2] * 100) | number:'1.0-1' }}% ce mois
+            </span>
+          </div>
+          <div class="chart-container">
+            <canvas #ordersChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.stat-card:nth-child(1) .stat-icon {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+}
+
+.stat-card:nth-child(2) .stat-icon {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.stat-card:nth-child(3) .stat-icon {
+  background: rgba(33, 150, 243, 0.1);
+  color: #2196f3;
+}
+
+.stat-card:nth-child(4) .stat-icon {
+  background: rgba(156, 39, 176, 0.1);
+  color: #9c27b0;
+}
+
+.stat-info h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.stat-info p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.chart-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-bottom: 1.5rem;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.chart-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.chart-container {
+  height: 300px;
+  position: relative;
+}
+
+.visibility-toggle {
+  border: none;
+  background: none;
+  height: 36px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  transition: all 0.2s ease;
+  color: #6c757d;
+  font-size: 1.1rem;
+  background-color: rgba(108, 117, 125, 0.1);
+}
+
+.visibility-toggle:hover {
+  background-color: rgba(33, 150, 243, 0.15);
+  color: #2196f3;
+}
+
+.visibility-toggle.active {
+  color: #2196f3;
+  background-color: rgba(33, 150, 243, 0.15);
+}
+
+.visibility-toggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.25);
+}
+
+.visibility-toggle i {
+  transition: transform 0.2s ease;
+}
+
+.visibility-toggle:hover i {
+  transform: scale(1.1);
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.toggle-label.active {
+  color: #2196f3;
+}
+</style>

@@ -4,16 +4,26 @@ import { Product } from '../../../core/models/product.model';
 import { Promotion } from '../../../core/services/promotion.service';
 
 export interface ProductWithPromotion extends Product {
-  discountedPrice?: number | null;
+  originalPrice?: number;
+  discountedPrice: number | null;
   activePromotion?: Promotion | null;
+  promotion?: Promotion | null;
+  promotionId?: string;
+  storeUrl?: string;
+  storeName?: string;
 }
 
+export type ProductCardViewMode = 'grid' | 'list';
+
 @Component({
-  selector: 'app-product-card',
+  selector: 'product-card',
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="product-card" [class.out-of-stock]="product.stock === 0">
+    <div class="product-card" 
+         [class.out-of-stock]="product.stock === 0"
+         [class.view-mode-grid]="viewMode === 'grid'"
+         [class.view-mode-list]="viewMode === 'list'">
       <div class="product-image">
         <img [src]="product.images[0] || 'assets/default-product.svg'" 
              [alt]="product.name"
@@ -73,6 +83,9 @@ export class ProductCardComponent {
   @Input() product!: ProductWithPromotion;
   @Input() categoryName: string = '';
   @Input() showDescription: boolean = false;
+  @Input() viewMode: ProductCardViewMode = 'grid';
+  @Input() storeUrl?: string;
+  @Input() storeName?: string;
 
   getDiscountPercentage(): number {
     if (!this.product.activePromotion) return 0;

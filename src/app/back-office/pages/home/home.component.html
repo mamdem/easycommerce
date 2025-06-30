@@ -1,0 +1,240 @@
+<div class="home-container">
+  <!-- Navbar avec effet de verre -->
+  <nav class="glass-navbar">
+    <div class="container">
+      <div class="navbar-content">
+      <div class="navbar-brand">
+          <a routerLink="/" class="brand-link">
+            <img src="assets/images/logo.png" alt="EasyCommerce Logo" class="brand-logo">
+          </a>
+      </div>
+        
+        <div class="nav-menu">
+          <a href="#features" class="nav-link" (click)="scrollToSection('features', $event)">Fonctionnalités</a>
+          <a href="#how-it-works" class="nav-link" (click)="scrollToSection('how-it-works', $event)">Comment ça marche</a>
+          
+          <!-- Menu utilisateur -->
+        <div *ngIf="isLoggedIn()" class="user-menu">
+            <div class="user-info" data-bs-toggle="dropdown">
+            <div class="avatar">
+                <img [src]="getUserAvatar()" alt="Avatar" onError="this.src='assets/default-avatar.svg'">
+              </div>
+              <span class="user-name">{{ getUserName() }}</span>
+              <i class="bi bi-chevron-down"></i>
+            </div>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" routerLink="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+              <li><a class="dropdown-item" routerLink="/profile"><i class="bi bi-person"></i> Profil</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" (click)="logout()"><i class="bi bi-box-arrow-right"></i> Déconnexion</a></li>
+            </ul>
+          </div>
+          
+          <!-- Boutons d'authentification -->
+          <div *ngIf="!isLoggedIn()" class="auth-buttons">
+            <a routerLink="/auth/login" class="btn btn-outline">Connexion</a>
+            <a routerLink="/auth/register" class="btn btn-primary">Inscription</a>
+        </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Section Hero -->
+  <section class="hero-section">
+    <div class="container">
+      <div class="hero-content">
+        <h1 class="hero-title">Créez votre boutique en ligne en quelques minutes</h1>
+        <p class="hero-subtitle">Une solution complète pour gérer votre business en ligne, de la création à la gestion quotidienne</p>
+        
+        <!-- Afficher les boutons CTA si non connecté -->
+        <div class="hero-cta" *ngIf="!isLoggedIn()">
+          <a routerLink="/auth/register" class="btn btn-primary">
+            <i class="bi bi-rocket"></i>
+            Commencer gratuitement
+          </a>
+          <a href="#features" class="btn btn-outline">
+            <i class="bi bi-info-circle"></i>
+            En savoir plus
+          </a>
+        </div>
+
+        <!-- Afficher la section des boutiques si connecté -->
+        <div class="user-stores" *ngIf="isLoggedIn() && isMerchant()">
+          <!-- État de chargement -->
+          <div class="loading-state" *ngIf="loading">
+            <div class="spinner"></div>
+            <p>Chargement de vos boutiques...</p>
+          </div>
+          
+          <!-- État vide -->
+          <div class="empty-state" *ngIf="!loading && userStores.length === 0">
+            <i class="bi bi-shop"></i>
+            <h3>Aucune boutique</h3>
+            <p>Vous n'avez pas encore créé de boutique</p>
+            <button class="btn btn-primary" (click)="createNewStore()">
+              <i class="bi bi-plus-circle"></i>
+              Créer une boutique
+            </button>
+          </div>
+
+          <!-- Liste des boutiques -->
+          <div class="stores-grid" *ngIf="!loading && userStores.length > 0">
+            <!-- Carte pour créer une nouvelle boutique -->
+            <div class="store-card new-store" (click)="createNewStore()">
+              <div class="add-icon">
+                <i class="bi bi-plus-lg"></i>
+              </div>
+              <h3>Nouvelle boutique</h3>
+            </div>
+            
+            <!-- Cartes des boutiques existantes -->
+            <div class="store-card" *ngFor="let store of userStores" (click)="navigateToStoreDashboard(store.id || '')">
+              <div class="store-banner">
+                <img [src]="store.bannerUrl || 'assets/default-banner.svg'" [alt]="store.storeName + ' banner'" onError="this.src='assets/default-banner.svg'">
+              </div>
+              <div class="store-content">
+                <div class="store-logo">
+                  <img [src]="store.logoUrl || 'assets/default-store.svg'" [alt]="store.storeName" onError="this.src='assets/default-store.svg'">
+                </div>
+                <div class="card-content">
+                  <h3>{{ store.storeName }}</h3>
+                  <button class="btn btn-primary">
+                    <span>Accéder</span>
+                    <i class="bi bi-arrow-right"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+            
+      <!-- Section "Pourquoi nous choisir" -->
+      <div class="benefits-grid">
+        <div class="benefit-item">
+          <div class="benefit-icon">
+            <i class="bi bi-lightning-charge"></i>
+                  </div>
+          <div class="benefit-content">
+            <h3>Démarrage Rapide</h3>
+            <p>Lancez votre boutique en ligne en moins de 5 minutes</p>
+                  </div>
+                </div>
+        <div class="benefit-item">
+          <div class="benefit-icon">
+            <i class="bi bi-shield-check"></i>
+              </div>
+          <div class="benefit-content">
+            <h3>100% Sécurisé</h3>
+            <p>Protection des données et paiements sécurisés</p>
+          </div>
+        </div>
+        <div class="benefit-item">
+          <div class="benefit-icon">
+            <i class="bi bi-headset"></i>
+      </div>
+          <div class="benefit-content">
+            <h3>Support 24/7</h3>
+            <p>Une équipe dédiée à votre réussite</p>
+          </div>
+        </div>
+        </div>
+      </div>
+
+    <!-- Formes décoratives -->
+    <div class="shape-blob"></div>
+    <div class="shape-blob shape-blob-2"></div>
+  </section>
+
+  <!-- Section Fonctionnalités -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Fonctionnalités</h2>
+        <p>Tout ce dont vous avez besoin pour réussir en ligne</p>
+      </div>
+      
+      <div class="features-grid">
+        <div class="feature-card" *ngFor="let feature of features">
+          <div class="feature-icon">
+            <i class="bi" [class]="feature.icon"></i>
+          </div>
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.description }}</p>
+        </div>
+          </div>
+        </div>
+  </section>
+
+  <!-- Section Comment ça marche -->
+  <section id="how-it-works" class="how-it-works-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Comment ça marche</h2>
+        <p>Lancez votre boutique en ligne en 3 étapes simples</p>
+              </div>
+
+      <div class="steps-container">
+        <div class="step-card" *ngFor="let step of steps">
+          <div class="step-number">{{ step.number }}</div>
+          <h3>{{ step.title }}</h3>
+          <p>{{ step.description }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Footer -->
+  <footer class="modern-footer">
+    <div class="container">
+      <div class="footer-content">
+          <div class="footer-brand">
+          <div class="brand">
+            <img src="assets/images/logo.png" alt="EasyCommerce Logo" class="footer-logo">
+          </div>
+          <p>La solution complète pour créer et gérer votre boutique en ligne. Simple, rapide et efficace.</p>
+        </div>
+
+        <div class="footer-links">
+          <div class="link-group">
+            <h4>Produit</h4>
+            <ul>
+            <li><a href="#features">Fonctionnalités</a></li>
+              <li><a href="#pricing">Tarifs</a></li>
+              <li><a href="#faq">FAQ</a></li>
+          </ul>
+        </div>
+
+          <div class="link-group">
+            <h4>Ressources</h4>
+            <ul>
+              <li><a href="/blog">Blog</a></li>
+              <li><a href="/guides">Guides</a></li>
+              <li><a href="/support">Support</a></li>
+          </ul>
+        </div>
+
+          <div class="link-group">
+            <h4>Légal</h4>
+            <ul>
+              <li><a href="/privacy">Confidentialité</a></li>
+              <li><a href="/terms">Conditions</a></li>
+              <li><a href="/contact">Contact</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; {{ currentYear }} MarketPlace. Tous droits réservés.</p>
+        <div class="social-links">
+          <a href="#" target="_blank" rel="noopener"><i class="bi bi-facebook"></i></a>
+          <a href="#" target="_blank" rel="noopener"><i class="bi bi-twitter"></i></a>
+          <a href="#" target="_blank" rel="noopener"><i class="bi bi-instagram"></i></a>
+          <a href="#" target="_blank" rel="noopener"><i class="bi bi-linkedin"></i></a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div> 

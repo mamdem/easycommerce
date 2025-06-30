@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { AngularFireStorage } from '@angular/fire/compat/storage';
 import { Observable, from, forkJoin } from 'rxjs';
-import { map, switchMap, take } from 'rxjs/operators';
+import { map, switchMap, take, tap } from 'rxjs/operators';
 import { Product } from '../models/product.model';
 import { AuthService } from './auth.service';
 import { ToastService } from './toast.service';
@@ -30,6 +30,13 @@ export class ProductService {
   }
 
   /**
+   * Obtient le chemin de la collection des produits publics
+   */
+  private getPublicProductsPath(storeId: string): string {
+    return `public_stores/${storeId}/products`;
+  }
+
+  /**
    * Crée un nouveau produit
    */
   async createProduct(product: Partial<Product>, images: File[]): Promise<string> {
@@ -48,10 +55,18 @@ export class ProductService {
         updatedAt: new Date()
       };
 
-      // 3. Sauvegarder dans Firestore
+      // 3. Sauvegarder dans Firestore (collection privée)
       const docRef = await this.firestore
         .collection(this.getProductsPath(product.storeId!))
         .add(productData);
+
+      // 4. Sauvegarder dans la collection publique
+      await this.firestore
+        .doc(`${this.getPublicProductsPath(product.storeId!)}/${docRef.id}`)
+        .set({
+          ...productData,
+          id: docRef.id
+        });
 
       return docRef.id;
     } catch (error) {
@@ -78,8 +93,32 @@ export class ProductService {
    * Récupère les produits d'une boutique
    */
   getStoreProducts(storeId: string): Observable<Product[]> {
+    console.log('Fetching products for store:', storeId);
     return this.firestore
       .collection<Product>(`${this.getProductsPath(storeId)}`, ref => 
+        ref.orderBy('createdAt', 'desc')
+      )
+      .valueChanges({ idField: 'id' })
+      .pipe(
+        tap(products => {
+          // Synchroniser avec la collection publique
+          products.forEach(product => {
+            this.firestore
+              .doc(`${this.getPublicProductsPath(storeId)}/${product.id}`)
+              .set(product)
+              .catch(err => console.error('Error syncing product to public:', err));
+          });
+        })
+      );
+  }
+
+  /**
+   * Récupère les produits publics d'une boutique
+   */
+  getPublicStoreProducts(storeId: string): Observable<Product[]> {
+    console.log('Fetching public products for store:', storeId);
+    return this.firestore
+      .collection<Product>(this.getPublicProductsPath(storeId), ref => 
         ref.orderBy('createdAt', 'desc')
       )
       .valueChanges({ idField: 'id' });
@@ -103,8 +142,14 @@ export class ProductService {
         updateData.images = [...(updates.images || []), ...newImageUrls];
       }
 
+      // Mettre à jour dans la collection privée
       await this.firestore
         .doc(`${this.getProductsPath(storeId)}/${productId}`)
+        .update(updateData);
+
+      // Mettre à jour dans la collection publique
+      await this.firestore
+        .doc(`${this.getPublicProductsPath(storeId)}/${productId}`)
         .update(updateData);
     } catch (error) {
       console.error('Erreur lors de la mise à jour du produit:', error);
@@ -139,9 +184,14 @@ export class ProductService {
         );
       }
 
-      // 3. Supprimer le document
+      // 3. Supprimer le document de la collection privée
       await this.firestore
         .doc(`${this.getProductsPath(storeId)}/${productId}`)
+        .delete();
+
+      // 4. Supprimer le document de la collection publique
+      await this.firestore
+        .doc(`${this.getPublicProductsPath(storeId)}/${productId}`)
         .delete();
     } catch (error) {
       console.error('Erreur lors de la suppression du produit:', error);
@@ -155,7 +205,7 @@ export class ProductService {
   getProduct(storeId: string, productId: string): Observable<Product | null> {
     return this.firestore
       .doc<Product>(`${this.getProductsPath(storeId)}/${productId}`)
-      .valueChanges()
+      .valueChanges({ idField: 'id' })
       .pipe(map(product => product || null));
   }
 
@@ -180,9 +230,77 @@ export class ProductService {
   getProductsByCategory(storeId: string, categoryId: string): Observable<Product[]> {
     return this.firestore
       .collection<Product>(this.getProductsPath(storeId), ref => 
-        ref.where('categoryId', '==', categoryId)
-           .orderBy('createdAt', 'desc')
+        ref.where('category', '==', categoryId)
+        // Le tri sera réactivé une fois l'index créé
+        // .orderBy('createdAt', 'desc')
       )
       .valueChanges({ idField: 'id' });
+  }
+
+  /**
+   * Récupère les produits paginés d'une boutique
+   */
+  getProductsWithPagination(storeId: string, pageSize: number, lastVisible?: any): Observable<{
+    products: Product[];
+    lastVisible: any;
+    total: number;
+  }> {
+    const productsPath = this.getProductsPath(storeId);
+
+    // Obtenir le nombre total de produits
+    const total$ = this.firestore.collection(productsPath).get().pipe(
+      map(snap => snap.size)
+    );
+
+    // Construire la requête paginée
+    let query = this.firestore.collection<Product>(productsPath, ref => {
+      let q = ref.orderBy('createdAt', 'desc').limit(pageSize);
+      if (lastVisible) {
+        q = q.startAfter(lastVisible);
+      }
+      return q;
+    });
+
+    // Obtenir les produits paginés
+    const products$ = query.get().pipe(
+      map(snap => ({
+        products: snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)),
+        lastVisible: snap.docs[snap.docs.length - 1]
+      }))
+    );
+
+    // Combiner les résultats
+    return forkJoin({
+      pageData: products$,
+      total: total$
+    }).pipe(
+      map(result => ({
+        products: result.pageData.products,
+        lastVisible: result.pageData.lastVisible,
+        total: result.total
+      }))
+    );
+  }
+
+  /**
+   * Recherche des produits avec pagination
+   */
+  searchProductsWithPagination(storeId: string, searchTerm: string, pageSize: number): Observable<{
+    products: Product[];
+    total: number;
+  }> {
+    return this.getStoreProducts(storeId).pipe(
+      map(products => {
+        const searchLower = searchTerm.toLowerCase();
+        const filtered = products.filter(product =>
+          product.name.toLowerCase().includes(searchLower) ||
+          product.description.toLowerCase().includes(searchLower)
+        );
+        return {
+          products: filtered.slice(0, pageSize),
+          total: filtered.length
+        };
+      })
+    );
   }
 }

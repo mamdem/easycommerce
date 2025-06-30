@@ -1,0 +1,153 @@
+<div class="container-fluid py-4">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <div class="d-flex align-items-center gap-3">
+          <div class="section-icon">
+            <i class="bi bi-percent"></i>
+          </div>
+          <div>
+            <h1 class="h2 mb-0">Promotions</h1>
+            <p class="text-muted mb-0">Gérez les promotions de votre boutique</p>
+          </div>
+        </div>
+        <div class="header-actions position-relative">
+          <button class="btn btn-primary btn-sm" [routerLink]="['ajouter']">
+            <i class="bi bi-plus-lg me-1"></i>
+            Créer une promotion
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading state -->
+      <app-loading-spinner *ngIf="loading"
+                          text="Chargement des promotions..."
+                          [showProgress]="true"
+                          [fullPage]="true">
+      </app-loading-spinner>
+
+      <!-- Content when not loading -->
+      <div *ngIf="!loading">
+        <!-- Promotions actives -->
+        <div class="promotions-section" *ngIf="(activePromotions$ | async)?.length">
+          <h2 class="h4 mb-4">Promotions actives</h2>
+          <div class="row">
+            <div class="col-md-6 col-lg-4 mb-4" *ngFor="let promotion of activePromotions$ | async">
+              <div class="card h-100">
+                <div class="card-header" [ngClass]="promotion.type.toLowerCase()">
+                  <span class="badge" [ngClass]="'bg-' + getPromotionTypeClass(promotion.type)">
+                    {{ getPromotionTypeLabel(promotion.type) }}
+                  </span>
+                  <div class="actions">
+                    <button class="btn btn-sm btn-outline-secondary me-2" (click)="desactiverPromotion(promotion)">
+                      <i class="bi bi-power"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="deletePromotion(promotion.id)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <h5 class="card-title">{{ promotion.nom }}</h5>
+                  <div class="promotion-details">
+                    <div class="detail-item">
+                      <i class="bi bi-tag"></i>
+                      <span>{{ promotion.reduction }}% de réduction</span>
+                    </div>
+                    <div class="detail-item">
+                      <i class="bi bi-calendar-event"></i>
+                      <span>Du {{ formatDate(promotion.dateDebut) }} au {{ formatDate(promotion.dateFin) }}</span>
+                    </div>
+                    <div class="detail-item" *ngIf="promotion.code">
+                      <i class="bi bi-upc"></i>
+                      <span>Code: <strong>{{ promotion.code }}</strong></span>
+                    </div>
+                    <div class="detail-item" *ngIf="promotion.minimumAchat">
+                      <i class="bi bi-cart"></i>
+                      <span>Minimum d'achat: {{ promotion.minimumAchat | number:'1.0-0' }} FCFA</span>
+                    </div>
+                    <div class="detail-item" *ngIf="promotion.utilisationsMax">
+                      <i class="bi bi-people"></i>
+                      <span>{{ promotion.utilisationsActuelles }}/{{ promotion.utilisationsMax }} utilisations</span>
+                    </div>
+                    <div class="detail-item" *ngIf="promotion.applicationScope !== 'PANIER_ENTIER'">
+                      <i class="bi" [ngClass]="{'bi-box': promotion.applicationScope === 'PRODUITS', 'bi-grid': promotion.applicationScope === 'CATEGORIES'}"></i>
+                      <span>
+                        {{ promotion.applicationScope === 'PRODUITS' ? 'Produits spécifiques' : 'Catégories spécifiques' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-footer text-muted">
+                  <small>
+                    <i class="bi bi-clock me-1"></i>
+                    Créée le {{ formatDate(promotion.createdAt) }}
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Promotions expirées -->
+        <div class="promotions-section expired mt-5" *ngIf="(expiredPromotions$ | async)?.length">
+          <h2 class="h4 mb-4">Promotions expirées</h2>
+          <div class="row">
+            <div class="col-md-6 col-lg-4 mb-4" *ngFor="let promotion of expiredPromotions$ | async">
+              <div class="card h-100 bg-light">
+                <div class="card-header" [ngClass]="promotion.type.toLowerCase()">
+                  <span class="badge bg-secondary">
+                    {{ getPromotionTypeLabel(promotion.type) }}
+                  </span>
+                  <div class="actions">
+                    <button class="btn btn-sm btn-outline-danger" (click)="deletePromotion(promotion.id)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <h5 class="card-title text-muted">{{ promotion.nom }}</h5>
+                  <div class="promotion-details">
+                    <div class="detail-item">
+                      <i class="bi bi-tag"></i>
+                      <span>{{ promotion.reduction }}% de réduction</span>
+                    </div>
+                    <div class="detail-item">
+                      <i class="bi bi-calendar-event"></i>
+                      <span>Du {{ formatDate(promotion.dateDebut) }} au {{ formatDate(promotion.dateFin) }}</span>
+                    </div>
+                    <div class="detail-item" *ngIf="promotion.code">
+                      <i class="bi bi-upc"></i>
+                      <span>Code: <strong>{{ promotion.code }}</strong></span>
+                    </div>
+                    <div class="detail-item" *ngIf="promotion.applicationScope !== 'PANIER_ENTIER'">
+                      <i class="bi" [ngClass]="{'bi-box': promotion.applicationScope === 'PRODUITS', 'bi-grid': promotion.applicationScope === 'CATEGORIES'}"></i>
+                      <span>
+                        {{ promotion.applicationScope === 'PRODUITS' ? 'Produits spécifiques' : 'Catégories spécifiques' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- État vide -->
+        <div class="empty-state" *ngIf="!(activePromotions$ | async)?.length && !(expiredPromotions$ | async)?.length">
+          <div class="text-center py-5">
+            <div class="empty-state-icon mb-4">
+              <i class="bi bi-percent display-1"></i>
+            </div>
+            <h3>Aucune promotion</h3>
+            <p class="text-muted">Vous n'avez pas encore créé de promotion pour votre boutique.</p>
+            <button class="btn btn-primary mt-3" [routerLink]="['ajouter']">
+              <i class="bi bi-plus-lg me-1"></i>
+              Créer une promotion
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

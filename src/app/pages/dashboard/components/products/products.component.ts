@@ -15,8 +15,17 @@ import { CategoryService } from '../../../../core/services/category.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PriceService } from '../../../../core/services/price.service';
 import { PromotionService, Promotion } from '../../../../core/services/promotion.service';
-import { ProductCardComponent, ProductWithPromotion } from '../../../../shared/components/product-card/product-card.component';
+import { ProductCardComponent } from '../../../../shared/components/product-card/product-card.component';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
+import { Store } from '../../../../core/models/store.model';
+
+interface ProductWithPromotion extends Product {
+  originalPrice: number;
+  discountedPrice: number | null;
+  promotion: Promotion | null;
+  promotionId?: string;
+}
 
 @Component({
   selector: 'app-products',
@@ -27,7 +36,8 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../shared/co
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    ProductCardComponent
+    ProductCardComponent,
+    LoadingSpinnerComponent
   ],
   animations: [
     trigger('fadeInOut', [
@@ -46,12 +56,12 @@ export class ProductsComponent implements OnInit {
   @ViewChild('scrollLeftBtn') scrollLeftBtn!: ElementRef;
   @ViewChild('scrollRightBtn') scrollRightBtn!: ElementRef;
   
-  products$!: Observable<ProductWithPromotion[]>;
+  products: ProductWithPromotion[] = [];
   categories$!: Observable<Category[]>;
   promotions$!: Observable<Promotion[]>;
   categoryMap: Map<string, string> = new Map();
-  loading = true;
   actionLoading = false;
+  loading = false;
   searchTerm = '';
   selectedCategory: string | null = null;
   viewMode: 'grid' | 'list' = 'grid';
@@ -69,6 +79,24 @@ export class ProductsComponent implements OnInit {
   private confirmCallback: (() => void) | null = null;
 
   showAllCategoriesPopup = false;
+
+  categories: Category[] = [];
+  currentStore!: Store;
+  loadingProducts = true;
+  loadingCategories = true;
+
+  // Pagination et cache
+  currentPage = 1;
+  pageSize = 12;
+  totalPages = 0;
+  totalProducts = 0;
+  lastVisible: any = null;
+  loadingMore = false;
+  productsCache: { [page: number]: ProductWithPromotion[] } = {};
+  lastVisibleCache: { [page: number]: any } = {};
+
+  // Gestion des promotions
+  activePromotions: Promotion[] = [];
 
   constructor(
     private productService: ProductService,
@@ -92,53 +120,136 @@ export class ProductsComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadProducts();
-    this.loadCategories();
+    this.loadStore();
   }
 
-  private loadProducts(): void {
-    this.loading = true;
-    this.storeService.getSelectedStore().subscribe(store => {
+  private async loadStore(): Promise<void> {
+    try {
+      const store = await firstValueFrom(this.storeService.getSelectedStore());
       if (!store) {
-        this.toastService.error('Aucune boutique sélectionnée');
+        this.toastService.error('Veuillez sélectionner une boutique');
         this.router.navigate(['/dashboard']);
         return;
       }
-      
-      // Charger les promotions et les produits
-      this.promotions$ = this.promotionService.getPromotions(store.id!);
-      const products$ = this.productService.getStoreProducts(store.id!);
-
-      // Combiner les produits avec leurs promotions
-      this.products$ = combineLatest([products$, this.promotions$]).pipe(
-        map(([products, promotions]) => {
-          return products
-            .filter(product => !this.selectedCategory || product.category === this.selectedCategory)
-            .map(product => ({
-              ...product,
-              discountedPrice: this.priceService.calculateDiscountedPrice(product, promotions),
-              activePromotion: this.priceService.getApplicablePromotion(product, promotions)
-            }));
-        })
-      );
-
-      this.loading = false;
-    });
+      this.currentStore = store;
+      this.loadCategories();
+      this.loadProducts();
+      await this.loadPromotions();
+    } catch (error) {
+      console.error('Error loading store:', error);
+      this.toastService.error('Erreur lors du chargement de la boutique');
+    }
   }
 
   private loadCategories(): void {
-    this.storeService.getSelectedStore().subscribe(store => {
-      if (store) {
-        this.categories$ = this.categoryService.getStoreCategories(store.id!).pipe(
-          map(categories => {
-            // Mettre à jour la map des catégories
-            this.categoryMap.clear();
-            categories.forEach(cat => this.categoryMap.set(cat.id, cat.name));
-            return categories;
-          })
-        );
+    this.loadingCategories = true;
+    this.categoryService.getStoreCategories(this.currentStore.id)
+      .pipe(take(1))
+      .subscribe({
+        next: (categories) => {
+          this.categories$ = this.categoryService.getStoreCategories(this.currentStore.id!).pipe(
+            map(categories => {
+              // Mettre à jour la map des catégories
+              this.categoryMap.clear();
+              categories.forEach(cat => this.categoryMap.set(cat.id, cat.name));
+              return categories;
+            })
+          );
+          this.loadingCategories = false;
+        },
+        error: (error) => {
+          console.error('Error loading categories:', error);
+          this.toastService.error('Erreur lors du chargement des catégories');
+          this.loadingCategories = false;
+        }
+      });
+  }
+
+  private async loadProducts(): Promise<void> {
+    if (this.productsCache[this.currentPage]) {
+      this.products = this.productsCache[this.currentPage];
+      return;
+    }
+
+    this.loadingProducts = true;
+    const previousPageLastVisible = this.lastVisibleCache[this.currentPage - 1];
+
+    try {
+      const result = await firstValueFrom(this.productService.getProductsWithPagination(
+      this.currentStore.id,
+      this.pageSize,
+      this.currentPage === 1 ? null : previousPageLastVisible
+      ));
+
+      // Charger les promotions actives
+      const now = Date.now();
+      const promotions = await firstValueFrom(this.promotionService.getPromotions(this.currentStore.id));
+      const activePromotions = (promotions as Promotion[]).filter((promo: Promotion) => 
+        promo.actif && 
+        promo.dateDebut <= now && 
+        promo.dateFin >= now &&
+        (!promo.utilisationsMax || promo.utilisationsActuelles < promo.utilisationsMax)
+      );
+
+      // Appliquer les promotions aux produits
+      const productsWithPromotions: ProductWithPromotion[] = result.products.map(product => {
+        const applicablePromotion = activePromotions.find((promo: Promotion) => {
+          if (!promo.actif) return false;
+
+          switch (promo.applicationScope) {
+            case 'PRODUITS':
+              return promo.produitIds?.includes(product.id!);
+            case 'CATEGORIES':
+              return promo.categorieIds?.includes(product.category);
+            case 'PANIER_ENTIER':
+              return true;
+            default:
+              return false;
+          }
+        });
+
+        const discountedPrice = applicablePromotion
+          ? product.price * (1 - applicablePromotion.reduction / 100)
+          : null;
+
+        return {
+          ...product,
+          originalPrice: product.price,
+          discountedPrice,
+          promotion: applicablePromotion || null,
+          promotionId: applicablePromotion?.id
+        };
+      });
+
+      this.products = productsWithPromotions;
+      this.productsCache[this.currentPage] = productsWithPromotions;
+        this.lastVisibleCache[this.currentPage] = result.lastVisible;
+        this.totalProducts = result.total;
+      this.totalPages = Math.ceil(result.total / this.pageSize);
+    } catch (error) {
+          console.error('Error loading products:', error);
+          this.toastService.error('Erreur lors du chargement des produits');
+    } finally {
+          this.loadingProducts = false;
+        }
+  }
+
+  onPageChange(page: number): void {
+    if (page >= 1 && page <= this.totalPages && page !== this.currentPage) {
+      this.currentPage = page;
+      if (page === 1) {
+        this.lastVisible = null;
       }
-    });
+      this.loadProducts();
+      const container = document.querySelector('.products-container');
+      if (container) {
+        container.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }
+
+  get pages(): number[] {
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
   }
 
   startEditingCategory(category: Category): void {
@@ -262,16 +373,66 @@ export class ProductsComponent implements OnInit {
 
   onSearch(): void {
     if (!this.searchTerm.trim()) {
+      this.currentPage = 1;
+      this.clearCache();
       this.loadProducts();
       return;
     }
 
-    this.loading = true;
-    this.storeService.getSelectedStore().subscribe(store => {
-      if (store) {
-        this.products$ = this.productService.searchProducts(store.id!, this.searchTerm.trim());
+    this.loadingProducts = true;
+    this.productService.searchProductsWithPagination(
+      this.currentStore.id,
+      this.searchTerm.trim(),
+      this.pageSize
+    ).pipe(take(1)).subscribe({
+      next: (result) => {
+        // Appliquer les promotions à chaque produit
+        const productsWithPromotions: ProductWithPromotion[] = result.products.map(product => {
+          // Trouver une promotion active pour ce produit
+          const activePromotion = this.activePromotions?.find(promo => {
+            if (!promo.actif) return false;
+            const now = Date.now();
+            if (now < promo.dateDebut || now > promo.dateFin) return false;
+
+            switch (promo.applicationScope) {
+              case 'PRODUITS':
+                return promo.produitIds?.includes(product.id!);
+              case 'CATEGORIES':
+                return promo.categorieIds?.includes(product.category);
+              case 'PANIER_ENTIER':
+                return true;
+              default:
+                return false;
+            }
+          });
+
+          // Calculer le prix avec promotion si applicable
+          const discountedPrice = activePromotion
+            ? product.price * (1 - activePromotion.reduction / 100)
+            : null;
+
+          return {
+            ...product,
+            originalPrice: product.price,
+            discountedPrice,
+            promotion: activePromotion || null,
+            promotionId: activePromotion?.id
+          };
+        });
+
+        this.products = productsWithPromotions;
+        this.currentPage = 1;
+        this.clearCache();
+        this.productsCache[1] = productsWithPromotions;
+        this.totalProducts = result.total;
+        this.totalPages = Math.ceil(this.totalProducts / this.pageSize);
+              this.loadingProducts = false;
+            },
+            error: (error) => {
+              console.error('Error searching products:', error);
+              this.toastService.error('Erreur lors de la recherche des produits');
+        this.loadingProducts = false;
       }
-      this.loading = false;
     });
   }
 
@@ -291,6 +452,7 @@ export class ProductsComponent implements OnInit {
   }
 
   editProduct(product: Product): void {
+    this.clearCache(); // Le cache n'est plus valide après une modification
     this.actionLoading = true;
     this.router.navigate(['/dashboard/products/edit', product.id], {
       state: { product }
@@ -298,6 +460,7 @@ export class ProductsComponent implements OnInit {
   }
 
   async deleteProduct(product: Product): Promise<void> {
+    this.clearCache(); // Le cache n'est plus valide après une suppression
     this.showConfirmation(
       'Supprimer le produit',
       `Êtes-vous sûr de vouloir supprimer "${product.name}" ? Cette action est irréversible.`,
@@ -320,12 +483,14 @@ export class ProductsComponent implements OnInit {
 
   onImageError(event: Event): void {
     const img = event.target as HTMLImageElement;
-    img.src = 'assets/default-product.svg';
+      img.src = 'assets/default-product.svg';
   }
 
   clearSearch(): void {
     this.searchTerm = '';
-    this.onSearch();
+    this.currentPage = 1;
+    this.clearCache();
+    this.loadProducts();
   }
 
   getCategoryName(categoryId: string): string {
@@ -400,5 +565,36 @@ export class ProductsComponent implements OnInit {
   getDiscountPercentage(product: Product & { activePromotion?: Promotion | null }): number {
     if (!product.activePromotion) return 0;
     return product.activePromotion.reduction;
+  }
+
+  openCategoryModal(): void {
+    this.showCategoryForm = true;
+    this.editingCategoryId = null;
+    this.categoryForm.reset();
+  }
+
+  private clearCache(): void {
+    this.productsCache = {};
+    this.lastVisibleCache = {};
+  }
+
+  private async loadPromotions(): Promise<void> {
+    try {
+      if (!this.currentStore?.id) return;
+      
+      this.promotions$ = this.promotionService.getPromotions(this.currentStore.id);
+      this.activePromotions = await firstValueFrom(this.promotions$);
+    } catch (error) {
+      console.error('Error loading promotions:', error);
+      this.toastService.error('Erreur lors du chargement des promotions');
+    }
+  }
+
+  // Méthode pour calculer le prix promotionnel
+  calculateDiscountedPrice(product: ProductWithPromotion): number {
+    if (product.promotion) {
+      return product.price * (1 - product.promotion.reduction / 100);
+    }
+    return product.price;
   }
 } 

@@ -1,0 +1,695 @@
+@import '../shared/dashboard.scss';
+
+// Styles spécifiques au composant de gestion des commandes
+.avatar-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: #4f46e5;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.status-filter {
+  display: flex;
+  width: 100%;
+  .btn {
+    flex: 1;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.5rem;
+    transition: all 0.2s;
+  }
+}
+
+.status-badge {
+  font-size: 0.85rem;
+  padding: 0.5em 0.85em;
+  border-radius: 50rem;
+  white-space: nowrap;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
+  
+  &.bg-warning {
+    background-color: rgba(255, 193, 7, 0.2) !important;
+    color: #cc9a06;
+  }
+  
+  &.bg-info {
+    background-color: rgba(13, 202, 240, 0.2) !important;
+    color: #0b96b4;
+  }
+  
+  &.bg-primary {
+    background-color: rgba(13, 110, 253, 0.2) !important;
+    color: #0b5ed7;
+  }
+  
+  &.bg-success {
+    background-color: rgba(25, 135, 84, 0.2) !important;
+    color: #157347;
+  }
+}
+
+.table {
+  th {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 8px;
+  }
+
+  td {
+    padding: 12px 8px;
+    vertical-align: middle;
+  }
+
+  thead {
+    th {
+      transition: background-color 0.2s;
+      user-select: none;
+      
+      &:not(:last-child):hover {
+        background-color: #e9ecef;
+      }
+      
+      i {
+        font-size: 0.85em;
+        vertical-align: middle;
+        
+        &.opacity-25 {
+          opacity: 0.25;
+        }
+      }
+    }
+  }
+}
+
+.orders-table {
+  tr {
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    
+    &:hover {
+      background-color: rgba(79, 70, 229, 0.03);
+      border-left: 3px solid #4f46e5;
+    }
+  }
+}
+
+.btn-group {
+  .btn {
+    border-radius: 4px;
+    margin: 0 2px;
+    padding: 0.25rem 0.5rem;
+    transition: all 0.2s;
+    
+    &:hover {
+      background-color: #f0f0f8;
+    }
+  }
+}
+
+// Pagination
+.pagination {
+  gap: 0.25rem;
+
+  .page-item {
+    &.active .page-link {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      color: white;
+    }
+
+    &.disabled .page-link {
+      background-color: #f8f9fa;
+      border-color: #dee2e6;
+      color: #6c757d;
+    }
+  }
+
+  .page-link {
+    border-radius: 4px;
+    padding: 0.375rem 0.75rem;
+    color: var(--primary-color);
+    border: 1px solid #dee2e6;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    
+    &:hover {
+      background-color: #e9ecef;
+      border-color: #dee2e6;
+      color: var(--primary-color);
+    }
+    
+    &:focus {
+      box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25);
+    }
+  }
+}
+
+// En-tête de la page
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 0;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e9ecef;
+
+  .header-content {
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: #2c3e50;
+      
+      i {
+        color: #3498db;
+      }
+    }
+  }
+}
+
+// Section des filtres
+.filters-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  
+  .search-box {
+    flex: 1;
+    min-width: 300px;
+    
+    .input-group {
+      background: #f8f9fa;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+      
+      .input-group-text {
+        color: #6c757d;
+      }
+      
+      input {
+        &:focus {
+          box-shadow: none;
+        }
+      }
+    }
+  }
+  
+  .status-filters {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    
+    .status-filter-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      background: white;
+      color: #495057;
+      font-weight: 500;
+      transition: all 0.2s;
+      
+      &:hover {
+        background: #f8f9fa;
+      }
+      
+      &.active {
+        background: #e3f2fd;
+        border-color: #90caf9;
+        color: #1976d2;
+      }
+      
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        
+        &.all {
+          background: #6c757d;
+        }
+        
+        &.en_cours {
+          background: #ffc107;
+        }
+        
+        &.valide {
+          background: #28a745;
+        }
+        
+        &.rejete {
+          background: #dc3545;
+        }
+      }
+      
+      .count {
+        background: #e9ecef;
+        padding: 0.2rem 0.5rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        color: #495057;
+      }
+    }
+  }
+}
+
+// Table des commandes
+.orders-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  overflow: hidden;
+  
+  table {
+    margin-bottom: 0;
+    
+    thead {
+      background: #f8f9fa;
+      
+      th {
+        padding: 1rem;
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #e9ecef;
+      }
+    }
+    
+    .order-row {
+      transition: background-color 0.2s;
+      
+      &:hover {
+        background-color: #f8f9fa;
+      }
+      
+      td {
+        padding: 1rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #e9ecef;
+      }
+    }
+  }
+}
+
+// Informations de commande
+.order-info {
+  .order-id {
+    display: block;
+    font-weight: 600;
+    color: #2c3e50;
+  }
+  
+  .order-date {
+    font-size: 0.875rem;
+    color: #6c757d;
+    white-space: nowrap;
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+  }
+}
+
+// Informations client
+.customer-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e3f2fd;
+    color: #1976d2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+  
+  .customer-details {
+    .customer-name {
+      font-weight: 500;
+      color: #2c3e50;
+    }
+    
+    .customer-email {
+      font-size: 0.875rem;
+      color: #6c757d;
+    }
+  }
+}
+
+// Nombre d'articles
+.items-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  background: #f8f9fa;
+  border-radius: 20px;
+  color: #495057;
+  font-weight: 500;
+}
+
+// Total de la commande
+.order-total {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+// Badge de statut
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 500;
+  
+  &.bg-warning {
+    background: #fff3cd !important;
+    color: #856404;
+  }
+  
+  &.bg-success {
+    background: #d4edda !important;
+    color: #155724;
+  }
+  
+  &.bg-danger {
+    background: #f8d7da !important;
+    color: #721c24;
+  }
+}
+
+// Boutons d'action
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  
+  .btn-link {
+    padding: 0.5rem;
+    border-radius: 6px;
+    
+    &:hover {
+      background: #f8f9fa;
+    }
+  }
+}
+
+// État vide
+.empty-state {
+  padding: 3rem 0;
+  text-align: center;
+  color: #6c757d;
+  
+  i {
+    opacity: 0.5;
+  }
+}
+
+// Export dialog styles
+.modal {
+  background-color: rgba(0, 0, 0, 0.5);
+  
+  &.show {
+    display: block;
+  }
+}
+
+.period-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  
+  .btn {
+    flex: 1;
+    min-width: calc(33.333% - 0.5rem);
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #495057;
+    
+    &:hover {
+      background-color: #e9ecef;
+    }
+    
+    &.btn-primary {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      color: white;
+      
+      &:hover {
+        filter: brightness(90%);
+      }
+    }
+  }
+}
+
+.statistics {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  
+  label {
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  h4 {
+    font-weight: 600;
+    color: #2d3436;
+  }
+}
+
+.modal-content {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  padding: 1.5rem;
+  
+  .modal-title {
+    font-weight: 600;
+    color: #2d3436;
+  }
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  
+  &:hover {
+    filter: brightness(90%);
+  }
+}
+
+.form-control {
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  padding: 0.5rem 0.75rem;
+  
+  &:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25);
+  }
+}
+
+.modal-backdrop {
+  &.show {
+    opacity: 0.5;
+  }
+}
+
+// Export popup styles
+.export-popup {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: 400px;
+  background: white;
+  border-radius: 8px;
+  padding: 1.25rem;
+  z-index: 1000;
+  display: none;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  
+  &.show {
+    display: block;
+  }
+
+  .popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+
+    h5 {
+      margin: 0;
+      font-weight: 600;
+      color: var(--secondary-color);
+    }
+
+    .btn-close {
+      filter: invert(1) brightness(200%);
+    }
+  }
+}
+
+.period-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  
+  .btn {
+    font-size: 0.875rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: var(--secondary-color);
+    
+    &:hover {
+      background-color: #e9ecef;
+    }
+    
+    &.btn-primary {
+      background-color: white;
+      border-color: var(--secondary-color);
+      color: var(--secondary-color);
+      
+      &:hover {
+        background-color: var(--secondary-color);
+        color: white;
+      }
+    }
+  }
+}
+
+.date-range {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  
+  .form-label {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    color: var(--secondary-color);
+    font-weight: 500;
+  }
+
+  .form-control {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    color: var(--secondary-color);
+    height: 38px;
+    padding: 0.5rem;
+    width: 100%;
+    border-radius: 4px;
+    font-size: 0.9rem;
+
+    &:focus {
+      border-color: var(--secondary-color);
+      box-shadow: 0 0 0 0.2rem rgba(var(--secondary-color-rgb), 0.25);
+      outline: none;
+    }
+
+    &::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.6;
+      color: var(--secondary-color);
+    }
+
+    &:hover::-webkit-calendar-picker-indicator {
+      opacity: 0.8;
+    }
+  }
+
+  .row {
+    margin: 0 -0.5rem;
+
+    .col-6 {
+      padding: 0 0.5rem;
+    }
+  }
+}
+
+.statistics {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+  
+  .stat-item {
+    &:not(:last-child) {
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #dee2e6;
+    }
+    
+    label {
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+      display: block;
+      color: var(--secondary-color);
+    }
+    
+    h4 {
+      margin: 0;
+      font-weight: 600;
+      color: var(--secondary-color);
+    }
+  }
+}
+
+// Modifier le bouton principal
+.header-actions {
+  .btn-primary {
+    background-color: white;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    
+    &:hover {
+      background-color: var(--primary-color);
+      color: white;
+    }
+  }
+}
+
+// Modifier le bouton de téléchargement dans le popup
+.export-popup {
+  .btn-primary {
+    background-color: white;
+    border-color: var(--secondary-color);
+    color: var(--secondary-color);
+    
+    &:hover {
+      background-color: var(--secondary-color);
+      color: white;
+    }
+  }
+} 

@@ -2,9 +2,9 @@ import { Component, OnInit, Renderer2, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, map } from 'rxjs';
 import { Store } from '../../../core/models/store.model';
-import { StoreService } from '../../../core/services/store.service';
+import { StoreService, StoreData } from '../../../core/services/store.service';
 import { CartService } from '../../../core/services/cart.service';
 import { StoreNavbarComponent } from '../../components/store-navbar/store-navbar.component';
 import { StoreFooterComponent } from '../../components/store-footer/store-footer.component';
@@ -95,6 +95,36 @@ export class StoreLayoutComponent implements OnInit {
   private loadStore() {
     if (this.storeUrl) {
       this.store$ = this.storeService.getStoreByUrl(this.storeUrl).pipe(
+        map(storeData => {
+          if (storeData) {
+            // Convertir StoreData en Store
+            return {
+              id: storeData.id || '',
+              ownerId: storeData.ownerId,
+              legalName: storeData.legalName,
+              storeName: storeData.storeName,
+              storeDescription: storeData.storeDescription,
+              storeCategory: storeData.storeCategory,
+              email: storeData.email,
+              phoneNumber: storeData.phoneNumber,
+              address: storeData.address,
+              city: storeData.city,
+              country: storeData.country,
+              zipCode: storeData.zipCode,
+              latitude: storeData.latitude,
+              longitude: storeData.longitude,
+              taxId: storeData.taxId || '',
+              logoUrl: storeData.logoUrl || '',
+              bannerUrl: storeData.bannerUrl || '',
+              primaryColor: storeData.primaryColor,
+              secondaryColor: storeData.secondaryColor,
+              createdAt: storeData.createdAt,
+              updatedAt: storeData.updatedAt,
+              status: 'active'
+            } as Store;
+          }
+          return null;
+        }),
         tap(store => {
           if (store) {
             this.applyStoreTheme(store);
@@ -141,10 +171,6 @@ export class StoreLayoutComponent implements OnInit {
     return `#${adjustedR.toString(16).padStart(2, '0')}${adjustedG.toString(16).padStart(2, '0')}${adjustedB.toString(16).padStart(2, '0')}`;
   }
 
-  private updateCartCount() {
-    this.cartItemsCount = this.cartService.getCartItemsCount(this.storeUrl);
-  }
-
   private checkScreenSize() {
     this.isMobile = window.innerWidth < 768;
     if (!this.isMobile) {
@@ -152,22 +178,40 @@ export class StoreLayoutComponent implements OnInit {
     }
   }
 
-  toggleMenu() {
-    this.isMenuOpen = !this.isMenuOpen;
-  }
-
-  closeMenu() {
-    this.isMenuOpen = false;
-  }
-
-  ngOnDestroy() {
-    window.removeEventListener('resize', () => this.checkScreenSize());
+  private updateCartCount() {
+    const cartItems = this.cartService.getCartItemsByStore(this.storeUrl);
+    this.cartItemsCount = cartItems.reduce((total, item) => total + item.quantity, 0);
   }
 
   private loadStoreSettings() {
     this.storeService.getStoreByUrl(this.storeUrl).subscribe({
-      next: (store) => {
-        if (store) {
+      next: (storeData) => {
+        if (storeData) {
+          // Convertir StoreData en Store
+          const store: Store = {
+            id: storeData.id || '',
+            ownerId: storeData.ownerId,
+            legalName: storeData.legalName,
+            storeName: storeData.storeName,
+            storeDescription: storeData.storeDescription,
+            storeCategory: storeData.storeCategory,
+            email: storeData.email,
+            phoneNumber: storeData.phoneNumber,
+            address: storeData.address,
+            city: storeData.city,
+            country: storeData.country,
+            zipCode: storeData.zipCode,
+            latitude: storeData.latitude,
+            longitude: storeData.longitude,
+            taxId: storeData.taxId || '',
+            logoUrl: storeData.logoUrl || '',
+            bannerUrl: storeData.bannerUrl || '',
+            primaryColor: storeData.primaryColor,
+            secondaryColor: storeData.secondaryColor,
+            createdAt: storeData.createdAt,
+            updatedAt: storeData.updatedAt,
+            status: 'active'
+          };
           this.updateStoreColors(store);
         }
       },
@@ -198,5 +242,17 @@ export class StoreLayoutComponent implements OnInit {
     const b = parseInt(hex.substring(4, 6), 16);
     
     return `${r}, ${g}, ${b}`;
+  }
+
+  toggleMenu() {
+    this.isMenuOpen = !this.isMenuOpen;
+  }
+
+  closeMenu() {
+    this.isMenuOpen = false;
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('resize', () => this.checkScreenSize());
   }
 } 

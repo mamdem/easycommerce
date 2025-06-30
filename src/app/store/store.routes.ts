@@ -12,6 +12,11 @@ export const storeRoutes: Routes = [
           .then(m => m.StoreHomeComponent)
       },
       {
+        path: ':productId',
+        loadComponent: () => import('./pages/store-home/components/product-details/product-details.component')
+          .then(m => m.ProductDetailsComponent)
+      },
+      {
         path: 'contact',
         loadComponent: () => import('./pages/store-home/components/store-contact/store-contact.component')
           .then(m => m.StoreContactComponent)

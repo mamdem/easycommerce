@@ -1,0 +1,152 @@
+<div class="register-container">
+  <div class="register-content">
+    <div class="register-header">
+      <a routerLink="/" class="logo-link">
+        <img src="assets/images/logo.png" alt="EasyCommerce Logo" class="auth-logo">
+      </a>
+      <h1>Créez votre compte marchand</h1>
+      <p>Rejoignez EasyCommerce et lancez votre boutique en ligne</p>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="firstName">Prénom</label>
+          <div class="input-group">
+            <i class="bi bi-person"></i>
+            <input
+              type="text"
+              id="firstName"
+              formControlName="firstName"
+              placeholder="Votre prénom"
+              [class.is-invalid]="firstName?.invalid && (firstName?.dirty || firstName?.touched)"
+            >
+          </div>
+          <div class="error-message" *ngIf="firstName?.invalid && (firstName?.dirty || firstName?.touched)">
+            <span *ngIf="firstName?.errors?.['required']">Le prénom est requis</span>
+            <span *ngIf="firstName?.errors?.['minlength']">Le prénom doit contenir au moins 2 caractères</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="lastName">Nom</label>
+          <div class="input-group">
+            <i class="bi bi-person-fill"></i>
+            <input
+              type="text"
+              id="lastName"
+              formControlName="lastName"
+              placeholder="Votre nom"
+              [class.is-invalid]="lastName?.invalid && (lastName?.dirty || lastName?.touched)"
+            >
+          </div>
+          <div class="error-message" *ngIf="lastName?.invalid && (lastName?.dirty || lastName?.touched)">
+            <span *ngIf="lastName?.errors?.['required']">Le nom est requis</span>
+            <span *ngIf="lastName?.errors?.['minlength']">Le nom doit contenir au moins 2 caractères</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <div class="input-group">
+          <i class="bi bi-envelope"></i>
+          <input
+            type="email"
+            id="email"
+            formControlName="email"
+            placeholder="votre@email.com"
+            [class.is-invalid]="email?.invalid && (email?.dirty || email?.touched)"
+          >
+        </div>
+        <div class="error-message" *ngIf="email?.invalid && (email?.dirty || email?.touched)">
+          <span *ngIf="email?.errors?.['required']">L'email est requis</span>
+          <span *ngIf="email?.errors?.['email']">Format d'email invalide</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <div class="input-group">
+          <i class="bi bi-lock"></i>
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            id="password"
+            formControlName="password"
+            placeholder="8 caractères minimum"
+            [class.is-invalid]="password?.invalid && (password?.dirty || password?.touched)"
+          >
+          <button type="button" class="toggle-password" (click)="togglePasswordVisibility()">
+            <i [class]="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+          </button>
+        </div>
+        <div class="error-message" *ngIf="password?.invalid && (password?.dirty || password?.touched)">
+          <span *ngIf="password?.errors?.['required']">Le mot de passe est requis</span>
+          <span *ngIf="password?.errors?.['minlength']">Le mot de passe doit contenir au moins 8 caractères</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirmer le mot de passe</label>
+        <div class="input-group">
+          <i class="bi bi-lock-fill"></i>
+          <input
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            id="confirmPassword"
+            formControlName="confirmPassword"
+            placeholder="Confirmez votre mot de passe"
+            [class.is-invalid]="confirmPassword?.invalid && (confirmPassword?.dirty || confirmPassword?.touched)"
+          >
+          <button type="button" class="toggle-password" (click)="toggleConfirmPasswordVisibility()">
+            <i [class]="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+          </button>
+        </div>
+        <div class="error-message" *ngIf="confirmPassword?.invalid && (confirmPassword?.dirty || confirmPassword?.touched)">
+          <span *ngIf="confirmPassword?.errors?.['required']">La confirmation du mot de passe est requise</span>
+          <span *ngIf="confirmPassword?.errors?.['passwordMismatch']">Les mots de passe ne correspondent pas</span>
+        </div>
+      </div>
+
+      <div class="form-group terms">
+        <label class="checkbox-container">
+          <input type="checkbox" formControlName="acceptTerms">
+          <span class="checkmark"></span>
+          <span class="terms-text">
+            J'accepte les <a href="/terms" target="_blank">conditions d'utilisation</a> et la 
+            <a href="/privacy" target="_blank">politique de confidentialité</a>
+          </span>
+        </label>
+        <div class="error-message" *ngIf="acceptTerms?.invalid && (acceptTerms?.dirty || acceptTerms?.touched)">
+          <span *ngIf="acceptTerms?.errors?.['required']">Vous devez accepter les conditions d'utilisation</span>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" [disabled]="registerForm.invalid || isLoading">
+        <span *ngIf="!isLoading">Créer mon compte</span>
+        <div class="spinner" *ngIf="isLoading">
+          <div class="bounce1"></div>
+          <div class="bounce2"></div>
+          <div class="bounce3"></div>
+        </div>
+      </button>
+
+      <div class="social-login">
+        <p>Ou inscrivez-vous avec</p>
+        <div class="social-buttons">
+          <button type="button" class="social-btn google" (click)="signInWithGoogle()">
+            <img src="assets/images/google-icon.svg" alt="Google">
+            <span>Google</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="auth-footer">
+        <p>Déjà inscrit ? <a routerLink="/auth/login">Connectez-vous</a></p>
+      </div>
+    </form>
+  </div>
+
+  <!-- Décoration -->
+  <div class="decoration-blob blob-1"></div>
+  <div class="decoration-blob blob-2"></div>
+</div> 

@@ -1,0 +1,258 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <div class="d-flex align-items-center gap-3">
+    <div class="section-icon">
+      <i class="bi bi-people-fill"></i>
+    </div>
+    <div>
+      <h1 class="h2 mb-0">Gestion des clients</h1>
+      <p class="text-muted mb-0">Gérez votre base clients</p>
+    </div>
+  </div>
+  <div class="header-actions position-relative">
+    <button class="btn btn-primary btn-sm" (click)="exportAllCustomers()">
+      <i class="bi bi-download me-1"></i>
+      Exporter les clients
+    </button>
+  </div>
+</div>
+
+<!-- États de chargement et d'erreur -->
+<div class="loading-state" *ngIf="loading">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Chargement...</span>
+  </div>
+</div>
+
+<div class="alert alert-danger" *ngIf="error">
+  <i class="bi bi-exclamation-triangle me-2"></i>
+  Une erreur est survenue lors du chargement des clients.
+  <button class="btn btn-sm btn-outline-danger ms-3" (click)="loadCustomers()">Réessayer</button>
+</div>
+
+<!-- Loading state -->
+<app-loading-spinner *ngIf="loading"
+                    text="Chargement des clients..."
+                    [showProgress]="true"
+                    [fullPage]="true">
+</app-loading-spinner>
+
+<!-- Content when not loading -->
+<div *ngIf="!loading">
+  <!-- Recherche -->
+  <div class="row mb-4">
+    <div class="col-lg-6">
+      <div class="input-group">
+        <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+        <input type="text" 
+               class="form-control" 
+               placeholder="Rechercher par nom, email ou téléphone..." 
+               [(ngModel)]="searchTerm"
+               (ngModelChange)="currentPage = 1">
+        <button class="btn btn-outline-secondary" 
+                type="button" 
+                *ngIf="searchTerm" 
+                (click)="clearSearch()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <small class="text-muted mt-1" *ngIf="searchTerm">
+        {{ allFilteredCustomers.length }} résultat(s) trouvé(s)
+      </small>
+    </div>
+  </div>
+
+  <!-- Liste des clients -->
+  <div class="card shadow-sm mb-4 border-0 rounded-3 overflow-hidden">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table customers-table align-middle mb-0">
+          <thead class="bg-light">
+            <tr>
+              <th scope="col" class="ps-3" (click)="setSorting('fullName')" style="cursor: pointer;">
+                Client 
+                <i *ngIf="sortBy === 'fullName'" class="bi sort-icon" 
+                   [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+              </th>
+              <th scope="col" (click)="setSorting('phone')" style="cursor: pointer;">
+                Contact
+                <i *ngIf="sortBy === 'phone'" class="bi sort-icon" 
+                   [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+              </th>
+              <th scope="col" class="text-center" (click)="setSorting('firstOrderDate')" style="cursor: pointer;">
+                Première commande
+                <i *ngIf="sortBy === 'firstOrderDate'" class="bi sort-icon" 
+                   [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+              </th>
+              <th scope="col" class="text-center" (click)="setSorting('lastOrderDate')" style="cursor: pointer;">
+                Dernière commande
+                <i *ngIf="sortBy === 'lastOrderDate'" class="bi sort-icon" 
+                   [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+              </th>
+              <th scope="col" class="text-center" (click)="setSorting('totalOrders')" style="cursor: pointer;">
+                Commandes
+                <i *ngIf="sortBy === 'totalOrders'" class="bi sort-icon" 
+                   [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+              </th>
+              <th scope="col" class="text-center" (click)="setSorting('totalSpent')" style="cursor: pointer;">
+                Total dépensé
+                <i *ngIf="sortBy === 'totalSpent'" class="bi sort-icon" 
+                   [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+              </th>
+              <th scope="col" class="text-end pe-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let customer of filteredCustomers" 
+                class="order-row"
+                [class.has-duplicates]="hasDuplicates(customer)">
+              <td class="ps-3">
+                <div class="d-flex align-items-center">
+                  <div class="avatar-circle me-3">{{ customer.fullName.charAt(0) }}</div>
+                  <div class="customer-name-info">
+                    <strong>{{ customer.fullName }}</strong>
+                    <div class="name-variations" *ngIf="getNameVariationsCount(customer) > 1">
+                      <small class="text-muted">
+                        <i class="bi bi-person-badge me-1"></i>
+                        {{ getNameVariationsCount(customer) - 1 }} autre(s) nom(s)
+                      </small>
+                    </div>
+                    <div class="duplicate-warning" *ngIf="hasDuplicates(customer)">
+                      <small class="text-warning">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Doublons potentiels
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="contact-info">
+                  <div><i class="bi bi-envelope-fill text-muted me-2"></i>{{ customer.email }}</div>
+                  <div><i class="bi bi-telephone-fill text-muted me-2"></i>{{ formatPhone(customer.phone) }}</div>
+                </div>
+              </td>
+              <td class="text-center">
+                <span class="registration-date">
+                  <i class="bi bi-calendar3 me-1"></i>
+                  {{ formatDate(customer.firstOrderDate) }}
+                </span>
+              </td>
+              <td class="text-center">
+                <span class="registration-date">
+                  <i class="bi bi-calendar3 me-1"></i>
+                  {{ formatDate(customer.lastOrderDate) }}
+                </span>
+              </td>
+              <td class="text-center">
+                <span class="badge rounded-pill orders-badge">
+                  <i class="bi bi-cart3 me-1"></i>
+                  {{ customer.totalOrders }}
+                </span>
+              </td>
+              <td class="text-center fw-bold">{{ formatAmount(customer.totalSpent) }}</td>
+              <td class="text-end pe-3">
+                <div class="btn-group">
+                  <button class="btn btn-sm btn-light" title="Voir profil">
+                    <i class="bi bi-person text-primary"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light" title="Voir les commandes">
+                    <i class="bi bi-cart text-success"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light" title="Envoyer un email">
+                    <i class="bi bi-envelope text-secondary"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light" 
+                          title="Gérer les doublons"
+                          *ngIf="hasDuplicates(customer)">
+                    <i class="bi bi-people text-warning"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="d-flex justify-content-between align-items-center mt-4" *ngIf="allFilteredCustomers.length > 0">
+    <div class="text-muted small">
+      Affichage de {{ (currentPage - 1) * pageSize + 1 }} à {{ Math.min(currentPage * pageSize, allFilteredCustomers.length) }} sur {{ allFilteredCustomers.length }} client(s)
+    </div>
+    <nav aria-label="Navigation des pages" *ngIf="totalPages > 1">
+      <ul class="pagination mb-0">
+        <!-- Bouton précédent -->
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <button class="page-link" (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 1">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+        </li>
+        
+        <!-- Pages -->
+        <li class="page-item" *ngFor="let page of pages" [class.active]="page === currentPage">
+          <button class="page-link" (click)="onPageChange(page)">{{ page }}</button>
+        </li>
+        
+        <!-- Bouton suivant -->
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <button class="page-link" (click)="onPageChange(currentPage + 1)" [disabled]="currentPage === totalPages">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<style>
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.customer-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.customer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #495057;
+}
+
+.customer-details {
+  flex: 1;
+}
+
+.customer-name {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.customer-variations {
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin-bottom: 0.25rem;
+}
+
+.customer-email {
+  font-size: 0.875rem;
+}
+
+.phone-number {
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.search-box {
+  width: 300px;
+}
+</style> 

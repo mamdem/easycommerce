@@ -1,0 +1,395 @@
+@import '../shared/dashboard.scss';
+
+// Variables
+$primary-color: var(--primary-color);
+$secondary-color: var(--secondary-color);
+$warning-color: #ffc107;
+$danger-color: #dc3545;
+$text-color: #2c3e50;
+$text-muted: #6c757d;
+$light-gray: #f8f9fa;
+$border-color: #edf2f9;
+$card-bg: #ffffff;
+$shadow-color: rgba(0, 0, 0, 0.05);
+
+// Style pour le bouton dans header-actions
+.header-actions {
+  .btn-primary {
+    background-color: white;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    
+    &:hover {
+      background-color: var(--primary-color);
+      color: white;
+    }
+  }
+}
+
+// Mixins
+@mixin card-shadow {
+  box-shadow: 0 2px 4px $shadow-color;
+}
+
+@mixin transition {
+  transition: all 0.2s ease;
+}
+
+// Container styles
+.promotions-container {
+  padding: 1rem;
+  min-height: 100vh;
+  background-color: $light-gray;
+}
+
+.container-fluid {
+  padding-top: 0.5rem !important;
+}
+
+.d-flex.justify-content-between.flex-wrap.flex-md-nowrap.align-items-center {
+  padding-top: 0.5rem !important;
+  padding-bottom: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+
+  h1 {
+    font-size: 1.75rem;
+    color: $text-color;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .btn-create {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    @include transition;
+
+    i {
+      font-size: 1rem;
+    }
+
+    &:hover {
+      filter: brightness(0.95);
+      transform: translateY(-1px);
+    }
+  }
+}
+
+// Promotions section
+.promotions-section {
+  margin-bottom: 3rem;
+
+  &.expired {
+    opacity: 0.75;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    color: $text-color;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &::before {
+      content: '';
+      width: 4px;
+      height: 18px;
+      background: var(--primary-color);
+      border-radius: 2px;
+      display: inline-block;
+    }
+  }
+}
+
+// Promotions grid
+.promotions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+// Promotion card
+.promotion-card {
+  background: $card-bg;
+  border-radius: 10px;
+  border: 1px solid $border-color;
+  overflow: hidden;
+  @include transition;
+  @include card-shadow;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  &.expired {
+    background-color: mix($card-bg, $light-gray, 90%);
+  }
+
+  .promotion-header {
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid $border-color;
+
+    &.code_promo {
+      background-color: rgba(var(--primary-color-rgb), 0.1);
+    }
+
+    &.reduction_produit {
+      background-color: rgba(var(--secondary-color-rgb), 0.1);
+    }
+
+    &.offre_limitee {
+      background-color: rgba($warning-color, 0.1);
+    }
+
+    .type-badge {
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      background: $card-bg;
+      color: $text-color;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+
+      .btn-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: none;
+        background: rgba(0, 0, 0, 0.05);
+        color: $text-muted;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        @include transition;
+
+        &:hover {
+          color: $danger-color;
+          background-color: rgba($danger-color, 0.1);
+        }
+      }
+    }
+  }
+
+  .promotion-content {
+    padding: 1.5rem;
+
+    h3 {
+      font-size: 1.25rem;
+      color: $text-color;
+      margin: 0 0 1rem;
+      font-weight: 600;
+    }
+
+    .promotion-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+
+      .detail-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: $text-muted;
+        font-size: 0.9375rem;
+
+        i {
+          width: 16px;
+          color: var(--secondary-color);
+        }
+
+        span {
+          flex: 1;
+        }
+      }
+    }
+  }
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+  .promotions-container {
+    padding: 1rem;
+
+    .header {
+      flex-direction: column;
+      gap: 1rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+
+      .btn-create {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+
+  .promotions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .promotion-card {
+    .promotion-header {
+      padding: 0.75rem 1rem;
+    }
+
+    .promotion-content {
+      padding: 1rem;
+    }
+  }
+}
+
+.section-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(var(--secondary-color-rgb), 0.1);
+  color: var(--secondary-color);
+  border-radius: 12px;
+  font-size: 1.5rem;
+}
+
+.card {
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease-in-out;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  .card-header {
+    background-color: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    &.code_promo {
+      border-left: 4px solid var(--bs-primary);
+    }
+
+    &.reduction_produit {
+      border-left: 4px solid var(--bs-success);
+    }
+
+    &.offre_limitee {
+      border-left: 4px solid var(--bs-warning);
+    }
+
+    .badge {
+      font-size: 0.8rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 50rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+
+      .btn {
+        padding: 0.25rem 0.5rem;
+        line-height: 1;
+        
+        i {
+          font-size: 0.875rem;
+        }
+      }
+    }
+  }
+
+  .card-body {
+    padding: 1.25rem;
+
+    .card-title {
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .promotion-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+
+      .detail-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: var(--bs-gray-700);
+
+        i {
+          font-size: 1rem;
+          color: var(--bs-gray-600);
+          width: 20px;
+          text-align: center;
+        }
+
+        strong {
+          color: var(--bs-gray-900);
+          background-color: var(--bs-gray-100);
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          font-family: monospace;
+        }
+      }
+    }
+  }
+
+  .card-footer {
+    background-color: transparent;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 0.75rem 1.25rem;
+
+    small {
+      color: var(--bs-gray-600);
+    }
+  }
+}
+
+.empty-state {
+  background-color: var(--bs-gray-100);
+  border-radius: 1rem;
+  margin: 2rem 0;
+
+  .empty-state-icon {
+    color: var(--bs-gray-400);
+  }
+
+  h3 {
+    color: var(--bs-gray-900);
+    font-weight: 600;
+  }
+
+  p {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+} 

@@ -204,9 +204,9 @@ export class StoreNavbarComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.cartService.cartItems$.subscribe(items => {
+    this.cartService.cartItems$.subscribe(() => {
       this.previousCartCount = this.cartItemsCount;
-      this.cartItemsCount = items.reduce((total, item) => total + item.quantity, 0);
+      this.cartItemsCount = this.cartService.getCartItemsCount(this.storeUrl);
       
       if (this.cartItemsCount > this.previousCartCount) {
         this.triggerCartAnimation();

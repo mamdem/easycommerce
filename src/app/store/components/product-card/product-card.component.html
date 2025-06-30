@@ -1,11 +1,13 @@
-<div class="product-card" [class.out-of-stock]="product.stock === 0">
+<div class="product-card" 
+     [class.out-of-stock]="product.stock === 0"
+     (click)="onCardClick()">
   <div class="product-image">
     <img [src]="product.images[0] || 'assets/default-product.svg'" 
          [alt]="product.name"
          (error)="onImageError($event)">
     
     <!-- Badge de promotion -->
-    <div class="product-badges" *ngIf="activePromotion">
+    <div class="product-badges" *ngIf="product.promotion">
       <div class="discount-badge">
         <i class="bi bi-tag-fill"></i>
         -{{ getDiscountPercentage() }}%
@@ -13,7 +15,7 @@
     </div>
 
     <button class="cart-icon" 
-            (click)="onAddToCartClick()"
+            (click)="onAddToCartClick($event)"
             [class.in-cart]="isInCart"
             [disabled]="isInCart || product.stock === 0">
       <i class="bi" [class.bi-cart-plus]="!isInCart" [class.bi-cart-check]="isInCart"></i>
@@ -23,17 +25,19 @@
   <div class="product-info">
     <span class="category-tag" *ngIf="product.category">
       <i class="bi bi-bookmark"></i>
-      {{ product.category }}
+      {{ categoryName }}
     </span>
 
     <h3 class="product-name">{{ product.name }}</h3>
     
     <div class="product-price">
-      <span class="current-price" [class.discounted]="discountedPrice">
-        {{ product.price | number:'1.0-0' }} FCFA
+      <!-- Prix original (barré si promotion) -->
+      <span class="current-price" [class.discounted]="product.discountedPrice !== null">
+        {{ formatPrice(product.price) }} FCFA
       </span>
-      <span class="discount-price" *ngIf="discountedPrice">
-        {{ discountedPrice | number:'1.0-0' }} FCFA
+      <!-- Prix avec promotion -->
+      <span class="discount-price" *ngIf="product.discountedPrice !== null">
+        {{ formatPrice(product.discountedPrice) }} FCFA
       </span>
     </div>
   </div>

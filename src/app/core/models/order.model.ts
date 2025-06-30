@@ -6,6 +6,7 @@ export interface OrderItem {
     description?: string;
     price: number;
     imageUrl?: string;
+    images?: string[];
   };
   quantity: number;
 }

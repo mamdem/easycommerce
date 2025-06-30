@@ -51,12 +51,13 @@
           <p>Aucun produit disponible dans cette boutique.</p>
         </div>
 
-        <app-product-card 
+        <product-card
           *ngFor="let product of products"
           [product]="product"
           [storeUrl]="storeUrl"
-          [storeName]="storeName">
-        </app-product-card>
+          [storeName]="storeName"
+          (addToCart)="onAddToCart(product)">
+        </product-card>
       </div>
     </main>
   </ng-container>

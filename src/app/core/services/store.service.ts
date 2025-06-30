@@ -3,11 +3,12 @@ import { AngularFirestore, DocumentReference } from '@angular/fire/compat/firest
 import { AngularFireStorage } from '@angular/fire/compat/storage';
 import { BehaviorSubject, Observable, from, of } from 'rxjs';
 import { map, switchMap, tap, catchError, take } from 'rxjs/operators';
-import { AuthService, User } from './auth.service';
+import { AuthService } from './auth.service';
 import { ToastService } from './toast.service';
 import { environment } from '../../../environments/environment';
 import { Store } from '../models/store.model';
 import { StorageService, STORE_IMAGE_DIMENSIONS, ImageDimensions } from './storage.service';
+import { User } from '../models/user.model';
 
 // Interface pour les données de boutique
 export interface StoreData {
@@ -32,11 +33,16 @@ export interface StoreData {
   longitude: number;
   createdAt: number;
   updatedAt: number;
+  isPublic: boolean;
+  storeUrl: string;
 }
 
 export interface StoreSettings {
   id?: string;
   ownerId: string;
+  name: string;
+  description?: string;
+  logo?: string;
   legalName: string;
   storeName: string;
   storeDescription: string;
@@ -54,6 +60,7 @@ export interface StoreSettings {
   bannerUrl: string;
   primaryColor: string;
   secondaryColor: string;
+  monthlyTargetSales: number;
   createdAt: number;
   updatedAt: number;
   status?: 'active' | 'inactive' | 'pending';
@@ -112,11 +119,25 @@ export class StoreService {
    * Crée une URL simplifiée pour une boutique
    */
   private async createStoreUrl(storeName: string, userId: string, storeId: string): Promise<string> {
-    // Utiliser le même format que le storeId
-    const friendlyUrl = storeId.split('_')[1]; // Récupère la partie après userId_
+    console.log('Création de l\'URL pour la boutique:', { storeName, userId, storeId });
+    
+    // Créer une URL conviviale à partir du nom de la boutique
+    let friendlyUrl = storeName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Supprimer les accents
+      .replace(/[^a-z0-9]+/g, '-') // Remplacer les caractères spéciaux par des tirets
+      .replace(/^-+|-+$/g, ''); // Supprimer les tirets au début et à la fin
+
+    // Ajouter un suffixe unique si nécessaire
+    const timestamp = Date.now().toString(36);
+    const uniqueSuffix = Math.random().toString(36).substring(2, 5);
+    friendlyUrl = `${friendlyUrl}-${timestamp}${uniqueSuffix}`;
+
+    console.log('URL générée:', friendlyUrl);
 
     // Sauvegarder dans la collection urls
-    await this.firestore.collection('urls').doc(friendlyUrl).set({
+    await this.firestore.doc(`urls/${friendlyUrl}`).set({
       userId,
       storeId,
       createdAt: Date.now()
@@ -145,6 +166,9 @@ export class StoreService {
       // Générer un ID unique pour la boutique
       const storeId = `${currentUser.uid}_${storeData.legalName!.replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 7)}`;
       
+      // Créer l'URL de la boutique
+      const storeUrl = await this.createStoreUrl(storeData.storeName || storeData.legalName!, currentUser.uid, storeId);
+      
       // Préparer les données à sauvegarder
       const timestamp = Date.now();
       const completeStoreData: StoreData = {
@@ -152,8 +176,8 @@ export class StoreService {
         storeName: '',
         storeCategory: '',
         storeDescription: '',
-        logoUrl: '',
-        bannerUrl: '',
+        logoUrl: '/assets/default-store-logo.svg', // Logo par défaut en SVG
+        bannerUrl: '/assets/baniere.png', // Bannière par défaut
         primaryColor: '#3f51b5',
         secondaryColor: '#ff4081',
         legalName: '',
@@ -168,10 +192,12 @@ export class StoreService {
         createdAt: timestamp,
         updatedAt: timestamp,
         ownerId: currentUser.uid,
+        storeUrl: storeUrl, // Ajouter l'URL de la boutique
+        isPublic: true, // La boutique est publique par défaut
         ...storeData
       };
       
-      // Sauvegarder dans Firestore
+      // Sauvegarder dans la collection stores/{userId}/userStores
       await this.firestore
         .collection('stores')
         .doc(currentUser.uid)
@@ -179,18 +205,10 @@ export class StoreService {
         .doc(storeId)
         .set(completeStoreData);
       
-      // Créer l'URL simplifiée
-      const friendlyUrl = await this.createStoreUrl(storeData.legalName!, currentUser.uid, storeId);
-      
-      // Mettre à jour le statut du marchand
-      await this.authService.updateStoreStatus(true);
-      
-      this.toastService.success('Votre boutique a été créée avec succès!', 'Félicitations');
-      
-      return friendlyUrl;
+      return storeId;
     } catch (error) {
-      this.toastService.error('Une erreur est survenue lors de la création de votre boutique.', 'Erreur');
-      console.error('Erreur lors de la création de la boutique:', error);
+      console.error('Erreur lors de la sauvegarde de la boutique:', error);
+      this.toastService.error('Une erreur est survenue lors de la sauvegarde de la boutique', 'Erreur');
       throw error;
     }
   }
@@ -230,13 +248,27 @@ export class StoreService {
    * @returns Promise avec les données de la boutique
    */
   async getStore(storeId: string): Promise<StoreData | null> {
-    const storeDoc = await this.firestore.collection('stores').doc(storeId).get().toPromise();
-    
-    if (storeDoc && storeDoc.exists) {
-      return storeDoc.data() as StoreData;
+    try {
+      const storeDoc = await this.firestore
+        .collection('stores')
+        .doc(storeId)
+        .get()
+        .toPromise();
+      
+      if (storeDoc && storeDoc.exists) {
+        const storeData = storeDoc.data() as StoreData;
+        // Vérifier si la boutique est publique ou si l'utilisateur est le propriétaire
+        const currentUser = this.authService.getCurrentUser();
+        if (storeData.isPublic || (currentUser && storeData.ownerId === currentUser.uid)) {
+          return storeData;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la boutique:', error);
+      return null;
     }
-    
-    return null;
   }
 
   /**
@@ -316,37 +348,65 @@ export class StoreService {
    * Met à jour les paramètres de la boutique
    */
   updateStoreSettings(settings: Partial<StoreSettings>): Observable<boolean> {
-    return this.authService.user$.pipe(
-      switchMap(user => {
-        if (!user) {
-          return of(false);
-        }
-        
-        const updatedSettings = {
-          ...settings,
-          updatedAt: new Date()
-        };
-        
-        return from(this.firestore.doc(`stores/${user.uid}`).update(updatedSettings)).pipe(
-          map(() => {
-            const currentSettings = this.storeSettingsSource.getValue();
-            if (currentSettings) {
-              this.storeSettingsSource.next({
-                ...currentSettings,
-                ...settings
-              });
-            }
-            this.toastService.success('Paramètres de la boutique mis à jour');
-            return true;
-          }),
-          catchError(error => {
-            console.error('Erreur lors de la mise à jour des paramètres:', error);
-            this.toastService.error('Impossible de mettre à jour les paramètres');
-            return of(false);
-          })
-        );
-      })
-    );
+    return new Observable<boolean>(observer => {
+      const currentUser = this.authService.getCurrentUser();
+      
+      if (!currentUser) {
+        this.toastService.error('Vous devez être connecté pour modifier une boutique', 'Erreur d\'authentification');
+        observer.next(false);
+        observer.complete();
+        return;
+      }
+
+      if (!settings.id) {
+        this.toastService.error('ID de boutique manquant', 'Erreur de mise à jour');
+        observer.next(false);
+        observer.complete();
+        return;
+      }
+
+      // Préparer les données à mettre à jour
+      const updatedSettings: Partial<StoreSettings> = {
+        ...settings,
+        updatedAt: Date.now()
+      };
+
+      // Mettre à jour dans Firestore
+      this.firestore
+        .collection('stores')
+        .doc(currentUser.uid)
+        .collection('userStores')
+        .doc(settings.id)
+        .set(updatedSettings, { merge: true }) // Utiliser set avec merge: true au lieu de update
+        .then(() => {
+          // Mettre à jour le BehaviorSubject
+          const currentSettings = this.storeSettingsSource.getValue();
+          if (currentSettings) {
+            this.storeSettingsSource.next({
+              ...currentSettings,
+              ...updatedSettings
+            });
+          }
+
+          // Appliquer les nouvelles couleurs si elles ont été modifiées
+          if (settings.primaryColor || settings.secondaryColor) {
+            this.applyStoreTheme(
+              settings.primaryColor || currentSettings?.primaryColor || '#4f46e5',
+              settings.secondaryColor || currentSettings?.secondaryColor || '#f97316'
+            );
+          }
+
+          this.toastService.success('Paramètres de la boutique mis à jour avec succès');
+          observer.next(true);
+          observer.complete();
+        })
+        .catch(error => {
+          console.error('Erreur lors de la mise à jour des paramètres:', error);
+          this.toastService.error('Impossible de mettre à jour les paramètres');
+          observer.next(false);
+          observer.complete();
+        });
+    });
   }
 
   /**
@@ -385,16 +445,33 @@ export class StoreService {
    * Met à jour une boutique existante
    */
   async updateStore(storeId: string, updates: Partial<Store>): Promise<void> {
-    const user = await this.authService.getCurrentUser();
-    if (!user) throw new Error('Utilisateur non connecté');
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser?.uid) throw new Error('Utilisateur non connecté');
 
-    const updateData: Partial<Store> = {
+    const updateData = {
       ...updates,
       updatedAt: Date.now()
     };
 
-    // Le logoUrl est déjà une URL dans les updates, pas besoin de le réuploader
-    await this.firestore.collection('stores').doc(storeId).update(updateData);
+    try {
+      // Mettre à jour dans la collection privée
+      await this.firestore
+        .collection('stores')
+        .doc(currentUser.uid)
+        .collection('userStores')
+        .doc(storeId)
+        .update(updateData);
+
+      // Mettre à jour dans la collection publique
+      await this.firestore
+        .collection('public_stores')
+        .doc(storeId)
+        .update(updateData);
+
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la boutique:', error);
+      throw error;
+    }
   }
 
   /**
@@ -641,26 +718,25 @@ export class StoreService {
   }
 
   /**
-   * Récupère une boutique par son URL simplifiée
+   * Récupère une boutique par son URL (version publique)
    */
-  getStoreByUrl(friendlyUrl: string): Observable<Store | null> {
-    console.log('Recherche de la boutique avec URL:', friendlyUrl);
+  getStoreByUrl(storeUrl: string): Observable<StoreData | null> {
+    console.log('Recherche de la boutique avec URL:', storeUrl);
     
-    return this.firestore.collection<StoreUrl>('urls').doc(friendlyUrl).get().pipe(
+    // D'abord, chercher dans la collection urls pour obtenir les informations de la boutique
+    return from(this.firestore.doc(`urls/${storeUrl}`).get()).pipe(
       switchMap(urlDoc => {
         if (!urlDoc.exists) {
-          console.log('URL non trouvée:', friendlyUrl);
+          console.log('URL non trouvée:', storeUrl);
           return of(null);
         }
-
-        const urlData = urlDoc.data() as StoreUrl;
-        console.log('Données URL trouvées:', urlData);
-
+        
+        const urlData = urlDoc.data() as { userId: string; storeId: string };
+        console.log('URL data trouvée:', urlData);
+        
+        // Ensuite, récupérer la boutique dans la collection stores/{userId}/userStores
         return this.firestore
-          .collection('stores')
-          .doc(urlData.userId)
-          .collection('userStores')
-          .doc(urlData.storeId)
+          .doc(`stores/${urlData.userId}/userStores/${urlData.storeId}`)
           .get()
           .pipe(
             map(storeDoc => {
@@ -668,12 +744,20 @@ export class StoreService {
                 console.log('Boutique non trouvée:', urlData.storeId);
                 return null;
               }
-              const storeData = storeDoc.data() as Store;
-              storeData.id = storeDoc.id;
-              console.log('Boutique trouvée:', storeData);
-              return storeData;
+              
+              const storeData = storeDoc.data() as StoreData;
+              console.log('Données de la boutique trouvées:', storeData);
+              
+              return {
+                ...storeData,
+                id: storeDoc.id
+              };
             })
           );
+      }),
+      catchError(error => {
+        console.error('Erreur lors de la récupération de la boutique:', error);
+        return of(null);
       })
     );
   }
@@ -706,5 +790,146 @@ export class StoreService {
         observer.complete();
       }, 500);
     });
+  }
+
+  /**
+   * Synchronise les données d'une boutique privée vers sa version publique
+   */
+  async syncStoreToPublic(storeId: string): Promise<void> {
+    try {
+      // 1. Récupérer les données de la boutique privée
+      const userId = this.authService.getCurrentUser()?.uid;
+      if (!userId) throw new Error('Utilisateur non connecté');
+
+      const privateStorePath = `stores/${userId}/userStores/${storeId}`;
+      const publicStorePath = `public_stores/${storeId}`;
+
+      // 2. Récupérer les données de la boutique privée
+      const privateStoreDoc = await this.firestore.doc(privateStorePath).get().toPromise();
+      if (!privateStoreDoc?.exists) {
+        console.error('Boutique privée non trouvée:', storeId);
+        return;
+      }
+
+      const storeData = privateStoreDoc.data();
+      if (!storeData) return;
+
+      // 3. Copier les données de la boutique dans la collection publique
+      await this.firestore.doc(publicStorePath).set(storeData);
+
+      // 4. Synchroniser les catégories
+      const privateCategories = await this.firestore.collection(`${privateStorePath}/categories`).get().toPromise();
+      const publicCategoriesPath = `${publicStorePath}/categories`;
+
+      for (const categoryDoc of privateCategories?.docs || []) {
+        const categoryData = categoryDoc.data();
+        await this.firestore.doc(`${publicCategoriesPath}/${categoryDoc.id}`).set(categoryData);
+      }
+
+      // 5. Synchroniser les produits
+      const privateProducts = await this.firestore.collection(`${privateStorePath}/products`).get().toPromise();
+      const publicProductsPath = `${publicStorePath}/products`;
+
+      for (const productDoc of privateProducts?.docs || []) {
+        const productData = productDoc.data();
+        await this.firestore.doc(`${publicProductsPath}/${productDoc.id}`).set(productData);
+      }
+
+      console.log('Synchronisation terminée pour la boutique:', storeId);
+    } catch (error) {
+      console.error('Erreur lors de la synchronisation de la boutique:', error);
+      throw error;
+    }
+  }
+
+  async migratePublicStoresToStores(): Promise<void> {
+    try {
+      // Récupérer toutes les boutiques publiques
+      const publicStoresSnapshot = await this.firestore
+        .collection('public_stores')
+        .get()
+        .toPromise();
+
+      if (!publicStoresSnapshot || publicStoresSnapshot.empty) {
+        console.log('Aucune boutique publique à migrer');
+        return;
+      }
+
+      // Migrer chaque boutique
+      const batch = this.firestore.firestore.batch();
+      
+      publicStoresSnapshot.docs.forEach(doc => {
+        const storeData = doc.data() as StoreData;
+        const storeRef = this.firestore.collection('stores').doc(doc.id).ref;
+        
+        batch.set(storeRef, {
+          ...storeData,
+          isPublic: true,
+          updatedAt: Date.now()
+        });
+        
+        // Supprimer le document de public_stores
+        batch.delete(doc.ref);
+      });
+
+      // Exécuter le batch
+      await batch.commit();
+      
+      console.log(`Migration terminée: ${publicStoresSnapshot.size} boutiques migrées`);
+    } catch (error) {
+      console.error('Erreur lors de la migration des boutiques:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Synchronise les données privées vers les collections publiques
+   */
+  async syncStoreDataToPublic(storeId: string): Promise<void> {
+    const userId = this.authService.getCurrentUser()?.uid;
+    if (!userId) throw new Error('User not authenticated');
+
+    try {
+      // 1. Synchroniser les catégories
+      const categoriesSnapshot = await this.firestore
+        .collection(`stores/${userId}/userStores/${storeId}/categories`)
+        .get()
+        .toPromise();
+
+      const categoriesBatch = this.firestore.firestore.batch();
+      categoriesSnapshot?.forEach(doc => {
+        const publicRef = this.firestore
+          .collection('public_stores')
+          .doc(storeId)
+          .collection('categories')
+          .doc(doc.id)
+          .ref;
+        categoriesBatch.set(publicRef, doc.data());
+      });
+      await categoriesBatch.commit();
+
+      // 2. Synchroniser les promotions
+      const promotionsSnapshot = await this.firestore
+        .collection(`stores/${userId}/userStores/${storeId}/promotions`)
+        .get()
+        .toPromise();
+
+      const promotionsBatch = this.firestore.firestore.batch();
+      promotionsSnapshot?.forEach(doc => {
+        const publicRef = this.firestore
+          .collection('public_stores')
+          .doc(storeId)
+          .collection('promotions')
+          .doc(doc.id)
+          .ref;
+        promotionsBatch.set(publicRef, doc.data());
+      });
+      await promotionsBatch.commit();
+
+      console.log('✅ Données synchronisées avec succès vers les collections publiques');
+    } catch (error) {
+      console.error('❌ Erreur lors de la synchronisation des données:', error);
+      throw error;
+    }
   }
 } 

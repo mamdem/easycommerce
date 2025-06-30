@@ -1,230 +1,302 @@
-<app-store-navbar [store]="store$ | async" [storeUrl]="storeUrl" [storeStyle]="storeStyle"></app-store-navbar>
-
-<!-- Contenu principal -->
-<main class="store-main" role="main">
-  <!-- Message d'erreur -->
-  <div class="alert alert-danger" 
-       *ngIf="error" 
-       role="alert"
-       aria-live="polite">
-    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-    {{ error }}
+<div class="store-main" role="main">
+  <!-- Loading State -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="loading-content">
+      <div class="loading-spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+      </div>
+      <h3 class="loading-title">Chargement de votre boutique</h3>
+      <p class="loading-subtitle">Nous préparons vos produits...</p>
+    </div>
   </div>
 
-  <!-- En-tête de la boutique -->
-  <ng-container *ngIf="store$ | async as store">
-    <header class="store-header" role="banner">
-      <div class="store-banner" 
-           [style.backgroundImage]="'url(' + (store.bannerUrl || 'assets/default-store-banner.svg') + ')'"
-           role="img" 
-           [attr.aria-label]="'Bannière de ' + store.legalName">
-        <div class="banner-overlay">
-          <div class="banner-content">
-            <div class="store-logo">
-              <img [src]="store.logoUrl || 'assets/default-store-logo.png'" 
-                   [alt]="store.legalName + ' logo'"
-                   loading="eager">
-            </div>
-            <div class="store-details">
-              <h1>{{ store.legalName }}</h1>
-              <p>{{ store.storeDescription }}</p>
-              <div class="store-badges" role="list">
-                <div class="badge" role="listitem">
-                  <i class="bi bi-geo-alt" aria-hidden="true"></i>
-                  <span>{{ store.city }}</span>
-                </div>
-                <div class="badge" role="listitem">
-                  <i class="bi bi-telephone" aria-hidden="true"></i>
-                  <span>{{ store.phoneNumber }}</span>
+  <!-- Error State -->
+  <div class="error-container" *ngIf="error">
+    <div class="error-content">
+      <i class="bi bi-exclamation-circle"></i>
+      <h3>{{ error }}</h3>
+      <button class="btn btn-primary" (click)="reloadStore()">Réessayer</button>
+    </div>
+  </div>
+
+  <!-- Store Content -->
+  <ng-container *ngIf="!loading && !error">
+    <app-store-navbar [store]="store$ | async" [storeUrl]="storeUrl" [storeStyle]="storeStyle"></app-store-navbar>
+
+    <!-- En-tête de la boutique -->
+    <ng-container *ngIf="store$ | async as store">
+      <header class="store-header" role="banner" data-aos="fade-down" data-aos-duration="1000">
+        <div class="store-banner" 
+             [style.backgroundImage]="'url(' + (store.bannerUrl || 'assets/default-store-banner.svg') + ')'"
+             role="img" 
+             [attr.aria-label]="'Bannière de ' + store.legalName">
+          <div class="banner-overlay">
+            <div class="banner-content">
+              <div class="store-logo" data-aos="zoom-in" data-aos-delay="200">
+                <img [src]="store.logoUrl || 'assets/default-store-logo.png'" 
+                     [alt]="store.legalName + ' logo'"
+                     loading="eager">
+              </div>
+              <div class="store-details" data-aos="fade-up" data-aos-delay="400">
+                <h1>{{ store.legalName }}</h1>
+                <p>{{ store.storeDescription }}</p>
+                <div class="store-badges" role="list">
+                  <div class="badge" role="listitem">
+                    <i class="bi bi-geo-alt" aria-hidden="true"></i>
+                    <span>{{ store.city }}</span>
+                  </div>
+                  <div class="badge" role="listitem">
+                    <i class="bi bi-telephone" aria-hidden="true"></i>
+                    <span>{{ store.phoneNumber }}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
 
-    <!-- Section À propos -->
-    <section id="about" class="store-section" *ngIf="!isMobile">
-      <div class="section-header">
-        <h2>
-          <i class="bi bi-info-circle" aria-hidden="true"></i>
-          À propos de la boutique
-        </h2>
-      </div>
-      <div class="about-content">
-        <div class="store-description">
-          <p>{{ store.storeDescription }}</p>
+      <!-- Section À propos -->
+      <section id="about" class="store-section" *ngIf="!isMobile" data-aos="fade-up" data-aos-offset="200">
+        <div class="section-header" data-aos="fade-right" data-aos-delay="200">
+          <h2>
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            À propos de la boutique
+          </h2>
         </div>
-        <div class="store-info-grid" role="list">
-          <div class="info-item" role="listitem">
-            <i class="bi bi-geo-alt" aria-hidden="true"></i>
-            <span>{{ store.city }}, {{ store.country }}</span>
+        <div class="about-content">
+          <div class="store-description" data-aos="fade-up" data-aos-delay="400">
+            <p>{{ store.storeDescription }}</p>
           </div>
-          <div class="info-item" role="listitem">
-            <i class="bi bi-telephone" aria-hidden="true"></i>
-            <span>{{ store.phoneNumber }}</span>
-          </div>
-          <div class="info-item" role="listitem">
-            <i class="bi bi-envelope" aria-hidden="true"></i>
-            <span>{{ store.email }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Section Produits avec Sidebar -->
-    <div class="store-content-wrapper">
-      <!-- Sidebar des catégories -->
-      <aside class="categories-sidebar" role="navigation" aria-label="Catégories de produits">
-        <div class="sidebar-header">
-          <h3>
-            <i class="bi bi-grid-3x3-gap-fill"></i>
-            Catégories
-          </h3>
-        </div>
-
-        <div class="categories-list">
-          <!-- Catégorie "Tous les produits" -->
-          <div class="category-item" 
-               [class.active]="!selectedCategory"
-               (click)="selectCategory(null)"
-               role="button"
-               tabindex="0">
-            <div class="category-icon">
-              <i class="bi bi-grid-3x3-gap"></i>
+          <div class="store-info-grid" role="list" data-aos="fade-up" data-aos-delay="600">
+            <div class="info-item" role="listitem" data-aos="fade-right" data-aos-delay="800">
+              <i class="bi bi-geo-alt" aria-hidden="true"></i>
+              <span>{{ store.city }}, {{ store.country }}</span>
             </div>
-            <div class="category-info">
-              <span class="category-name">Tous les produits</span>
-              <span class="category-count" *ngIf="(products$ | async) as products">
-                ({{ products.length }})
-              </span>
+            <div class="info-item" role="listitem" data-aos="fade-right" data-aos-delay="900">
+              <i class="bi bi-telephone" aria-hidden="true"></i>
+              <span>{{ store.phoneNumber }}</span>
             </div>
-          </div>
-
-          <!-- Liste des catégories -->
-          <div class="category-item" 
-               *ngFor="let category of categories$ | async"
-               [class.active]="selectedCategory?.id === category.id"
-               (click)="selectCategory(category)"
-               role="button"
-               tabindex="0">
-            <div class="category-icon">
-              <i [class]="category.icon || 'bi bi-grid'"></i>
+            <div class="info-item" role="listitem" data-aos="fade-right" data-aos-delay="1000">
+              <i class="bi bi-envelope" aria-hidden="true"></i>
+              <span>{{ store.email }}</span>
             </div>
-            <div class="category-info">
-              <span class="category-name">{{ category.name }}</span>
-              <span class="category-count" *ngIf="category.productCount">
-                ({{ category.productCount }})
-              </span>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Section des produits -->
-      <section id="products" class="store-section products-section">
-        <div class="section-header">
-          <div class="header-main">
-            <h2>
-              <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
-              {{ selectedCategory?.name || 'Tous les produits' }}
-            </h2>
-            <div class="products-count" role="status" aria-live="polite">
-              {{ (filteredProducts$ | async)?.length || 0 }} produits
-            </div>
-          </div>
-          <div class="filters-bar">
-            <div class="search-box">
-              <i class="bi bi-search" aria-hidden="true"></i>
-              <input type="text" 
-                     [(ngModel)]="searchQuery" 
-                     (ngModelChange)="onSearch()"
-                     placeholder="Rechercher un produit..."
-                     [attr.aria-label]="'Rechercher un produit'">
-            </div>
-            
-            <!-- Filtre de prix -->
-            <div class="price-filter">
-              <div class="price-inputs">
-                <div class="price-input">
-                  <span class="price-label">Min</span>
-                  <input type="number" 
-                         [(ngModel)]="priceRange.min" 
-                         (ngModelChange)="onPriceRangeChange()"
-                         [min]="minPrice"
-                         [max]="priceRange.max"
-                         [attr.aria-label]="'Prix minimum'">
-                  <span class="currency">FCFA</span>
-                </div>
-                <div class="price-separator">-</div>
-                <div class="price-input">
-                  <span class="price-label">Max</span>
-                  <input type="number" 
-                         [(ngModel)]="priceRange.max" 
-                         (ngModelChange)="onPriceRangeChange()"
-                         [min]="priceRange.min"
-                         [max]="maxPrice"
-                         [attr.aria-label]="'Prix maximum'">
-                  <span class="currency">FCFA</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="sort-options">
-              <select [(ngModel)]="sortOption" 
-                      (change)="onSort()"
-                      [attr.aria-label]="'Trier les produits'">
-                <option value="name">Nom (A-Z)</option>
-                <option value="-name">Nom (Z-A)</option>
-                <option value="price">Prix croissant</option>
-                <option value="-price">Prix décroissant</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div *ngIf="filteredProducts$ | async as products">
-          <div *ngIf="products.length > 0" 
-               class="products-grid"
-               role="grid">
-            <app-product-card 
-              *ngFor="let product of products"
-              [product]="product"
-              [storeUrl]="storeUrl"
-              [storeName]="storeName"
-              (addToCart)="onAddToCart(product)"
-              role="gridcell">
-            </app-product-card>
-          </div>
-
-          <div *ngIf="products.length === 0" 
-               class="no-products"
-               role="status"
-               aria-live="polite">
-            <i class="bi bi-box-seam" aria-hidden="true"></i>
-            <p>Aucun produit disponible dans cette catégorie</p>
-            <small>Essayez une autre catégorie ou revenez plus tard</small>
           </div>
         </div>
       </section>
-    </div>
+
+      <!-- Section Produits avec Sidebar -->
+      <div class="store-content-wrapper">
+        <!-- Sidebar des catégories -->
+        <aside class="categories-sidebar" role="navigation" aria-label="Catégories de produits" data-aos="fade-right" data-aos-offset="300">
+          <div class="sidebar-header">
+            <h3>
+              <i class="bi bi-grid-3x3-gap-fill"></i>
+              Catégories
+            </h3>
+          </div>
+
+          <div class="categories-list">
+            <!-- Catégorie "Tous les produits" -->
+            <div class="category-item" 
+                 [class.active]="!selectedCategory"
+                 (click)="selectCategory(null)"
+                 role="button"
+                 tabindex="0"
+                 data-aos="fade-left"
+                 data-aos-delay="200">
+              <div class="category-icon">
+                <i class="bi bi-grid-3x3-gap"></i>
+              </div>
+              <div class="category-info">
+                <span class="category-name">Tous les produits</span>
+                <span class="category-count" *ngIf="(products$ | async) as products">
+                  ({{ products.length }})
+                </span>
+              </div>
+            </div>
+
+            <!-- Liste des catégories -->
+            <div class="category-item" 
+                 *ngFor="let category of categories$ | async; let i = index"
+                 [class.active]="selectedCategory?.id === category.id"
+                 (click)="selectCategory(category)"
+                 role="button"
+                 tabindex="0"
+                 data-aos="fade-left"
+                 [attr.data-aos-delay]="300 + (i * 100)">
+              <div class="category-icon">
+                <i [class]="category.icon || 'bi bi-grid'"></i>
+              </div>
+              <div class="category-info">
+                <span class="category-name">{{ category.name }}</span>
+                <span class="category-count" *ngIf="category.productCount">
+                  ({{ category.productCount }})
+                </span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Section des produits -->
+        <section id="products" class="store-section products-section">
+          <div class="section-header" data-aos="fade-down" data-aos-offset="200">
+            <div class="header-main">
+              <h2>
+                <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
+                {{ selectedCategory?.name || 'Tous les produits' }}
+              </h2>
+              <div class="products-count" role="status" aria-live="polite">
+                {{ (filteredProducts$ | async)?.length || 0 }} produits
+              </div>
+            </div>
+            <div class="filters-bar" data-aos="fade-up" data-aos-offset="200" data-aos-delay="200">
+              <div class="search-box">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="text" 
+                       [(ngModel)]="searchQuery" 
+                       (ngModelChange)="onSearch()"
+                       placeholder="Rechercher un produit..."
+                       [attr.aria-label]="'Rechercher un produit'">
+              </div>
+              
+              <!-- Filtre de prix -->
+              <div class="price-filter">
+                <div class="price-inputs">
+                  <div class="price-input">
+                    <span class="price-label">Min</span>
+                    <input type="number" 
+                           [(ngModel)]="priceRange.min" 
+                           (ngModelChange)="onPriceRangeChange()"
+                           [min]="minPrice"
+                           [max]="priceRange.max"
+                           [attr.aria-label]="'Prix minimum'">
+                    <span class="currency">FCFA</span>
+                  </div>
+                  <div class="price-separator">-</div>
+                  <div class="price-input">
+                    <span class="price-label">Max</span>
+                    <input type="number" 
+                           [(ngModel)]="priceRange.max" 
+                           (ngModelChange)="onPriceRangeChange()"
+                           [min]="priceRange.min"
+                           [max]="maxPrice"
+                           [attr.aria-label]="'Prix maximum'">
+                    <span class="currency">FCFA</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sort-options">
+                <select [(ngModel)]="sortOption" 
+                        (change)="onSort()"
+                        [attr.aria-label]="'Trier les produits'">
+                  <option value="name">Nom (A-Z)</option>
+                  <option value="-name">Nom (Z-A)</option>
+                  <option value="price">Prix croissant</option>
+                  <option value="-price">Prix décroissant</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="filteredProducts$ | async as products">
+            <div *ngIf="products.length > 0" 
+                 class="products-grid"
+                 role="grid">
+              <div class="product-card" 
+                   *ngFor="let product of products"
+                   [class.out-of-stock]="product.stock === 0"
+                   (click)="viewProductDetails(product)"
+                   style="cursor: pointer;">
+                <div class="product-image">
+                  <img [src]="product.images[0] || 'assets/default-product.svg'" 
+                       [alt]="product.name"
+                       loading="lazy"
+                       (error)="onImageError($event)">
+                  
+                  <!-- Badge de promotion -->
+                  <div class="product-badges" *ngIf="product.promotion">
+                    <div class="discount-badge">
+                      <i class="bi bi-tag-fill"></i>
+                      -{{ product.promotion.reduction }}%
+                    </div>
+                  </div>
+
+                  <!-- Actions overlay -->
+                  <div class="product-actions-overlay" (click)="$event.stopPropagation()">
+                    <!-- Bouton Ajouter au panier -->
+                    <button class="action-btn add-to-cart-btn" 
+                            (click)="onAddToCart(product)"
+                            [disabled]="product.stock === 0"
+                            [class.out-of-stock]="product.stock === 0"
+                            [class.in-cart]="isProductInCart(product)"
+                            [attr.aria-label]="getCartButtonLabel(product)">
+                      <i class="bi" [ngClass]="{
+                        'bi-x-circle': product.stock === 0,
+                        'bi-cart-check-fill': isProductInCart(product),
+                        'bi-cart-plus': !isProductInCart(product) && product.stock > 0
+                      }"></i>
+                      <span class="action-tooltip">
+                        {{ getCartButtonLabel(product) }}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="product-info">
+                  <div class="product-header">
+                    <span class="category-tag" *ngIf="product.category">
+                      <i class="bi bi-bookmark"></i>
+                      {{ getCategoryName(product.category) }}
+                    </span>
+
+                    <h3 class="product-name">{{ product.name }}</h3>
+                  </div>
+                    
+                  <!-- Prix -->
+                  <div class="product-price">
+                    <div class="price-container" *ngIf="product.promotion; else normalPrice">
+                      <div class="price-wrapper">
+                        <span class="original-price">{{ product.originalPrice | number:'1.0-0':'fr-FR' }} FCFA</span>
+                        <div class="discounted-price">
+                          <span class="promotional-price">{{ product.discountedPrice | number:'1.0-0':'fr-FR' }}</span>
+                          <span class="currency">FCFA</span>
+                        </div>
+                      </div>
+                    </div>
+                    <ng-template #normalPrice>
+                      <div class="price-wrapper">
+                        <span class="current-price">{{ product.price | number:'1.0-0':'fr-FR' }}</span>
+                        <span class="currency">FCFA</span>
+                      </div>
+                    </ng-template>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="products.length === 0" 
+                 class="no-products"
+                 role="status"
+                 data-aos="fade-up"
+                 data-aos-offset="200"
+                 aria-live="polite">
+              <i class="bi bi-box-seam" aria-hidden="true"></i>
+              <p>Aucun produit disponible dans cette catégorie</p>
+              <small>Essayez une autre catégorie ou revenez plus tard</small>
+            </div>
+          </div>
+        </section>
+      </div>
+    </ng-container>
+
+    <!-- Router outlet pour les routes enfants (panier) -->
+    <router-outlet></router-outlet>
   </ng-container>
-
-  <!-- Router outlet pour les routes enfants (panier) -->
-  <router-outlet></router-outlet>
-
-  <!-- Template de chargement -->
-  <div class="loading-spinner" 
-       *ngIf="loading"
-       role="status"
-       aria-live="polite">
-    <div class="spinner-border text-primary" role="progressbar">
-      <span class="visually-hidden">Chargement...</span>
-    </div>
-    <p>Chargement de la boutique...</p>
-  </div>
-</main>
+</div>
 
 <style>
 .store-nav {

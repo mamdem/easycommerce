@@ -1,0 +1,58 @@
+<div class="product-detail-dialog">
+  <div class="dialog-header">
+    <h2>{{ data.product.name }}</h2>
+    <button class="close-btn" (click)="closeDialog()">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <div class="dialog-content">
+    <div class="product-image">
+      <img [src]="data.product.imageUrl" [alt]="data.product.name">
+      <div class="product-badges" *ngIf="data.product.discount">
+        <span class="discount-badge">
+          <i class="fas fa-tag"></i>
+          -{{ data.product.discount }}%
+        </span>
+      </div>
+    </div>
+
+    <div class="product-info">
+      <div class="category-tag">
+        <i class="fas fa-folder"></i>
+        {{ data.product.category }}
+      </div>
+
+      <div class="product-description">
+        <h3>Description</h3>
+        <p>{{ data.product.description }}</p>
+      </div>
+
+      <div class="product-price">
+        <div class="price-container">
+          <div class="price-wrapper">
+            <span class="original-price" *ngIf="data.product.discount">
+              {{ data.product.price }} <span class="currency">DH</span>
+            </span>
+            <span class="promotional-price" *ngIf="data.product.discount">
+              {{ data.product.price * (1 - data.product.discount / 100) }} <span class="currency">DH</span>
+            </span>
+            <span class="current-price" *ngIf="!data.product.discount">
+              {{ data.product.price }} <span class="currency">DH</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="product-actions">
+        <button class="add-to-cart-btn" 
+                [class.out-of-stock]="!data.product.inStock"
+                [disabled]="!data.product.inStock"
+                (click)="addToCart(data.product)">
+          <i class="fas" [class.fa-cart-plus]="data.product.inStock" [class.fa-ban]="!data.product.inStock"></i>
+          {{ data.product.inStock ? 'Ajouter au panier' : 'Rupture de stock' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

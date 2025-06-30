@@ -2,7 +2,7 @@ import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
-import { ProductCardComponent } from '../product-card/product-card.component';
+import { ProductCardComponent, ProductWithPromotion } from '../../../shared/components/product-card/product-card.component';
 import { Product } from '../../../core/models/product.model';
 
 @Component({
@@ -27,12 +27,12 @@ import { Product } from '../../../core/models/product.model';
         </div>
 
         <div *ngFor="let product of products" class="product-card-container">
-          <app-product-card
+          <product-card
             [product]="mapToProductCard(product)"
             [storeUrl]="storeUrl"
             [storeName]="storeName"
             (addToCart)="onAddToCart(product)">
-          </app-product-card>
+          </product-card>
         </div>
       </div>
     </div>
@@ -90,9 +90,12 @@ export class StoreProductsComponent implements OnInit {
     // Le loading sera géré par le composant parent
   }
 
-  mapToProductCard(product: Product): Product {
+  mapToProductCard(product: Product): ProductWithPromotion {
     return {
       ...product,
+      discountedPrice: null,
+      activePromotion: null,
+      promotion: null,
       images: product.images?.length ? product.images : ['/assets/images/placeholder.png']
     };
   }

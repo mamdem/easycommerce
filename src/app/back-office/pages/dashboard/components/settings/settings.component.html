@@ -1,0 +1,529 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Paramètres</h1>
+</div>
+
+<!-- Navigation par onglets -->
+<div class="card shadow-sm border-0 rounded-3 mb-4">
+  <div class="card-body p-0">
+    <ul class="nav nav-tabs settings-tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" 
+                [class.active]="activeTab === 'compte'" 
+                (click)="changeTab('compte')">
+          <i class="bi bi-person me-2"></i>Profil
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" 
+                [class.active]="activeTab === 'boutique'" 
+                (click)="changeTab('boutique')">
+          <i class="bi bi-shop me-2"></i>Boutique 
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<!-- Contenu des onglets -->
+<div class="tab-content">
+
+  <!-- Onglet Profil -->
+  <div class="tab-pane fade" [class.show]="activeTab === 'compte'" [class.active]="activeTab === 'compte'">
+    <div class="card shadow-sm border-0 rounded-3">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-person-circle fs-4 text-primary"></i>
+            <h4 class="card-title mb-0">Informations du profil</h4>
+          </div>
+          <div class="d-flex gap-2">
+            <button *ngIf="isEditMode" 
+                    type="button" 
+                    class="btn btn-outline-secondary btn-sm" 
+                    (click)="toggleEditMode()">
+              <i class="bi bi-x-lg me-1"></i>Annuler
+            </button>
+            <button *ngIf="!isEditMode" 
+                    type="button" 
+                    class="btn btn-outline-primary btn-sm" 
+                    (click)="toggleEditMode()" 
+                    [ngStyle]="{'color': storeSettings.secondaryColor, 'border-color': storeSettings.secondaryColor}">
+              <i class="bi bi-pencil me-1"></i>Modifier
+            </button>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <!-- Photo de profil -->
+          <div class="col-md-4">
+            <div class="profile-image-section text-center">
+              <div class="avatar-container mb-3">
+                <img [src]="currentUser?.photoURL || 'assets/default-avatar.svg'" 
+                     [alt]="currentUser?.displayName || 'Photo de profil'"
+                     class="avatar-image"
+                     (error)="onImageError($event)">
+                <div class="avatar-overlay" *ngIf="isEditMode">
+                  <div class="upload-btn-wrapper">
+                    <button class="btn btn-light btn-sm rounded-circle">
+                      <i class="bi bi-camera"></i>
+                    </button>
+                    <input type="file" 
+                           accept="image/*" 
+                           (change)="onAvatarChange($event)"
+                           #avatarInput>
+                  </div>
+                </div>
+              </div>
+              <h5 class="mb-1">{{ userProfile.firstName }} {{ userProfile.lastName }}</h5>
+              <p class="text-muted mb-0">{{ userProfile.email }}</p>
+            </div>
+          </div>
+          
+          <!-- Informations du profil -->
+          <div class="col-md-8">
+            <!-- Mode lecture -->
+            <div *ngIf="!isEditMode" class="user-info">
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-label">
+                    <i class="bi bi-person"></i>
+                    <span>Nom complet</span>
+                  </div>
+                  <div class="info-value">{{ userProfile.firstName }} {{ userProfile.lastName }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">
+                    <i class="bi bi-envelope"></i>
+                    <span>Email</span>
+                  </div>
+                  <div class="info-value">{{ userProfile.email }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">
+                    <i class="bi bi-telephone"></i>
+                    <span>Téléphone</span>
+                  </div>
+                  <div class="info-value">{{ userProfile.phone || 'Non renseigné' }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Statut du compte</span>
+                  </div>
+                  <div class="info-value">
+                    <span class="badge bg-success">Vérifié</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mode édition -->
+            <form *ngIf="isEditMode" class="edit-form">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="firstName" class="form-label">
+                    <i class="bi bi-person me-1"></i>Prénom
+                  </label>
+                  <input type="text" 
+                         class="form-control" 
+                         id="firstName" 
+                         [(ngModel)]="userProfile.firstName" 
+                         name="firstName"
+                         placeholder="Votre prénom">
+                </div>
+                <div class="col-md-6">
+                  <label for="lastName" class="form-label">
+                    <i class="bi bi-person me-1"></i>Nom
+                  </label>
+                  <input type="text" 
+                         class="form-control" 
+                         id="lastName" 
+                         [(ngModel)]="userProfile.lastName" 
+                         name="lastName"
+                         placeholder="Votre nom">
+              </div>
+              
+                <div class="col-12">
+                  <label for="email" class="form-label">
+                    <i class="bi bi-envelope me-1"></i>Adresse email
+                  </label>
+                  <input type="email" 
+                         class="form-control" 
+                         id="email" 
+                         [(ngModel)]="userProfile.email" 
+                         name="email"
+                         placeholder="votre@email.com">
+              </div>
+              
+                <div class="col-12">
+                  <label for="phone" class="form-label">
+                    <i class="bi bi-telephone me-1"></i>Téléphone
+                  </label>
+                  <input type="tel" 
+                         class="form-control" 
+                         id="phone" 
+                         [(ngModel)]="userProfile.phone" 
+                         name="phone"
+                         placeholder="+33 6 XX XX XX XX">
+              </div>
+              
+                <div class="col-12">
+                  <div class="d-flex justify-content-end gap-2">
+                    <button type="button" 
+                            class="btn btn-primary" 
+                            (click)="saveProfile()"
+                            [disabled]="!isProfileChanged()">
+                      <i class="bi bi-check-lg me-1"></i>Enregistrer les modifications
+                </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Section Sécurité -->
+    <div class="card shadow-sm border-0 rounded-3 mt-4">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-2 mb-4">
+          <i class="bi bi-shield-lock fs-4 text-primary"></i>
+          <h5 class="card-title mb-0">Sécurité</h5>
+        </div>
+        
+        <form class="security-form">
+          <div class="row g-3">
+            <div class="col-12">
+              <label for="currentPassword" class="form-label">
+                <i class="bi bi-key me-1"></i>Mot de passe actuel
+              </label>
+              <input type="password" 
+                     class="form-control" 
+                     id="currentPassword" 
+                     [(ngModel)]="securitySettings.currentPassword"
+                     name="currentPassword"
+                     [disabled]="isChangingPassword">
+            </div>
+          
+            <div class="col-md-6">
+              <label for="newPassword" class="form-label">
+                <i class="bi bi-lock me-1"></i>Nouveau mot de passe
+              </label>
+              <input type="password" 
+                     class="form-control" 
+                     id="newPassword" 
+                     [(ngModel)]="securitySettings.newPassword"
+                     name="newPassword"
+                     [disabled]="isChangingPassword">
+              <small class="form-text text-muted">
+                Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.
+              </small>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="confirmPassword" class="form-label">
+                <i class="bi bi-lock-fill me-1"></i>Confirmer le mot de passe
+              </label>
+              <input type="password" 
+                     class="form-control" 
+                     id="confirmPassword" 
+                     [(ngModel)]="securitySettings.confirmPassword"
+                     name="confirmPassword"
+                     [disabled]="isChangingPassword">
+            </div>
+          
+            <div class="col-12">
+              <div class="d-flex justify-content-end">
+                <button type="button" 
+                        class="btn btn-primary" 
+                        (click)="updatePassword()"
+                        [disabled]="isChangingPassword || !securitySettings.currentPassword || !securitySettings.newPassword || !securitySettings.confirmPassword">
+                  <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" *ngIf="isChangingPassword"></span>
+                  <i class="bi bi-shield-check me-1" *ngIf="!isChangingPassword"></i>
+                  {{ isChangingPassword ? 'Mise à jour en cours...' : 'Mettre à jour le mot de passe' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onglet Boutique -->
+  <div class="tab-pane fade" [class.show]="activeTab === 'boutique'" [class.active]="activeTab === 'boutique'">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+      <div class="d-flex align-items-center gap-3">
+        <div class="section-icon">
+          <i class="bi bi-shop"></i>
+        </div>
+        <div>
+          <h1 class="h2 mb-0">Paramètres de la boutique</h1>
+          <p class="text-muted mb-0">Personnalisez les informations de votre boutique</p>
+        </div>
+      </div>
+      <div class="btn-toolbar mb-2 mb-md-0">
+        <button *ngIf="isEditMode" type="button" class="btn btn-primary" (click)="saveSettings()" [ngStyle]="{'background-color': storeSettings.secondaryColor, 'border-color': storeSettings.secondaryColor}">
+          <i class="bi bi-save me-1"></i> Enregistrer
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulaire de paramètres -->
+    <div class="row">
+      <div class="col-md-8">
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h5 class="card-title mb-0">Informations générales</h5>
+              <div class="d-flex gap-2">
+                <button *ngIf="isEditMode" type="button" class="btn btn-outline-secondary" (click)="toggleEditMode()">
+                  <i class="bi bi-x-lg me-1"></i>Annuler
+                </button>
+                <button *ngIf="!isEditMode" type="button" class="btn btn-outline-primary" (click)="toggleEditMode()" [ngStyle]="{'color': storeSettings.secondaryColor, 'border-color': storeSettings.secondaryColor}">
+                  <i class="bi bi-pencil me-1"></i>Modifier
+                </button>
+              </div>
+            </div>
+
+            <!-- Mode lecture -->
+            <div *ngIf="!isEditMode" class="store-info">
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-label">Nom de la boutique</div>
+                  <div class="info-value">{{ storeSettings.storeName }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Description</div>
+                  <div class="info-value">{{ storeSettings.storeDescription }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Catégorie</div>
+                  <div class="info-value">{{ storeSettings.storeCategory }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Email</div>
+                  <div class="info-value">{{ storeSettings.email }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Téléphone</div>
+                  <div class="info-value">{{ storeSettings.phoneNumber }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Adresse</div>
+                  <div class="info-value address-block">
+                    {{ storeSettings.address }}<br>
+                    {{ storeSettings.zipCode }} {{ storeSettings.city }}<br>
+                    {{ storeSettings.country }}
+                  </div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Numéro de TVA</div>
+                  <div class="info-value">{{ storeSettings.taxId }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mode édition -->
+            <form *ngIf="isEditMode" class="edit-form">
+              <div class="mb-3">
+                <label for="storeName" class="form-label">Nom de la boutique</label>
+                <input type="text" class="form-control" id="storeName" [(ngModel)]="storeSettings.storeName" name="storeName">
+              </div>
+              <div class="mb-3">
+                <label for="storeDescription" class="form-label">Description</label>
+                <textarea class="form-control" id="storeDescription" rows="3" [(ngModel)]="storeSettings.storeDescription" name="storeDescription"></textarea>
+              </div>
+              <div class="mb-3">
+                <label for="storeCategory" class="form-label">Catégorie</label>
+                <input type="text" class="form-control" id="storeCategory" [(ngModel)]="storeSettings.storeCategory" name="storeCategory">
+              </div>
+              <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" [(ngModel)]="storeSettings.email" name="email">
+              </div>
+              <div class="mb-3">
+                <label for="phoneNumber" class="form-label">Téléphone</label>
+                <input type="tel" class="form-control" id="phoneNumber" [(ngModel)]="storeSettings.phoneNumber" name="phoneNumber">
+              </div>
+              <div class="mb-3">
+                <label for="address" class="form-label">Adresse</label>
+                <input type="text" class="form-control" id="address" [(ngModel)]="storeSettings.address" name="address">
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="city" class="form-label">Ville</label>
+                    <input type="text" class="form-control" id="city" [(ngModel)]="storeSettings.city" name="city">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="zipCode" class="form-label">Code postal</label>
+                    <input type="text" class="form-control" id="zipCode" [(ngModel)]="storeSettings.zipCode" name="zipCode">
+                  </div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="country" class="form-label">Pays</label>
+                <input type="text" class="form-control" id="country" [(ngModel)]="storeSettings.country" name="country">
+              </div>
+              <div class="mb-3">
+                <label for="taxId" class="form-label">Numéro de TVA</label>
+                <input type="text" class="form-control" id="taxId" [(ngModel)]="storeSettings.taxId" name="taxId">
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-3 mb-4" *ngIf="isEditMode">
+          <div class="card-body">
+            <h5 class="card-title">Images</h5>
+            <form>
+              <div class="mb-4">
+                <label class="form-label">Logo</label>
+                <div class="d-flex align-items-center gap-3">
+                  <div class="image-preview" *ngIf="storeSettings.logoUrl">
+                    <img [src]="storeSettings.logoUrl" alt="Logo" class="img-thumbnail" style="max-width: 100px;">
+                  </div>
+                  <div class="d-flex gap-2">
+                    <div class="upload-btn-wrapper">
+                      <button class="btn btn-outline-primary" type="button" [ngStyle]="{'color': storeSettings.secondaryColor, 'border-color': storeSettings.secondaryColor}">
+                        <i class="bi bi-upload me-1"></i>Changer
+                      </button>
+                      <input type="file" accept="image/*" (change)="onLogoChange($event)">
+              </div>
+                    <button *ngIf="logoFile || resizedLogoFile" 
+                            type="button" 
+                            class="btn btn-primary" 
+                            (click)="saveSettings()" 
+                            [ngStyle]="{'background-color': storeSettings.secondaryColor, 'border-color': storeSettings.secondaryColor}">
+                      <i class="bi bi-save me-1"></i>Appliquer
+                    </button>
+                    <button *ngIf="storeSettings.logoUrl" 
+                            class="btn btn-outline-danger" 
+                            type="button" 
+                            (click)="removeLogo()">
+                      <i class="bi bi-trash me-1"></i>Supprimer
+                    </button>
+                </div>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label">Bannière</label>
+                <div class="d-flex align-items-center gap-3">
+                  <div class="image-preview" *ngIf="storeSettings.bannerUrl">
+                    <img [src]="storeSettings.bannerUrl" alt="Bannière" class="img-thumbnail" style="max-width: 200px;">
+                  </div>
+                  <div class="d-flex gap-2">
+                    <div class="upload-btn-wrapper">
+                      <button class="btn btn-outline-primary" type="button" [ngStyle]="{'color': storeSettings.secondaryColor, 'border-color': storeSettings.secondaryColor}">
+                        <i class="bi bi-upload me-1"></i>Changer
+                      </button>
+                      <input type="file" accept="image/*" (change)="onBannerChange($event)">
+                    </div>
+                    <button *ngIf="bannerFile || resizedBannerFile" 
+                            type="button" 
+                            class="btn btn-primary" 
+                            (click)="saveSettings()" 
+                            [ngStyle]="{'background-color': storeSettings.secondaryColor, 'border-color': storeSettings.secondaryColor}">
+                      <i class="bi bi-save me-1"></i>Appliquer
+                    </button>
+                    <button *ngIf="storeSettings.bannerUrl" 
+                            class="btn btn-outline-danger" 
+                            type="button" 
+                            (click)="removeBanner()">
+                      <i class="bi bi-trash me-1"></i>Supprimer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+        </div>
+      </div>
+
+        <div class="card shadow-sm border-0 rounded-3 mb-4" *ngIf="isEditMode">
+          <div class="card-body"> 
+            <h5 class="card-title">Apparence</h5>
+            <form>
+              <div class="mb-3">
+                <label for="primaryColor" class="form-label">Couleur principale</label>
+                <input type="color" class="form-control form-control-color" id="primaryColor" [(ngModel)]="storeSettings.primaryColor" name="primaryColor">
+              </div>
+              <div class="mb-3">
+                <label for="secondaryColor" class="form-label">Couleur secondaire</label>
+                <input type="color" class="form-control form-control-color" id="secondaryColor" [(ngModel)]="storeSettings.secondaryColor" name="secondaryColor">
+              </div>
+            </form>
+          </div>
+          </div>
+        </div>
+
+      <div class="col-md-4">
+        <div class="card shadow-sm border-0 rounded-3 mb-4">
+          <div class="card-body">
+            <h5 class="card-title">Aperçu</h5>
+            <div class="store-preview">
+              <div class="logo-preview mb-3" *ngIf="storeSettings.logoUrl">
+                <img [src]="storeSettings.logoUrl" alt="Logo" class="img-fluid">
+              </div>
+              <div class="banner-preview mb-3" *ngIf="storeSettings.bannerUrl">
+                <img [src]="storeSettings.bannerUrl" alt="Bannière" class="img-fluid">
+              </div>
+              <div class="color-preview">
+                <div class="color-sample primary" [style.backgroundColor]="storeSettings.primaryColor"></div>
+                <div class="color-sample secondary" [style.backgroundColor]="storeSettings.secondaryColor"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+          </div>
+          
+<style>
+.upload-btn-wrapper {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.upload-btn-wrapper input[type=file] {
+  font-size: 100px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.image-preview {
+  border: 1px solid #dee2e6;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  background-color: #fff;
+}
+
+.image-preview img {
+  display: block;
+  max-height: 150px;
+  width: auto;
+  object-fit: contain;
+}
+
+.color-preview {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.color-sample {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+</style> 

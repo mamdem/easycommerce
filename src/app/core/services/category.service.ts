@@ -29,6 +29,18 @@ export class CategoryService {
       );
   }
 
+  getCategoryById(storeId: string, categoryId: string): Observable<Category> {
+    return this.firestore
+      .doc<Category>(`${this.getCategoriesPath(storeId)}/${categoryId}`)
+      .valueChanges({ idField: 'id' })
+      .pipe(
+        map(category => {
+          if (!category) throw new Error('Catégorie non trouvée');
+          return category;
+        })
+      );
+  }
+
   async addCategory(storeId: string, categoryData: Partial<Category>): Promise<Category> {
     try {
       const userId = this.authService.getCurrentUser()?.uid;

@@ -3,7 +3,8 @@ import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { environment } from '../../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { AuthService, User } from './auth.service';
+import { AuthService } from './auth.service';
+import { User } from '../models/user.model';
 import { switchMap } from 'rxjs/operators';
 
 @Injectable({

@@ -11,22 +11,19 @@ import {
   UserCredential,
   updateProfile,
   Auth,
-  User as FirebaseUser
+  User as FirebaseUser,
+  updateEmail,
+  sendPasswordResetEmail,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword as firebaseUpdatePassword
 } from 'firebase/auth';
 import { initializeApp } from 'firebase/app';
 import { environment } from '../../../environments/environment';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { getFirestore, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
-
-// Définir l'interface User pour le type de retour de getCurrentUser
-export interface User {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-  userType: 'customer' | 'merchant';
-  hasStore: boolean;
-}
+import { ToastService } from './toast.service';
+import { User } from '../models/user.model';
 
 @Injectable({
   providedIn: 'root'
@@ -41,7 +38,7 @@ export class AuthService {
   private userSubject = new BehaviorSubject<User | null>(null);
   public user$: Observable<User | null> = this.userSubject.asObservable();
 
-  constructor(private router: Router) {
+  constructor(private router: Router, private toastService: ToastService) {
     // Initialisation de Firebase
     this.auth = getAuth(this.app);
     
@@ -60,7 +57,10 @@ export class AuthService {
               const updatedUserData = {
                 ...userData,
                 userType: userDoc['userType'] || 'customer',
-                hasStore: userDoc['hasStore'] || false
+                hasStore: userDoc['hasStore'] || false,
+                emailVerified: userData.emailVerified || false,
+                isAnonymous: userData.isAnonymous || false,
+                phoneNumber: userData.phoneNumber || null
               };
               localStorage.setItem('user', JSON.stringify(updatedUserData));
             }
@@ -108,31 +108,40 @@ export class AuthService {
     
     const timestamp = Date.now();
     
+    const baseUserData = {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+      phoneNumber: additionalData.phoneNumber || null,
+      emailVerified: user.emailVerified,
+      isAnonymous: user.isAnonymous,
+      userType: userType as 'customer' | 'merchant',
+      hasStore: false,
+      metadata: {
+        creationTime: user.metadata.creationTime,
+        lastSignInTime: user.metadata.lastSignInTime
+      },
+      providerData: user.providerData,
+      refreshToken: user.refreshToken,
+      tenantId: user.tenantId
+    } as User;
+    
     if (userDoc.exists()) {
       // Mettre à jour le document existant
       const existingData = userDoc.data();
       await updateDoc(userRef, {
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
+        ...baseUserData,
         firstName: firstName || existingData['firstName'] || '',
         lastName: lastName || existingData['lastName'] || '',
-        phoneNumber: additionalData.phoneNumber || existingData['phoneNumber'] || '',
-        userType: userType,
         updatedAt: timestamp
       });
     } else {
       // Créer un nouveau document
       await setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        firstName: firstName,
-        lastName: lastName,
-        phoneNumber: additionalData.phoneNumber || '',
-        userType: userType,
-        hasStore: false,
+        ...baseUserData,
+        firstName,
+        lastName,
         createdAt: timestamp,
         updatedAt: timestamp
       });
@@ -191,8 +200,18 @@ export class AuthService {
         email: user.email,
         displayName: displayName,
         photoURL: user.photoURL,
+        phoneNumber: userData.phoneNumber || null,
+        emailVerified: user.emailVerified,
+        isAnonymous: user.isAnonymous,
         userType: userType,
-        hasStore: false
+        hasStore: false,
+        metadata: {
+          creationTime: user.metadata.creationTime,
+          lastSignInTime: user.metadata.lastSignInTime
+        },
+        providerData: user.providerData,
+        refreshToken: user.refreshToken,
+        tenantId: user.tenantId
       });
       
       return userCredential;
@@ -211,16 +230,26 @@ export class AuthService {
       const user = userCredential.user;
       const userDoc = await this.getUserDataFromFirestore(user.uid);
       
-      const userData = {
+      const userData: User = {
         uid: user.uid,
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        phoneNumber: user.phoneNumber,
+        emailVerified: user.emailVerified,
+        isAnonymous: user.isAnonymous,
         userType: userDoc ? userDoc['userType'] : 'customer',
-        hasStore: userDoc ? userDoc['hasStore'] : false
+        hasStore: userDoc ? userDoc['hasStore'] : false,
+        metadata: {
+          creationTime: user.metadata.creationTime,
+          lastSignInTime: user.metadata.lastSignInTime
+        },
+        providerData: user.providerData,
+        refreshToken: user.refreshToken,
+        tenantId: user.tenantId
       };
       
-      this.userSubject.next(userData as User);
+      this.userSubject.next(userData);
       localStorage.setItem('user', JSON.stringify(userData));
       
       return userCredential;
@@ -328,7 +357,18 @@ export class AuthService {
    * @returns L'objet utilisateur ou null si non connecté
    */
   getCurrentUser(): User | null {
-    return this.userSubject.value;
+    const user = this.userSubject.value;
+    if (user) {
+      return {
+        ...user,
+        emailVerified: user.emailVerified || false,
+        isAnonymous: user.isAnonymous || false,
+        phoneNumber: user.phoneNumber || null,
+        userType: user.userType || 'customer',
+        hasStore: user.hasStore || false
+      };
+    }
+    return null;
   }
   
   /**
@@ -465,5 +505,141 @@ export class AuthService {
   async signOut(): Promise<void> {
     await this.auth.signOut();
     this.userSubject.next(null);
+  }
+
+  /**
+   * Met à jour le profil de l'utilisateur
+   * @param profileData Les données du profil à mettre à jour
+   */
+  async updateProfile(profileData: {
+    displayName?: string;
+    email?: string;
+    phoneNumber?: string;
+    photoURL?: string;
+  }): Promise<void> {
+    try {
+      // Vérifier d'abord l'état de l'authentification via le BehaviorSubject
+      const currentUserFromSubject = this.userSubject.value;
+      console.log('État utilisateur depuis userSubject:', currentUserFromSubject);
+
+      // Vérifier ensuite l'état de Firebase Auth
+      const auth = getAuth(this.app);
+      const firebaseUser = auth.currentUser;
+      console.log('État utilisateur depuis Firebase Auth:', firebaseUser);
+
+      // Si aucun utilisateur n'est trouvé dans les deux sources
+      if (!currentUserFromSubject && !firebaseUser) {
+        throw new Error('Vous devez être connecté pour modifier votre profil');
+      }
+
+      // Utiliser l'utilisateur Firebase si disponible, sinon utiliser celui du subject
+      const currentUser = firebaseUser || currentUserFromSubject;
+      if (!currentUser) {
+        throw new Error('Impossible de récupérer les informations de l\'utilisateur');
+      }
+
+      // Créer un tableau de promesses pour les mises à jour
+      const updatePromises: Promise<any>[] = [];
+
+      if (firebaseUser) {
+        // Mettre à jour le profil Firebase si l'utilisateur Firebase est disponible
+        if (profileData.displayName !== undefined || profileData.photoURL !== undefined) {
+          updatePromises.push(
+            updateProfile(firebaseUser, {
+              displayName: profileData.displayName || firebaseUser.displayName,
+              photoURL: profileData.photoURL || firebaseUser.photoURL
+            })
+          );
+        }
+
+        // Mettre à jour l'email si fourni et différent
+        if (profileData.email && profileData.email !== firebaseUser.email) {
+          updatePromises.push(updateEmail(firebaseUser, profileData.email));
+        }
+      }
+
+      // Mettre à jour le numéro de téléphone dans Firestore
+      if (profileData.phoneNumber !== undefined) {
+        const userRef = doc(this.firestore, 'users', currentUser.uid);
+        updatePromises.push(
+          updateDoc(userRef, {
+            phoneNumber: profileData.phoneNumber,
+            updatedAt: Date.now()
+          })
+        );
+      }
+
+      // Attendre que toutes les mises à jour soient terminées
+      await Promise.all(updatePromises);
+
+      // Mettre à jour le subject avec les nouvelles données
+      const updatedUserData = {
+        ...currentUserFromSubject,
+        displayName: profileData.displayName || currentUserFromSubject?.displayName,
+        email: profileData.email || currentUserFromSubject?.email,
+        phoneNumber: profileData.phoneNumber || currentUserFromSubject?.phoneNumber,
+        photoURL: profileData.photoURL || currentUserFromSubject?.photoURL
+      } as User;
+
+      this.userSubject.next(updatedUserData);
+      
+      // Mettre à jour le localStorage
+      localStorage.setItem('user', JSON.stringify(updatedUserData));
+
+      this.toastService.success('Profil mis à jour avec succès');
+    } catch (error) {
+      console.error('Erreur détaillée lors de la mise à jour du profil:', error);
+      
+      // Gérer les erreurs spécifiques de Firebase
+      if (error instanceof Error) {
+        switch (error.message) {
+          case 'auth/requires-recent-login':
+            throw new Error('Pour des raisons de sécurité, veuillez vous reconnecter avant de modifier ces informations');
+          case 'auth/email-already-in-use':
+            throw new Error('Cette adresse email est déjà utilisée par un autre compte');
+          case 'auth/invalid-email':
+            throw new Error('L\'adresse email fournie n\'est pas valide');
+          default:
+            throw error;
+        }
+      }
+      throw error;
+    }
+  }
+
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    try {
+      await sendPasswordResetEmail(this.auth, email);
+      this.toastService.success('Un email de réinitialisation de mot de passe a été envoyé');
+    } catch (error) {
+      console.error('Erreur lors de la réinitialisation du mot de passe:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Met à jour le mot de passe de l'utilisateur
+   * @param currentPassword Le mot de passe actuel
+   * @param newPassword Le nouveau mot de passe
+   */
+  async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
+    try {
+      const auth = getAuth(this.app);
+      const user = auth.currentUser;
+      
+      if (!user || !user.email) {
+        throw new Error('Utilisateur non connecté ou email manquant');
+      }
+
+      // Réauthentifier l'utilisateur avant de changer le mot de passe
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      // Mettre à jour le mot de passe
+      await firebaseUpdatePassword(user, newPassword);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du mot de passe:', error);
+      throw error;
+    }
   }
 } 

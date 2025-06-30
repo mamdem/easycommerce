@@ -1,0 +1,1148 @@
+<!-- En-tête de la page -->
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <div class="d-flex align-items-center gap-3">
+    <div class="section-icon">
+      <i class="bi bi-box-seam"></i>
+    </div>
+    <div>
+      <h1 class="h2 mb-0">Produits</h1>
+      <p class="text-muted mb-0">Gérez vos produits et leurs catégories</p>
+    </div>
+  </div>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <button class="btn btn-sm btn-outline-primary" routerLink="add">
+      <i class="bi bi-plus-lg me-1"></i>
+      Ajouter un produit
+    </button>
+  </div>
+</div>
+
+<!-- Catégories -->
+<div class="categories-section mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Catégories</h5>
+    <button class="btn btn-sm btn-outline-secondary" (click)="openCategoryModal()">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle catégorie
+    </button>
+  </div>
+
+  <!-- Formulaire de catégorie -->
+  <div class="category-form-section" *ngIf="showCategoryForm" [@fadeInOut]>
+    <div class="category-form-content">
+      <div class="category-form-header">
+        <h3>{{ editingCategoryId ? 'Modifier la catégorie' : 'Nouvelle catégorie' }}</h3>
+        <button class="btn-close" (click)="cancelEditing()" aria-label="Fermer"></button>
+      </div>
+      
+      <form [formGroup]="categoryForm" (ngSubmit)="saveCategoryForm()">
+        <div class="form-group mb-3">
+          <label class="form-label">Nom*</label>
+          <input type="text" 
+                 class="form-control" 
+                 formControlName="name" 
+                 [class.is-invalid]="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched"
+                 placeholder="Nom de la catégorie">
+          <div class="invalid-feedback" *ngIf="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched">
+            <span *ngIf="categoryForm.get('name')?.errors?.['required']">Le nom est requis</span>
+            <span *ngIf="categoryForm.get('name')?.errors?.['minlength']">Le nom doit contenir au moins 2 caractères</span>
+          </div>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" 
+                    formControlName="description" 
+                    rows="3"
+                    placeholder="Description de la catégorie (optionnel)"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-light" (click)="cancelEditing()">
+            <i class="bi bi-x me-1"></i>Annuler
+          </button>
+          <button type="submit" 
+                  class="btn btn-primary" 
+                  [disabled]="categoryForm.invalid || actionLoading">
+            <i class="bi" [ngClass]="actionLoading ? 'spinner-border spinner-border-sm' : 'bi-check-lg'"></i>
+            {{ editingCategoryId ? 'Mettre à jour' : 'Créer' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading des catégories -->
+  <app-loading-spinner *ngIf="loadingCategories"
+                      text="Chargement des catégories..."
+                      [showProgress]="false">
+  </app-loading-spinner>
+
+  <!-- Liste des catégories -->
+  <div class="categories-wrapper" #categoriesContainer *ngIf="!loadingCategories">
+    <!-- Bouton de défilement gauche -->
+    <button class="scroll-button scroll-left" (click)="scrollCategories('left')" #scrollLeftBtn>
+      <i class="bi bi-chevron-left"></i>
+    </button>
+
+    <!-- Liste des catégories -->
+    <div class="categories-grid">
+      <!-- Carte "Voir tout" -->
+      <div class="category-card view-all" 
+           *ngIf="(categories$ | async)?.length"
+           [class.active]="!selectedCategory"
+           (click)="filterByCategory(null)">
+        <div class="category-icon">
+          <i class="bi bi-grid"></i>
+        </div>
+        <div class="category-content">
+          <h4 class="category-name">Voir tout</h4>
+          <div class="category-description-wrapper">
+            <p class="category-description text-muted mb-0">
+              Afficher tous les produits
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cartes des catégories -->
+      <div class="category-card" 
+           *ngFor="let category of categories$ | async"
+           [class.active]="selectedCategory === category.id"
+           (click)="filterByCategory(category)">
+        <div class="category-icon">
+          <i class="bi bi-folder"></i>
+        </div>
+        <div class="category-content">
+          <h4 class="category-name">{{ category.name }}</h4>
+          <div class="category-description-wrapper">
+            <p class="category-description text-muted mb-0" [class.empty]="!category.description">
+              {{ category.description || 'Aucune description' }}
+            </p>
+          </div>
+        </div>
+        <div class="category-actions">
+          <button class="btn btn-icon btn-light" 
+                  (click)="startEditingCategory(category); $event.stopPropagation()"
+                  [disabled]="actionLoading"
+                  title="Modifier la catégorie">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-icon btn-light text-danger" 
+                  (click)="deleteCategory(category); $event.stopPropagation()"
+                  [disabled]="actionLoading"
+                  title="Supprimer la catégorie">
+            <i class="bi" [ngClass]="actionLoading ? 'spinner-border spinner-border-sm' : 'bi-trash'"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bouton de défilement droit -->
+    <button class="scroll-button scroll-right" (click)="scrollCategories('right')" #scrollRightBtn>
+      <i class="bi bi-chevron-right"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Barre de recherche et filtres -->
+<div class="filters-bar mb-4">
+  <div class="filters-content">
+  <div class="search-box">
+    <div class="input-group">
+      <span class="input-group-text border-0 bg-light">
+        <i class="bi bi-search"></i>
+      </span>
+      <input 
+        type="text" 
+        class="form-control border-0 bg-light" 
+        placeholder="Rechercher un produit..." 
+               [(ngModel)]="searchTerm"
+        (ngModelChange)="onSearch()">
+      <button 
+        *ngIf="searchTerm" 
+        class="btn btn-link text-secondary border-0" 
+        (click)="clearSearch()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="category-selector">
+    <select class="form-select" 
+            [(ngModel)]="selectedCategory" 
+            (ngModelChange)="onCategoryChange($event)"
+            [disabled]="loading">
+      <option [ngValue]="null">Toutes les catégories</option>
+      <option *ngFor="let category of categories$ | async" [value]="category.id">
+        {{ category.name }}
+      </option>
+    </select>
+  </div>
+
+  <button class="btn btn-outline-secondary" 
+          (click)="toggleViewMode()"
+          [disabled]="true"
+          title="Cette fonctionnalité sera bientôt disponible">
+    <i class="bi" [ngClass]="viewMode === 'grid' ? 'bi-list' : 'bi-grid'"></i>
+  </button>
+  </div>
+</div>
+
+<!-- Loading des produits -->
+<app-loading-spinner *ngIf="loadingProducts"
+                    text="Chargement des produits..."
+                    [showProgress]="true"
+                    [fullPage]="true">
+</app-loading-spinner>
+
+<!-- Message si aucun produit -->
+<div class="alert alert-info" *ngIf="!loadingProducts && products.length === 0">
+  <i class="bi bi-info-circle me-2"></i>
+  Aucun produit disponible. Commencez par en ajouter un !
+</div>
+
+<!-- Grille des produits -->
+<div class="products-container" *ngIf="!loadingProducts && products.length > 0">
+  <div class="products-grid" [class.list-view]="viewMode === 'list'">
+    <div class="product-card" 
+         *ngFor="let product of products"
+         [class.out-of-stock]="product.stock === 0"
+         (click)="viewProductDetails(product)">
+      
+      <div class="product-image">
+        <img [src]="product.images[0] || 'assets/default-product.svg'" 
+             [alt]="product.name"
+             (error)="onImageError($event)">
+        
+        <!-- Badge de promotion -->
+        <div class="product-badges" *ngIf="product.promotion">
+          <div class="discount-badge">
+            <i class="bi bi-tag-fill"></i>
+            -{{ product.promotion.reduction }}%
+          </div>
+        </div>
+
+        <!-- Actions rapides -->
+        <div class="quick-actions">
+          <button class="btn" 
+                  [disabled]="actionLoading"
+                  title="Modifier"
+                  (click)="editProduct(product); $event.stopPropagation()">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn text-danger" 
+                  [disabled]="actionLoading"
+                  title="Supprimer"
+                  (click)="deleteProduct(product); $event.stopPropagation()">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="product-info">
+        <div class="product-header">
+          <div class="category-tag" *ngIf="product.category">
+            <i class="bi bi-bookmark"></i>
+            {{ getCategoryName(product.category) }}
+          </div>
+          <h3 class="product-name">{{ product.name }}</h3>
+        </div>
+
+        <p class="product-description" *ngIf="viewMode === 'list'">
+          {{ product.description || 'Aucune description disponible.' }}
+        </p>
+
+        <div class="product-footer">
+          <div class="product-price">
+            <ng-container *ngIf="product.promotion">
+              <span class="original-price">{{ product.originalPrice }} FCFA</span>
+              <span class="promotional-price">{{ calculateDiscountedPrice(product) }} FCFA</span>
+            </ng-container>
+            <span class="current-price" *ngIf="!product.promotion">{{ product.price }} FCFA</span>
+          </div>
+
+          <div class="product-stock" *ngIf="viewMode === 'list'"
+               [class.in-stock]="product.stock > 10"
+               [class.low-stock]="product.stock > 0 && product.stock <= 10"
+               [class.out-of-stock]="product.stock === 0">
+            <i class="bi" [ngClass]="{
+              'bi-check-circle-fill': product.stock > 10,
+              'bi-exclamation-circle-fill': product.stock > 0 && product.stock <= 10,
+              'bi-x-circle-fill': product.stock === 0
+            }"></i>
+            <span>{{ product.stock > 0 ? product.stock + ' en stock' : 'Rupture de stock' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination-container" *ngIf="totalPages > 1">
+    <div class="pagination">
+      <button class="btn btn-outline-secondary" 
+              [disabled]="currentPage === 1 || loadingMore"
+              (click)="onPageChange(currentPage - 1)">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      
+      <button class="btn" 
+              *ngFor="let page of pages"
+              [class.btn-primary]="page === currentPage"
+              [class.btn-outline-secondary]="page !== currentPage"
+              [disabled]="loadingMore"
+              (click)="onPageChange(page)">
+        {{ page }}
+      </button>
+      
+      <button class="btn btn-outline-secondary" 
+              [disabled]="currentPage === totalPages || loadingMore"
+              (click)="onPageChange(currentPage + 1)">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Dialog de confirmation -->
+<div class="modal-overlay" *ngIf="showDeleteConfirm && categoryToDelete" [@fadeInOut]>
+  <div class="modal-dialog" [@liftUpDown]>
+    <div class="modal-content">
+      <h3>Confirm Action</h3>
+      <p>Are you sure you want to do this?</p>
+      <div class="modal-actions">
+        <button class="btn btn-light" (click)="showDeleteConfirm = null; categoryToDelete = null">
+          No
+        </button>
+        <button class="btn btn-primary" (click)="confirmDeleteCategory()">
+          Yes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup pour toutes les catégories -->
+<div class="simple-popup" *ngIf="showAllCategoriesPopup" [@fadeInOut]>
+  <div class="popup-content categories-popup">
+    <button class="close-btn" (click)="closeAllCategoriesPopup()">
+      <i class="bi bi-x"></i>
+    </button>
+    
+    <div class="popup-body">
+      <h3>Toutes les catégories</h3>
+      
+      <div class="categories-list">
+        <div class="category-item" 
+             *ngFor="let category of categories$ | async"
+             [class.active]="selectedCategory === category.id"
+             (click)="selectCategoryAndClose(category)">
+          <div class="category-icon">
+            <i class="bi bi-folder"></i>
+          </div>
+          <div class="category-info">
+            <h4>{{ category.name }}</h4>
+            <p class="text-muted mb-0">{{ category.description || 'Aucune description' }}</p>
+          </div>
+          <div class="category-actions">
+            <button class="btn btn-icon btn-light" 
+                    (click)="startEditingCategory(category); $event.stopPropagation(); closeAllCategoriesPopup()"
+                    [disabled]="actionLoading"
+                    title="Modifier la catégorie">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-icon btn-light text-danger" 
+                    (click)="deleteCategory(category); $event.stopPropagation(); closeAllCategoriesPopup()"
+                    [disabled]="actionLoading"
+                    title="Supprimer la catégorie">
+              <i class="bi" [ngClass]="actionLoading ? 'spinner-border spinner-border-sm' : 'bi-trash'"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.products-container {
+  padding: 1.75rem;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.left-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.right-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.search-bar {
+  position: relative;
+  min-width: 300px;
+}
+
+.search-bar i {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+}
+
+.search-bar input {
+  padding-right: 2.5rem;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.75rem;
+}
+
+.products-grid.list-view {
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.product-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  cursor: pointer;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.product-card.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.list-view .product-card {
+  display: flex;
+  align-items: flex-start;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  padding: 0.75rem;
+  gap: 1rem;
+}
+
+.product-image {
+  position: relative;
+  aspect-ratio: 1;
+  background: #f8f9fa;
+}
+
+.list-view .product-image {
+  position: relative;
+  width: 90px;
+  min-width: 90px;
+  aspect-ratio: 3/4;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f8f9fa;
+}
+
+.list-view .product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.quick-actions {
+  position: absolute;
+  top: 0.875rem;
+  right: 0.875rem;
+  display: flex;
+  gap: 0.4rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+
+.product-card:hover .quick-actions {
+  opacity: 1;
+}
+
+.quick-actions .btn {
+  padding: 0.4rem;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  border-radius: 4px;
+  color: #6c757d;
+  transition: all 0.2s;
+  backdrop-filter: blur(2px);
+}
+
+.quick-actions .btn:hover {
+  background: white;
+  color: #2c3e50;
+  transform: scale(1.05);
+}
+
+.quick-actions .btn.text-danger:hover {
+  color: #dc3545 !important;
+}
+
+.product-badges {
+  position: absolute;
+  top: 0.875rem;
+  left: 0.875rem;
+}
+
+.discount-badge {
+  background: #dc3545;
+  color: white;
+  padding: 0.4rem 0.875rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.product-info {
+  padding: 1rem;
+}
+
+.list-view .product-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.product-header {
+  margin-bottom: 0.25rem;
+}
+
+.list-view .product-header {
+  margin-bottom: 0.25rem;
+}
+
+.list-view .category-tag {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 0.15rem;
+  display: block;
+}
+
+.list-view .product-name {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #2c3e50;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-view .product-description {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin: 0.25rem 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.list-view .product-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.list-view .product-price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.list-view .original-price {
+  font-size: 0.85rem;
+  color: #6c757d;
+  text-decoration: line-through;
+}
+
+.list-view .promotional-price {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #dc3545;
+}
+
+.list-view .current-price {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.list-view .product-stock {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.list-view .product-stock i {
+  font-size: 0.9rem;
+}
+
+.list-view .quick-actions {
+  position: static;
+  display: flex;
+  gap: 0.35rem;
+  opacity: 1;
+  margin-left: auto;
+  padding-left: 0.5rem;
+}
+
+.list-view .quick-actions .btn {
+  padding: 0.25rem;
+  font-size: 0.85rem;
+  color: #6c757d;
+  background: transparent;
+}
+
+.list-view .quick-actions .btn:hover {
+  color: #2c3e50;
+  background: #f8f9fa;
+}
+
+.list-view .quick-actions .btn.text-danger:hover {
+  color: #dc3545 !important;
+}
+
+.list-view .product-badges {
+  position: absolute;
+  top: 0.35rem;
+  left: 0.35rem;
+}
+
+.list-view .discount-badge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 3px;
+}
+
+.no-products {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.no-products i {
+  font-size: 3rem;
+  color: #6c757d;
+  margin-bottom: 1rem;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+  .products-container {
+    padding: 1.25rem;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .right-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .search-bar {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .list-view .product-card {
+    padding: 0.5rem;
+    gap: 0.75rem;
+  }
+
+  .list-view .product-image {
+    width: 70px;
+    min-width: 70px;
+  }
+
+  .list-view .product-name {
+    font-size: 0.9rem;
+  }
+
+  .list-view .product-description {
+    font-size: 0.8rem;
+  }
+
+  .list-view .product-footer {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .list-view .quick-actions {
+    padding-left: 0;
+    margin-left: 0;
+  }
+}
+
+/* Nouveaux styles pour la gestion des catégories */
+.categories-management {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.category-form {
+  border: 1px solid #e9ecef;
+}
+
+.category-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.category-card:hover {
+  background: #e9ecef;
+}
+
+.category-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.category-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.category-description {
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-actions {
+  margin-left: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .categories-management {
+    padding: 1rem;
+  }
+
+  .category-form {
+    padding: 1rem;
+  }
+}
+
+/* Style pour le bouton désactivé */
+.btn-outline-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.category-form-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+
+  .popup-content {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+
+    h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      padding: 0.5rem;
+      cursor: pointer;
+      font-size: 1.25rem;
+      line-height: 1;
+      color: #6c757d;
+      transition: color 0.2s;
+
+      &:hover {
+        color: #343a40;
+      }
+    }
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+}
+
+/* Styles pour le formulaire de catégorie */
+.categories-container {
+  position: relative;
+}
+
+.category-form-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  border-radius: 12px;
+}
+
+.category-form-wrapper {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  width: 100%;
+  max-width: 500px;
+  padding: 1.5rem;
+}
+
+.category-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.category-form-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.form-actions .btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+}
+
+.form-control {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.form-control:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.15);
+}
+
+.form-label {
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.invalid-feedback {
+  font-size: 0.875rem;
+  color: #dc3545;
+  margin-top: 0.25rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .category-form-wrapper {
+    margin: 1rem;
+    padding: 1rem;
+  }
+  
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+  
+  .form-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Styles pour le formulaire de catégorie */
+.category-form-section {
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.category-form-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.category-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.category-form-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.form-actions .btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+}
+
+.form-control {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.form-control:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.15);
+}
+
+.form-label {
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.invalid-feedback {
+  font-size: 0.875rem;
+  color: #dc3545;
+  margin-top: 0.25rem;
+}
+
+/* Animation pour le formulaire */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.category-form-section {
+  animation: slideDown 0.3s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .category-form-content {
+    padding: 1rem;
+  }
+  
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+  
+  .form-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Styles pour le modal de confirmation */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 360px;
+  margin: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 1.75rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  text-align: center;
+}
+
+.modal-content h3 {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary-color, #2c3e50);
+}
+
+.modal-content p {
+  margin: 0 0 1.75rem;
+  color: #4a5568;
+  font-size: 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.modal-actions .btn {
+  min-width: 100px;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.modal-actions .btn-light {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+.modal-actions .btn-light:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.modal-actions .btn-primary {
+  background: var(--primary-color, #3b82f6);
+  border: none;
+  color: white;
+}
+
+.modal-actions .btn-primary:hover {
+  background: var(--primary-dark-color, #2563eb);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb, 59, 130, 246), 0.2);
+}
+
+@media (max-width: 576px) {
+  .modal-dialog {
+    margin: 1rem;
+  }
+
+  .modal-content {
+    padding: 1.5rem;
+  }
+}
+</style> 

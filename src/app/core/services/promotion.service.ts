@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { Observable, from, throwError } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, switchMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
+import { StoreService } from './store.service';
 import firebase from 'firebase/compat/app';
 
 export interface Promotion {
@@ -31,7 +32,8 @@ export interface Promotion {
 export class PromotionService {
   constructor(
     private firestore: AngularFirestore,
-    private authService: AuthService
+    private authService: AuthService,
+    private storeService: StoreService
   ) {}
 
   private getPromotionsPath(storeId: string): string {
@@ -53,7 +55,11 @@ export class PromotionService {
         .collection(this.getPromotionsPath(storeId))
         .add(promotionData)
     ).pipe(
-      map(docRef => docRef.id),
+      switchMap(async docRef => {
+        // Synchroniser avec la collection publique
+        await this.storeService.syncStoreDataToPublic(storeId);
+        return docRef.id;
+      }),
       catchError(error => {
         console.error('Erreur lors de la création de la promotion:', error);
         return throwError(() => new Error('Erreur lors de la création de la promotion'));
@@ -90,6 +96,10 @@ export class PromotionService {
         .doc(promotionId)
         .update(updateData)
     ).pipe(
+      switchMap(async () => {
+        // Synchroniser avec la collection publique
+        await this.storeService.syncStoreDataToPublic(storeId);
+      }),
       catchError(error => {
         console.error('Erreur lors de la mise à jour de la promotion:', error);
         return throwError(() => new Error('Erreur lors de la mise à jour de la promotion'));
@@ -105,6 +115,10 @@ export class PromotionService {
         .doc(promotionId)
         .delete()
     ).pipe(
+      switchMap(async () => {
+        // Synchroniser avec la collection publique
+        await this.storeService.syncStoreDataToPublic(storeId);
+      }),
       catchError(error => {
         console.error('Erreur lors de la suppression de la promotion:', error);
         return throwError(() => new Error('Erreur lors de la suppression de la promotion'));
@@ -151,6 +165,10 @@ export class PromotionService {
           updatedAt: Date.now()
         })
     ).pipe(
+      switchMap(async () => {
+        // Synchroniser avec la collection publique
+        await this.storeService.syncStoreDataToPublic(storeId);
+      }),
       catchError(error => {
         console.error('Erreur lors de l\'incrémentation des utilisations:', error);
         return throwError(() => new Error('Erreur lors de l\'incrémentation des utilisations'));

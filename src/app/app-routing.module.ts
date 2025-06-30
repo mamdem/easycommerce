@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { HomeComponent } from './pages/home/home.component';
+import { HomeComponent } from './back-office/pages/home/home.component';
 // Commenté pour désactiver les guards
 // import { StoreCreationGuard } from './core/guards/store-creation.guard';
 // import { authGuard, postLoginGuard } from './core/guards/auth.guard';
@@ -10,27 +10,21 @@ const routes: Routes = [
   { path: 'home', component: HomeComponent },
   { 
     path: 'auth', 
-    loadChildren: () => import('./pages/auth/auth.module').then(m => m.AuthModule) 
+    loadChildren: () => import('./back-office/pages/auth/auth.module').then(m => m.AuthModule) 
   },
   { 
     path: 'payment',
-    loadComponent: () => import('./pages/payment/payment.component').then(m => m.PaymentComponent)
-  },
-  { 
-    path: 'store/:id', 
-    loadChildren: () => import('./pages/store/store.module').then(m => m.StoreModule)
-    // Guards désactivés
-    // canActivate: [authGuard, postLoginGuard]
+    loadComponent: () => import('./back-office/pages/payment/payment.component').then(m => m.PaymentComponent)
   },
   { 
     path: 'store-creation',   
-    loadChildren: () => import('./pages/store-creation/store-creation.module').then(m => m.StoreCreationModule)
+    loadChildren: () => import('./back-office/pages/store-creation/store-creation.module').then(m => m.StoreCreationModule)
     // Guards désactivés
     // canActivate: [authGuard, postLoginGuard]
   },
   { 
     path: 'dashboard', 
-    loadChildren: () => import('./pages/dashboard/dashboard.module').then(m => m.DashboardModule)
+    loadChildren: () => import('./back-office/pages/dashboard/dashboard.module').then(m => m.DashboardModule)
     // Guards désactivés
     // canActivate: [authGuard, postLoginGuard]
   },

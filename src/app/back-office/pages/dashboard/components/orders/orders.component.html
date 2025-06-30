@@ -1,0 +1,281 @@
+<!-- En-tête de la page -->
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <div class="d-flex align-items-center gap-3">
+    <div class="section-icon">
+      <i class="bi bi-cart3"></i>
+    </div>
+    <div>
+      <h1 class="h2 mb-0">Gestion des commandes</h1>
+    <p class="text-muted mb-0">Gérez vos commandes et leur statut</p>
+    </div>
+  </div>
+  <div class="header-actions position-relative">
+    <button class="btn btn-primary btn-sm" (click)="toggleExportPopup()">
+      <i class="bi bi-download me-1"></i>
+      Télécharger les factures
+    </button>
+
+    <!-- Popup d'export -->
+    <div class="export-popup shadow" [class.show]="showExportDialog">
+      <div class="popup-header">
+        <h5>Statistiques des dépenses</h5>
+        <button type="button" class="btn-close" (click)="closeExportDialog()"></button>
+      </div>
+      
+      <!-- Période buttons -->
+      <div class="period-buttons">
+        <button class="btn" 
+                [class.btn-primary]="selectedPeriod === 'today'"
+                (click)="selectPeriod('today')">
+          Aujourd'hui
+        </button>
+        <button class="btn" 
+                [class.btn-primary]="selectedPeriod === 'week'"
+                (click)="selectPeriod('week')">
+          Cette semaine
+        </button>
+        <button class="btn" 
+                [class.btn-primary]="selectedPeriod === 'month'"
+                (click)="selectPeriod('month')">
+          Ce mois
+        </button>
+        <button class="btn" 
+                [class.btn-primary]="selectedPeriod === 'year'"
+                (click)="selectPeriod('year')">
+          Cette année
+        </button>
+        <button class="btn" 
+                [class.btn-primary]="selectedPeriod === 'custom'"
+                (click)="selectPeriod('custom')">
+          Personnalisé
+        </button>
+      </div>
+
+      <!-- Custom date range -->
+      <div class="date-range" *ngIf="selectedPeriod === 'custom'">
+        <div class="row g-3">
+          <div class="col-6">
+            <label class="form-label">Date début</label>
+            <input type="date" class="form-control" [(ngModel)]="startDate">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Date fin</label>
+            <input type="date" class="form-control" [(ngModel)]="endDate">
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics -->
+      <div class="statistics">
+        <div class="stat-item">
+          <label class="text-muted">Total des dépenses:</label>
+          <h4>{{ getTotalAmount() }} FCFA</h4>
+        </div>
+        <div class="stat-item">
+          <label class="text-muted">Nombre de transactions:</label>
+          <h4>{{ getTransactionCount() }}</h4>
+        </div>
+        <div class="stat-item">
+          <label class="text-muted">Période:</label>
+          <h4>{{ getFormattedPeriod() }}</h4>
+        </div>
+      </div>
+
+      <!-- Download button -->
+      <button class="btn btn-primary w-100" (click)="downloadInvoices()">
+        <i class="bi bi-download me-2"></i>
+        Télécharger les factures (Excel)
+    </button>
+    </div>
+  </div>
+</div>
+
+<!-- Filtres et recherche -->
+<div class="filters-section">
+  <div class="search-box">
+    <div class="input-group">
+      <span class="input-group-text border-0 bg-light">
+        <i class="bi bi-search"></i>
+      </span>
+      <input 
+        type="text" 
+        class="form-control border-0 bg-light" 
+        placeholder="Rechercher une commande..." 
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onSearch()">
+      <button 
+        *ngIf="searchTerm" 
+        class="btn btn-link text-secondary border-0" 
+        (click)="clearSearch()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+  </div>
+  
+  <div class="status-filters">
+    <button 
+      class="status-filter-btn" 
+      [class.active]="selectedStatus === 'tous'"
+      (click)="filterByStatus('tous')">
+      <span class="status-dot all"></span>
+      Toutes
+      <span class="count">{{ orders.length }}</span>
+    </button>
+    <button 
+      *ngFor="let status of statuses" 
+      class="status-filter-btn" 
+      [class.active]="selectedStatus === status"
+      (click)="filterByStatus(status)">
+      <span class="status-dot" [class]="status"></span>
+      {{ statusLabels[status] }}
+      <span class="count">{{ getOrdersCountByStatus(status) }}</span>
+    </button>
+  </div>
+</div>
+
+<!-- Loading state -->
+<app-loading-spinner *ngIf="loading"
+                    text="Chargement des commandes..."
+                    [showProgress]="true"
+                    [fullPage]="true">
+</app-loading-spinner>
+
+<!-- Content when not loading -->
+<div *ngIf="!loading">
+  <!-- Liste des commandes -->
+  <div class="orders-container">
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th (click)="toggleSort('customerName')" style="cursor: pointer">
+              Client
+              <i class="bi ms-1" [class]="getSortIconClass('customerName')"></i>
+            </th>
+            <th class="text-center" (click)="toggleSort('itemsCount')" style="cursor: pointer">
+              Articles
+              <i class="bi ms-1" [class]="getSortIconClass('itemsCount')"></i>
+            </th>
+            <th class="text-center" (click)="toggleSort('total')" style="cursor: pointer">
+              Total
+              <i class="bi ms-1" [class]="getSortIconClass('total')"></i>
+            </th>
+            <th class="text-center" (click)="toggleSort('date')" style="cursor: pointer">
+              Date
+              <i class="bi ms-1" [class]="getSortIconClass('date')"></i>
+            </th>
+            <th class="text-center" (click)="toggleSort('status')" style="cursor: pointer">
+              Statut
+              <i class="bi ms-1" [class]="getSortIconClass('status')"></i>
+            </th>
+            <th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let order of filteredOrders" class="order-row">
+            <td>
+              <div class="customer-info">
+                <div class="avatar">{{ order.customerInfo.fullName.charAt(0) }}</div>
+                <div class="customer-details">
+                  <div class="customer-name">{{ order.customerInfo.fullName }}</div>
+                  <div class="customer-email">{{ order.customerInfo.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="text-center">
+              <span class="items-count">
+                <i class="bi bi-box me-1"></i>
+                {{ order.items.length }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="order-total">{{ formatAmount(order.total) }}</span>
+            </td>
+            <td class="text-center">
+              <span class="order-date">{{ formatDate(order.createdAt) }}</span>
+            </td>
+            <td class="text-center">
+              <span class="status-badge" [ngClass]="getStatusBadgeClass(order.status)">
+                <i class="bi" [ngClass]="getStatusIcon(order.status)"></i>
+                {{ getStatusLabel(order.status) }}
+              </span>
+            </td>
+            <td class="text-end pe-3">
+              <div class="action-buttons">
+                <button 
+                  class="btn btn-link text-primary" 
+                  title="Voir les détails"
+                  [routerLink]="['/dashboard/orders', order.id]">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button 
+                  *ngIf="order.status === 'valide'"
+                  class="btn btn-link text-secondary" 
+                  title="Imprimer le ticket"
+                  (click)="printOrderTicket(order)">
+                  <i class="bi bi-printer"></i>
+                </button>
+                <button 
+                  *ngIf="order.status === 'en_cours'"
+                  class="btn btn-link text-success" 
+                  title="Valider la commande"
+                  (click)="validateOrder(order)">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button 
+                  *ngIf="order.status === 'en_cours'"
+                  class="btn btn-link text-danger" 
+                  title="Rejeter la commande"
+                  (click)="rejectOrder(order)">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Aucune commande -->
+          <tr *ngIf="filteredOrders.length === 0">
+            <td colspan="6" class="text-center py-5">
+              <div class="empty-state">
+                <i class="bi bi-inbox display-4 text-muted"></i>
+                <p class="mt-3 mb-0">Aucune commande trouvée</p>
+                <small class="text-muted" *ngIf="searchTerm">
+                  Essayez de modifier vos critères de recherche
+                </small>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="d-flex justify-content-between align-items-center mt-4" *ngIf="allFilteredOrders.length > 0">
+    <div class="text-muted small">
+      Affichage de {{ (currentPage - 1) * pageSize + 1 }} à {{ Math.min(currentPage * pageSize, allFilteredOrders.length) }} sur {{ allFilteredOrders.length }} commande(s)
+    </div>
+    <nav aria-label="Navigation des pages" *ngIf="totalPages > 1">
+      <ul class="pagination mb-0">
+        <!-- Bouton précédent -->
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <button class="page-link" (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 1">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+        </li>
+        
+        <!-- Pages -->
+        <li class="page-item" *ngFor="let page of pages" [class.active]="page === currentPage">
+          <button class="page-link" (click)="onPageChange(page)">{{ page }}</button>
+        </li>
+        
+        <!-- Bouton suivant -->
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <button class="page-link" (click)="onPageChange(currentPage + 1)" [disabled]="currentPage === totalPages">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div> 

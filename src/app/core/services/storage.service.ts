@@ -4,15 +4,26 @@ import { Observable, from } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { MatDialog } from '@angular/material/dialog';
 import { ImageCropperModalComponent, ImageCropperDialogData } from '../../shared/components/image-cropper-modal/image-cropper-modal.component';
+import { getStorage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage';
+import { getAuth } from 'firebase/auth';
 
 export interface ImageDimensions {
   width: number;
   height: number;
+  quality?: number;
 }
 
 export const STORE_IMAGE_DIMENSIONS = {
-  logo: { width: 200, height: 200 },
-  banner: { width: 1200, height: 300 }
+  logo: {
+    width: 200,
+    height: 200,
+    quality: 0.8
+  } as ImageDimensions,
+  banner: {
+    width: 1200,
+    height: 300,
+    quality: 0.8
+  } as ImageDimensions
 };
 
 @Injectable({
@@ -23,6 +34,67 @@ export class StorageService {
     private storage: AngularFireStorage,
     private dialog: MatDialog
   ) {}
+
+  /**
+   * Redimensionne une image selon les dimensions spécifiées
+   */
+  async resizeImage(file: File, dimensions: ImageDimensions): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            reject(new Error('Impossible de créer le contexte 2D'));
+            return;
+          }
+
+          // Calculer les dimensions en gardant le ratio
+          let newWidth = dimensions.width;
+          let newHeight = dimensions.height;
+          const ratio = Math.min(newWidth / img.width, newHeight / img.height);
+          newWidth = img.width * ratio;
+          newHeight = img.height * ratio;
+
+          // Configurer le canvas
+          canvas.width = newWidth;
+          canvas.height = newHeight;
+
+          // Dessiner l'image redimensionnée
+          ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+          // Convertir en blob
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Échec de la conversion en blob'));
+                return;
+              }
+              // Créer un nouveau fichier avec le même nom
+              const resizedFile = new File([blob], file.name, {
+                type: file.type,
+                lastModified: Date.now(),
+              });
+              resolve(resizedFile);
+            },
+            file.type,
+            dimensions.quality || 0.8
+          );
+        };
+        img.onerror = () => {
+          reject(new Error('Erreur lors du chargement de l\'image'));
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => {
+        reject(new Error('Erreur lors de la lecture du fichier'));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   /**
    * Upload un fichier vers Firebase Storage
@@ -58,9 +130,9 @@ export class StorageService {
    */
   generateUniqueFileName(originalName: string): string {
     const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 8);
+    const random = Math.floor(Math.random() * 1000);
     const extension = originalName.split('.').pop();
-    return `${timestamp}_${randomString}.${extension}`;
+    return `${timestamp}-${random}.${extension}`;
   }
 
   /**
@@ -71,37 +143,59 @@ export class StorageService {
   }
 
   /**
-   * Upload une image avec redimensionnement
+   * Upload une image
    */
-  uploadImage(file: File, path: string, dimensions: ImageDimensions): Observable<string> {
-    return new Observable<string>(observer => {
-      const dialogRef = this.dialog.open(ImageCropperModalComponent, {
-        width: '800px',
-        data: {
-          imageFile: file,
-          aspectRatio: dimensions.width / dimensions.height,
-          resizeToWidth: dimensions.width,
-          resizeToHeight: dimensions.height,
-          maintainAspectRatio: true,
-          title: 'Redimensionner l\'image'
-        } as ImageCropperDialogData
-      });
-
-      dialogRef.afterClosed().subscribe(result => {
-        if (result) {
-          // Si l'utilisateur a validé le recadrage, on upload l'image recadrée
-          this.uploadFile(path, result).subscribe({
-            next: (url) => {
-              observer.next(url);
-              observer.complete();
-            },
-            error: (error) => observer.error(error)
-          });
-        } else {
-          // Si l'utilisateur a annulé, on envoie une erreur
-          observer.error('Opération annulée');
+  uploadImage(file: File, path: string, dimensions?: ImageDimensions): Observable<string> {
+    return from(
+      (async () => {
+        try {
+          // Redimensionner l'image si des dimensions sont spécifiées
+          const imageToUpload = dimensions ? await this.resizeImage(file, dimensions) : file;
+          
+          // Upload vers Firebase Storage
+          const ref = this.storage.ref(path);
+          const task = ref.put(imageToUpload);
+          
+          // Attendre la fin de l'upload
+          await task;
+          
+          // Retourner l'URL de téléchargement
+          return await ref.getDownloadURL().toPromise();
+        } catch (error) {
+          console.error('Erreur lors de l\'upload de l\'image:', error);
+          throw error;
         }
-      });
-    });
+      })()
+    );
+  }
+
+  /**
+   * Upload l'avatar de l'utilisateur
+   * @param file Le fichier image à uploader
+   * @returns L'URL de l'avatar uploadé
+   */
+  async uploadUserAvatar(file: File): Promise<string> {
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      throw new Error('Aucun utilisateur connecté');
+    }
+
+    const storage = getStorage();
+    const avatarRef = ref(storage, `users/${currentUser.uid}/avatar/${file.name}`);
+
+    try {
+      // Upload le fichier
+      const snapshot = await uploadBytes(avatarRef, file);
+      
+      // Obtenir l'URL de téléchargement
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error('Erreur lors de l\'upload de l\'avatar:', error);
+      throw error;
+    }
   }
 } 

@@ -245,3 +245,143 @@ button, .btn {
 .cdk-overlay-backdrop {
   animation: fadeIn 0.2s ease-out;
 }
+
+/* Styles personnalisés pour les toasts */
+.ngx-toastr {
+  background-color: #ffffff !important;
+  color: #333333 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 8px !important;
+  padding: 15px !important;
+  font-family: var(--font-family) !important;
+}
+
+.toast-container {
+  .ngx-toastr {
+    &:hover {
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+    }
+  }
+}
+
+.toast-title {
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  margin-bottom: 5px !important;
+  color: inherit !important;
+}
+
+.toast-message {
+  font-size: 0.9rem !important;
+  color: #333333 !important;
+}
+
+.toast-close-button {
+  font-size: 18px !important;
+  color: #666 !important;
+  opacity: 0.8 !important;
+  
+  &:hover {
+    opacity: 1 !important;
+  }
+}
+
+/* Styles pour la barre de progression */
+.toast-progress {
+  height: 4px !important;
+  opacity: 0.8 !important;
+  border-radius: 0 0 4px 4px !important;
+}
+
+/* Styles spécifiques pour chaque type de toast */
+.toast-success {
+  border-left: 4px solid #28a745 !important;
+  
+  .toast-title {
+    color: #28a745 !important;
+  }
+  
+  .toast-message {
+    color: #333333 !important;
+  }
+  
+  .toast-progress {
+    background-color: #28a745 !important;
+  }
+}
+
+.toast-error {
+  border-left: 4px solid #dc3545 !important;
+  
+  .toast-title {
+    color: #dc3545 !important;
+  }
+  
+  .toast-message {
+    color: #333333 !important;
+  }
+  
+  .toast-progress {
+    background-color: #dc3545 !important;
+  }
+}
+
+.toast-info {
+  border-left: 4px solid #17a2b8 !important;
+  
+  .toast-title {
+    color: #17a2b8 !important;
+  }
+  
+  .toast-message {
+    color: #333333 !important;
+  }
+  
+  .toast-progress {
+    background-color: #17a2b8 !important;
+  }
+}
+
+.toast-warning {
+  border-left: 4px solid #ffc107 !important;
+  
+  .toast-title {
+    color: #ffc107 !important;
+  }
+  
+  .toast-message {
+    color: #333333 !important;
+  }
+  
+  .toast-progress {
+    background-color: #ffc107 !important;
+  }
+}
+
+/* Animation des toasts */
+.toast-top-right {
+  top: 12px !important;
+  right: 12px !important;
+}
+
+.toast-container .ngx-toastr {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  animation: slideInDown 0.3s ease-out !important;
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Suppression des styles en double */
+.custom-toast {
+  display: none;
+}

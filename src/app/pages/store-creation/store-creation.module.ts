@@ -1,21 +1,18 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { ReactiveFormsModule } from '@angular/forms';
-import { StoreCreationComponent } from './store-creation.component';
-import { NavbarComponent } from '../../shared/navbar/navbar.component';
+import { SharedModule } from '../../shared/shared.module';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 @NgModule({
-  declarations: [
-    StoreCreationComponent
-  ],
+  declarations: [],
   imports: [
     CommonModule,
-    ReactiveFormsModule,
-    NavbarComponent,
-    RouterModule.forChild([
-      { path: '', component: StoreCreationComponent }
-    ])
-  ]
+    RouterModule,
+    SharedModule,
+    FormsModule,
+    ReactiveFormsModule
+  ],
+  exports: []
 })
 export class StoreCreationModule { } 
