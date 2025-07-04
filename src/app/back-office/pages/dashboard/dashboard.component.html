@@ -85,36 +85,31 @@
           </div>
         </button>
         
+       
+        
         <!-- User Menu -->
-        <div class="user-menu">
+        <div class="user-menu" ngbDropdown display="dynamic" placement="bottom-end">
           <button class="user-menu-btn" 
-                  type="button" 
-                  [id]="'userDropdown'" 
-                  data-bs-toggle="dropdown" 
-                  aria-expanded="false">
+                  ngbDropdownToggle
+                  type="button">
               <img [src]="currentUser?.photoURL || 'assets/default-avatar.svg'" 
                    alt="Photo de profil"
                    class="user-avatar"
                    (error)="onImageError($event)">
             <span class="user-name">{{ currentUser?.displayName || 'Utilisateur' }}</span>
-            <i class="bi bi-chevron-down"></i>
           </button>
           
-          <ul class="dropdown-menu" [attr.aria-labelledby]="'userDropdown'">
-            <li>
-              <a class="dropdown-item" [routerLink]="['/profile']">
-                <i class="bi bi-person"></i>
-                <span>Mon profil</span>
-              </a>
-            </li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-              <a class="dropdown-item text-danger" (click)="logout()">
+          <div class="dropdown-menu" ngbDropdownMenu>
+            <button ngbDropdownItem [routerLink]="['/dashboard/settings']">
+              <i class="bi bi-gear"></i>
+              <span>Paramètres</span>
+            </button>
+            <div class="dropdown-divider"></div>
+            <button ngbDropdownItem (click)="logout()" class="text-danger">
                 <i class="bi bi-box-arrow-right"></i>
                 <span>Déconnexion</span>
-              </a>
-            </li>
-          </ul>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -210,7 +205,7 @@
         <div class="nav-section mt-auto">
           <ul class="nav-list">
             <li class="nav-item logout">
-              <a href="#" (click)="logout()">
+              <a (click)="logout(); $event.preventDefault()">
                 <i class="bi bi-box-arrow-right"></i>Déconnexion
               </a>
             </li>
@@ -251,6 +246,24 @@
     <div class="buttons-container">
       <button class="btn btn-outline-secondary" [routerLink]="['/home']">Sélectionner une boutique</button>
       <button class="btn btn-primary" [routerLink]="['/store-creation']">Créer une boutique</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dialog de confirmation de déconnexion -->
+<div class="modal-overlay" *ngIf="showLogoutConfirm" [@fadeInOut]>
+  <div class="modal-dialog" [@liftUpDown]>
+    <div class="modal-content">
+      <h3>Confirmation de déconnexion</h3>
+      <p>Êtes-vous sûr de vouloir vous déconnecter ?</p>
+      <div class="modal-actions">
+        <button class="btn btn-light" (click)="showLogoutConfirm = false">
+          Annuler
+        </button>
+        <button class="btn btn-warning" (click)="confirmLogout()">
+          Déconnexion
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -627,5 +640,54 @@
     width: 100%;
     right: -100%;
   }
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 400px;
+  margin: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 1.75rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+}
+
+.modal-content h3 {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.modal-content p {
+  margin: 0 0 1.5rem;
+  color: #4b5563;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.modal-actions .btn {
+  min-width: 100px;
+  padding: 0.5rem 1rem;
 }
 </style> 

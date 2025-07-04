@@ -40,9 +40,6 @@ export interface StoreData {
 export interface StoreSettings {
   id?: string;
   ownerId: string;
-  name: string;
-  description?: string;
-  logo?: string;
   legalName: string;
   storeName: string;
   storeDescription: string;
@@ -60,7 +57,7 @@ export interface StoreSettings {
   bannerUrl: string;
   primaryColor: string;
   secondaryColor: string;
-  monthlyTargetSales: number;
+  monthlyTargetSales: number; // Objectif de ventes mensuel
   createdAt: number;
   updatedAt: number;
   status?: 'active' | 'inactive' | 'pending';
@@ -118,32 +115,15 @@ export class StoreService {
   /**
    * Crée une URL simplifiée pour une boutique
    */
-  private async createStoreUrl(storeName: string, userId: string, storeId: string): Promise<string> {
-    console.log('Création de l\'URL pour la boutique:', { storeName, userId, storeId });
-    
-    // Créer une URL conviviale à partir du nom de la boutique
-    let friendlyUrl = storeName
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Supprimer les accents
-      .replace(/[^a-z0-9]+/g, '-') // Remplacer les caractères spéciaux par des tirets
-      .replace(/^-+|-+$/g, ''); // Supprimer les tirets au début et à la fin
-
-    // Ajouter un suffixe unique si nécessaire
-    const timestamp = Date.now().toString(36);
-    const uniqueSuffix = Math.random().toString(36).substring(2, 5);
-    friendlyUrl = `${friendlyUrl}-${timestamp}${uniqueSuffix}`;
-
-    console.log('URL générée:', friendlyUrl);
-
-    // Sauvegarder dans la collection urls
-    await this.firestore.doc(`urls/${friendlyUrl}`).set({
+  private async createStoreUrl(storeIdentity: string, userId: string, storeId: string): Promise<string> {
+       // Sauvegarder dans la collection urls
+    await this.firestore.doc(`urls/${storeIdentity}`).set({
       userId,
       storeId,
       createdAt: Date.now()
     });
 
-    return friendlyUrl;
+    return storeIdentity;
   }
 
   /**
@@ -164,10 +144,11 @@ export class StoreService {
     
     try {
       // Générer un ID unique pour la boutique
-      const storeId = `${currentUser.uid}_${storeData.legalName!.replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 7)}`;
+      const storeIdentity = `${storeData.legalName!.replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 7)}`;
+      const storeId = `${currentUser.uid}_${storeIdentity}`;
       
       // Créer l'URL de la boutique
-      const storeUrl = await this.createStoreUrl(storeData.storeName || storeData.legalName!, currentUser.uid, storeId);
+      const storeUrl = await this.createStoreUrl(storeIdentity, currentUser.uid, storeId);
       
       // Préparer les données à sauvegarder
       const timestamp = Date.now();

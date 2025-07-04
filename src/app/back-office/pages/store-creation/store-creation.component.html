@@ -268,6 +268,9 @@
                   </div>
                   <div class="form-text">
                     <i class="bi bi-cursor"></i> Sélectionnez une adresse dans les suggestions pour récupérer automatiquement les coordonnées GPS.
+                    <a href="javascript:void(0)" (click)="getCurrentLocation()" class="manual-link me-2">
+                      <i class="bi bi-geo"></i> Utiliser ma position
+                    </a>
                     <a href="javascript:void(0)" (click)="enableManualCoordinates()" *ngIf="!businessDetailsForm['manualCoordinates']?.value" class="manual-link">
                       <i class="bi bi-pencil-square"></i> Saisir les coordonnées manuellement
                     </a>
@@ -312,20 +315,27 @@
                   </div>
                 </div>
                 
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="city" class="form-label">Ville</label>
+                <div class="mb-3">
+                  <label for="city" class="form-label">Ville</label>
+                  <div class="input-with-icon">
+                    <i class="bi bi-building"></i>
                     <input 
                       type="text" 
                       id="city" 
                       formControlName="city" 
-                      class="form-control"
+                      class="form-control with-icon"
                       [ngClass]="{'is-invalid': businessDetailsForm['city']?.invalid && businessDetailsForm['city']?.touched}"
-                      placeholder="Ville">
-                    <div *ngIf="businessDetailsForm['city']?.invalid && businessDetailsForm['city']?.touched" class="invalid-feedback">
-                      La ville est requise
-                    </div>
+                      placeholder="Commencez à taper le nom d'une ville...">
                   </div>
+                  <div *ngIf="businessDetailsForm['city']?.invalid && businessDetailsForm['city']?.touched" class="invalid-feedback">
+                    La ville est requise
+                  </div>
+                  <div class="form-text">
+                    <i class="bi bi-info-circle"></i> Sélectionnez une ville dans les suggestions pour récupérer automatiquement les coordonnées.
+                  </div>
+                </div>
+                
+                <div class="row">
                   <div class="col-md-6 mb-3">
                     <label for="zipCode" class="form-label">Code postal</label>
                     <input 
@@ -344,19 +354,13 @@
                 <div class="row">
                   <div class="col-md-6 mb-3">
                     <label for="country" class="form-label">Pays</label>
-                    <select 
+                    <input 
+                      type="text" 
                       id="country" 
                       formControlName="country" 
-                      class="form-select"
-                      [ngClass]="{'is-invalid': businessDetailsForm['country']?.invalid && businessDetailsForm['country']?.touched}">
-                      <option value="" disabled selected>Sélectionnez un pays</option>
-                      <option value="France">France</option>
-                      <option value="Belgique">Belgique</option>
-                      <option value="Suisse">Suisse</option>
-                      <option value="Canada">Canada</option>
-                      <option value="Luxembourg">Luxembourg</option>
-                      <option value="Autre">Autre</option>
-                    </select>
+                      class="form-control"
+                      [ngClass]="{'is-invalid': businessDetailsForm['country']?.invalid && businessDetailsForm['country']?.touched}"
+                      readonly>
                     <div *ngIf="businessDetailsForm['country']?.invalid && businessDetailsForm['country']?.touched" class="invalid-feedback">
                       Le pays est requis
                     </div>
@@ -560,4 +564,40 @@
       </div>
     </div>
   </div>
-</div> 
+</div>
+
+<style>
+.city-input-container {
+  position: relative;
+}
+
+.departments-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-top: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.departments-list {
+  padding: 8px 0;
+}
+
+.department-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.department-item:hover {
+  background-color: #f8f9fa;
+  color: var(--store-primary-color);
+}
+</style> 

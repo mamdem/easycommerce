@@ -30,13 +30,19 @@ import { User } from '../models/user.model';
 })
 export class AuthService {
   private app = initializeApp(environment.firebase);
-  private auth: Auth;
+  private auth = getAuth();
   private firestore = getFirestore(this.app);
   private googleProvider = new GoogleAuthProvider();
   private facebookProvider = new FacebookAuthProvider();
   
   private userSubject = new BehaviorSubject<User | null>(null);
   public user$: Observable<User | null> = this.userSubject.asObservable();
+  private currentUser: User | null = null;
+  
+  // Flags pour l'état de l'authentification
+  private _isAuthenticated: boolean = false;
+  private _isMerchant: boolean = false;
+  private _hasStore: boolean = false;
 
   constructor(private router: Router, private toastService: ToastService) {
     // Initialisation de Firebase
@@ -334,10 +340,27 @@ export class AuthService {
   // Méthode pour la déconnexion
   async logout(): Promise<void> {
     try {
+      // Déconnexion de Firebase
       await signOut(this.auth);
+      
+      // Réinitialiser l'état de l'utilisateur
       this.userSubject.next(null);
+      
+      // Nettoyer le localStorage
       localStorage.removeItem('user');
-      this.router.navigate(['/auth/login']);
+      localStorage.removeItem('selectedStoreId');
+      localStorage.removeItem('userType');
+      localStorage.removeItem('hasStore');
+      localStorage.removeItem('token');
+      
+      // Nettoyer le sessionStorage
+      sessionStorage.clear();
+      
+      // Réinitialiser les flags
+      this._isAuthenticated = false;
+      this._isMerchant = false;
+      this._hasStore = false;
+      
     } catch (error) {
       console.error('Erreur de déconnexion:', error);
       throw error;
@@ -500,14 +523,6 @@ export class AuthService {
   }
 
   /**
-   * Déconnecte l'utilisateur
-   */
-  async signOut(): Promise<void> {
-    await this.auth.signOut();
-    this.userSubject.next(null);
-  }
-
-  /**
    * Met à jour le profil de l'utilisateur
    * @param profileData Les données du profil à mettre à jour
    */
@@ -578,7 +593,8 @@ export class AuthService {
         displayName: profileData.displayName || currentUserFromSubject?.displayName,
         email: profileData.email || currentUserFromSubject?.email,
         phoneNumber: profileData.phoneNumber || currentUserFromSubject?.phoneNumber,
-        photoURL: profileData.photoURL || currentUserFromSubject?.photoURL
+        photoURL: profileData.photoURL || currentUserFromSubject?.photoURL,
+        uid: currentUser.uid
       } as User;
 
       this.userSubject.next(updatedUserData);
@@ -586,7 +602,7 @@ export class AuthService {
       // Mettre à jour le localStorage
       localStorage.setItem('user', JSON.stringify(updatedUserData));
 
-      this.toastService.success('Profil mis à jour avec succès');
+      // Ne pas afficher de toast ici car il sera géré par le composant appelant
     } catch (error) {
       console.error('Erreur détaillée lors de la mise à jour du profil:', error);
       

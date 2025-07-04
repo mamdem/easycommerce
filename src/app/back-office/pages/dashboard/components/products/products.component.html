@@ -195,10 +195,19 @@
                     [fullPage]="true">
 </app-loading-spinner>
 
-<!-- Message si aucun produit -->
-<div class="alert alert-info" *ngIf="!loadingProducts && products.length === 0">
-  <i class="bi bi-info-circle me-2"></i>
-  Aucun produit disponible. Commencez par en ajouter un !
+<!-- État vide -->
+<div class="empty-state" *ngIf="!loadingProducts && products.length === 0">
+  <div class="text-center py-5">
+    <div class="empty-state-icon mb-4">
+      <i class="bi bi-box-seam display-1"></i>
+    </div>
+    <h3>Aucun produit</h3>
+    <p class="text-muted">Vous n'avez pas encore ajouté de produits dans votre boutique.</p>
+    <button class="btn btn-primary mt-3" routerLink="add">
+      <i class="bi bi-plus-lg me-1"></i>
+      Ajouter un produit
+    </button>
+  </div>
 </div>
 
 <!-- Grille des produits -->
@@ -313,7 +322,7 @@
       <div class="modal-actions">
         <button class="btn btn-light" (click)="showDeleteConfirm = null; categoryToDelete = null">
           No
-        </button>
+    </button>
         <button class="btn btn-primary" (click)="confirmDeleteCategory()">
           Yes
         </button>

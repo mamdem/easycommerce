@@ -247,12 +247,12 @@ $transition: all 0.3s ease;
     
     .step-content {
       flex: 1;
-      
-      .step-label {
+    
+    .step-label {
         display: block;
-        font-weight: 500;
+      font-weight: 500;
         color: $dark-color;
-        margin-bottom: 0.25rem;
+      margin-bottom: 0.25rem;
         transition: $transition;
       }
       
@@ -422,9 +422,9 @@ $transition: all 0.3s ease;
   
   .banner-upload-area {
     aspect-ratio: 4/1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
   }
   
   // Sélecteur de couleur
@@ -770,12 +770,12 @@ $transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 1rem;
-
+  
   i {
     font-size: 1.5rem;
     color: $primary-color;
   }
-
+  
   span {
     color: $dark-color;
     font-size: 0.95rem;
@@ -797,7 +797,7 @@ $transition: all 0.3s ease;
   position: relative;
   display: flex;
   align-items: center;
-
+  
   i {
     position: absolute;
     left: 1rem;
@@ -882,7 +882,7 @@ $transition: all 0.3s ease;
   gap: 0.5rem;
   color: $dark-gray;
   font-size: 0.875rem;
-
+  
   &.text-danger {
     color: $danger-color;
   }
@@ -894,7 +894,7 @@ $transition: all 0.3s ease;
   border-radius: $border-radius;
   padding: 1rem;
   margin-top: 1rem;
-
+  
   .tip-title {
     font-weight: 600;
     color: $dark-color;
@@ -902,17 +902,17 @@ $transition: all 0.3s ease;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-
+    
     i {
       color: $secondary-color;
     }
   }
-
+  
   .tip-list {
     margin: 0;
     padding-left: 1.5rem;
-    color: $dark-gray;
-    font-size: 0.9rem;
+      color: $dark-gray;
+      font-size: 0.9rem;
 
     li {
       margin-bottom: 0.25rem;

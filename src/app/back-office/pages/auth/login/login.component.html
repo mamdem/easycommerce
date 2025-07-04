@@ -1,106 +1,89 @@
-<div class="auth-page fade-in">
-  <div class="container py-5">
-    <div class="row justify-content-center">
-      <div class="col-lg-5 col-md-8 col-sm-12">
-        <div class="auth-header text-center">
-          <h2 class="fw-bold">Connexion</h2>
-          <p class="text-muted">Accédez à votre espace de e-commerce</p>
+<div class="login-container">
+  <div class="login-content">
+    <div class="login-header">
+      <a routerLink="/" class="logo-link">
+        <img src="assets/lgo-jokkofy.png" alt="Jokkofy Logo" class="auth-logo">
+      </a>
+      <h1>Connexion à votre compte</h1>
+      <p>Gérez votre boutique en ligne sur Jokkofy</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <div class="input-group">
+          <i class="bi bi-envelope"></i>
+          <input 
+            type="email" 
+            id="email" 
+            formControlName="email" 
+            placeholder="votre@email.com"
+            [class.is-invalid]="email?.invalid && (email?.dirty || email?.touched)"
+          >
         </div>
-
-        <form [formGroup]="loginForm" (ngSubmit)="login()" class="auth-form">
-          <!-- Affichage de message d'erreur -->
-          <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            {{ errorMessage }}
-            <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
-          </div>
-
-          <!-- Email -->
-          <div class="mb-3">
-            <label for="email" class="form-label">Adresse email</label>
-            <div class="input-group">
-              <span class="input-group-text bg-transparent border-end-0">
-                <i class="bi bi-envelope text-muted"></i>
-              </span>
-              <input 
-                type="email" 
-                id="email" 
-                formControlName="email" 
-                class="form-control border-start-0" 
-                [ngClass]="{'is-invalid': loginForm.get('email')?.invalid && (loginForm.get('email')?.dirty || loginForm.get('email')?.touched)}"
-                placeholder="nom@exemple.com">
-            </div>
-            <div *ngIf="loginForm.get('email')?.invalid && (loginForm.get('email')?.dirty || loginForm.get('email')?.touched)" class="invalid-feedback d-block small mt-1">
-              <div *ngIf="loginForm.get('email')?.errors?.['required']">Email requis</div>
-              <div *ngIf="loginForm.get('email')?.errors?.['email']">Format d'email invalide</div>
-            </div>
-          </div>
-
-          <!-- Mot de passe -->
-          <div class="mb-4">
-            <div class="d-flex justify-content-between">
-              <label for="password" class="form-label">Mot de passe</label>
-              <a href="#" class="small text-decoration-none">Mot de passe oublié?</a>
-            </div>
-            <div class="input-group">
-              <span class="input-group-text bg-transparent border-end-0">
-                <i class="bi bi-lock text-muted"></i>
-              </span>
-              <input 
-                type="password" 
-                id="password" 
-                formControlName="password" 
-                class="form-control border-start-0" 
-                [ngClass]="{'is-invalid': loginForm.get('password')?.invalid && (loginForm.get('password')?.dirty || loginForm.get('password')?.touched)}"
-                placeholder="••••••••">
-            </div>
-            <div *ngIf="loginForm.get('password')?.invalid && (loginForm.get('password')?.dirty || loginForm.get('password')?.touched)" class="invalid-feedback d-block small mt-1">
-              <div *ngIf="loginForm.get('password')?.errors?.['required']">Mot de passe requis</div>
-              <div *ngIf="loginForm.get('password')?.errors?.['minlength']">Le mot de passe doit contenir au moins 6 caractères</div>
-            </div>
-          </div>
-
-          <!-- Se souvenir de moi -->
-          <div class="mb-4 form-check">
-            <input type="checkbox" class="form-check-input" id="rememberMe">
-            <label class="form-check-label" for="rememberMe">Se souvenir de moi</label>
-          </div>
-
-          <!-- Bouton de connexion -->
-          <div class="d-grid">
-            <button 
-              type="submit" 
-              class="btn btn-primary btn-lg" 
-              [disabled]="loginForm.invalid || isSubmitting">
-              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-              <i *ngIf="!isSubmitting" class="bi bi-box-arrow-in-right me-2"></i>
-              Se connecter
-            </button>
-          </div>
-        </form>
-
-        <!-- Séparateur -->
-        <div class="d-flex align-items-center my-4">
-          <div class="flex-grow-1 border-bottom"></div>
-          <div class="px-3 text-muted">ou</div>
-          <div class="flex-grow-1 border-bottom"></div>
-        </div>
-
-        <!-- Connexion avec réseaux sociaux -->
-        <div class="d-grid gap-2 mb-4">
-          <button class="btn btn-outline-primary" type="button" (click)="loginWithGoogle()">
-            <i class="bi bi-google me-2"></i> Continuer avec Google
-          </button>
-          <button class="btn btn-outline-primary" type="button" (click)="loginWithFacebook()">
-            <i class="bi bi-facebook me-2"></i> Continuer avec Facebook
-          </button>
-        </div>
-
-        <!-- Lien d'inscription -->
-        <div class="text-center">
-          <p class="mb-0">Vous n'avez pas de compte? <a href="javascript:void(0)" (click)="navigateToRegister()" class="text-decoration-none fw-bold">S'inscrire</a></p>
+        <div class="error-message" *ngIf="email?.invalid && (email?.dirty || email?.touched)">
+          <span *ngIf="email?.errors?.['required']">L'email est requis</span>
+          <span *ngIf="email?.errors?.['email']">Format d'email invalide</span>
         </div>
       </div>
-    </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <div class="input-group">
+          <i class="bi bi-lock"></i>
+          <input 
+            [type]="showPassword ? 'text' : 'password'"
+            id="password" 
+            formControlName="password" 
+            placeholder="Votre mot de passe"
+            [class.is-invalid]="password?.invalid && (password?.dirty || password?.touched)"
+          >
+          <button type="button" class="toggle-password" (click)="togglePasswordVisibility()">
+            <i [class]="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+          </button>
+        </div>
+        <div class="error-message" *ngIf="password?.invalid && (password?.dirty || password?.touched)">
+          <span *ngIf="password?.errors?.['required']">Le mot de passe est requis</span>
+        </div>
+      </div>
+
+      <div class="form-options">
+        <div class="remember-me">
+          <label class="checkbox-container">
+            <input type="checkbox" formControlName="rememberMe">
+            <span class="checkmark"></span>
+            <span class="checkbox-text">Se souvenir de moi</span>
+          </label>
+        </div>
+        <a routerLink="/auth/forgot-password" class="forgot-password">Mot de passe oublié ?</a>
+      </div>
+
+      <button type="submit" class="submit-btn" [disabled]="loginForm.invalid || isLoading">
+        <span *ngIf="!isLoading">Se connecter</span>
+        <div class="spinner" *ngIf="isLoading">
+          <div class="bounce1"></div>
+          <div class="bounce2"></div>
+          <div class="bounce3"></div>
+        </div>
+      </button>
+
+      <div class="social-login">
+        <p>Ou connectez-vous avec</p>
+        <div class="social-buttons">
+          <button type="button" class="social-btn google" (click)="signInWithGoogle()">
+            <img src="assets/google-favicon-2025.jpg" alt="Google">
+            <span>Google</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="auth-footer">
+        <p>Pas encore de compte ? <a routerLink="/auth/register">Inscrivez-vous</a></p>
+      </div>
+    </form>
   </div>
+
+  <!-- Décoration -->
+  <div class="decoration-blob blob-1"></div>
+  <div class="decoration-blob blob-2"></div>
 </div> 

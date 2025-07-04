@@ -1826,6 +1826,37 @@ section {
         }
       }
 
+      .logout-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: transparent;
+        border: 1px solid var(--button-color, #4f46e5);
+        color: var(--button-color, #4f46e5);
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        margin-right: 1rem;
+
+        &:hover {
+          background: var(--button-color, #4f46e5);
+          color: white;
+        }
+
+        i {
+          font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+          .logout-label {
+            display: none;
+          }
+          padding: 0.5rem;
+          margin-right: 0.5rem;
+        }
+      }
+
       .user-menu {
         position: relative;
 

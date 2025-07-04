@@ -3,6 +3,7 @@ import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { Observable, of, from, map, switchMap, catchError, throwError } from 'rxjs';
 import { Product } from '../../core/models/product.model';
 import { UrlService } from '../../core/services/url.service';
+import { PublicStoreService } from '../../public_services/store.service';
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +11,8 @@ import { UrlService } from '../../core/services/url.service';
 export class StoreProductsService {
   constructor(
     private firestore: AngularFirestore,
-    private urlService: UrlService
+    private urlService: UrlService,
+    private publicStoreService: PublicStoreService
   ) {}
 
   getProductsByStoreUrl(storeUrl: string): Observable<Product[]> {
@@ -81,51 +83,12 @@ export class StoreProductsService {
       return throwError(() => new Error('Store URL and Product ID are required'));
     }
 
-    console.log('Recherche du produit:', { storeUrl, productId });
-
-    // 1. D'abord, chercher dans la collection urls pour obtenir userId et storeId
-    return this.firestore.collection('urls').doc(storeUrl).get().pipe(
-      switchMap(urlDoc => {
-        if (!urlDoc.exists) {
-          console.log('URL de boutique non trouvée:', storeUrl);
-          return throwError(() => new Error('Store not found'));
-        }
-
-        const urlData = urlDoc.data() as { userId: string, storeId: string };
-        console.log('Données URL trouvées:', urlData);
-
-        // 2. Chercher le produit dans la collection publique
-        return this.firestore
-          .collection('public_stores')
-          .doc(urlData.storeId)
-          .collection('products')
-          .doc(productId)
-          .get()
-          .pipe(
-            map(productDoc => {
-              if (!productDoc.exists) {
+    return this.publicStoreService.getProductDetails(storeUrl, productId).pipe(
+      map(product => {
+        if (!product) {
                 throw new Error('Product not found');
               }
-              const productData = productDoc.data() || {};
-              return {
-                id: productDoc.id,
-                name: productData['name'] || '',
-                description: productData['description'] || '',
-                price: productData['price'] || 0,
-                category: productData['category'] || '',
-                stock: productData['stock'] || 0,
-                images: productData['images'] || [],
-                isActive: productData['isActive'] ?? true,
-                storeId: urlData.storeId,
-                createdAt: productData['createdAt']?.toDate() || new Date(),
-                updatedAt: productData['updatedAt']?.toDate() || new Date()
-              } as Product;
-            })
-          );
-      }),
-      catchError(error => {
-        console.error('Erreur lors de la récupération du produit:', error);
-        return throwError(() => error);
+        return product;
       })
     );
   }

@@ -204,7 +204,7 @@
                      [(ngModel)]="securitySettings.currentPassword"
                      name="currentPassword"
                      [disabled]="isChangingPassword">
-            </div>
+          </div>
           
             <div class="col-md-6">
               <label for="newPassword" class="form-label">
@@ -231,10 +231,10 @@
                      [(ngModel)]="securitySettings.confirmPassword"
                      name="confirmPassword"
                      [disabled]="isChangingPassword">
-            </div>
+          </div>
           
             <div class="col-12">
-              <div class="d-flex justify-content-end">
+          <div class="d-flex justify-content-end">
                 <button type="button" 
                         class="btn btn-primary" 
                         (click)="updatePassword()"
@@ -242,7 +242,7 @@
                   <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" *ngIf="isChangingPassword"></span>
                   <i class="bi bi-shield-check me-1" *ngIf="!isChangingPassword"></i>
                   {{ isChangingPassword ? 'Mise à jour en cours...' : 'Mettre à jour le mot de passe' }}
-                </button>
+            </button>
               </div>
             </div>
           </div>
@@ -348,30 +348,81 @@
                 <input type="tel" class="form-control" id="phoneNumber" [(ngModel)]="storeSettings.phoneNumber" name="phoneNumber">
               </div>
               <div class="mb-3">
-                <label for="address" class="form-label">Adresse</label>
-                <input type="text" class="form-control" id="address" [(ngModel)]="storeSettings.address" name="address">
+                <label for="storeAddress" class="form-label">
+                  <i class="bi bi-geo-alt me-1"></i>Adresse
+                </label>
+                <div class="input-group">
+                  <input type="text"
+                         class="form-control"
+                         id="storeAddress"
+                         [(ngModel)]="storeSettings.address"
+                         name="address"
+                         placeholder="Commencez à taper votre adresse..."
+                         [ngClass]="{'is-invalid': !isAddressSelected && storeSettings.address}">
+                  <button class="btn btn-outline-secondary" 
+                          type="button"
+                          (click)="getCurrentLocation()"
+                          title="Utiliser ma position actuelle">
+                    <i class="bi bi-geo-alt"></i>
+                  </button>
+                </div>
+                <div class="form-text">
+                  <i class="bi bi-info-circle"></i> Sélectionnez une adresse dans les suggestions pour récupérer automatiquement les coordonnées GPS
+                </div>
               </div>
+
               <div class="row">
                 <div class="col-md-6">
-                  <div class="mb-3">
-                    <label for="city" class="form-label">Ville</label>
-                    <input type="text" class="form-control" id="city" [(ngModel)]="storeSettings.city" name="city">
+                  <label for="storeCity" class="form-label">
+                    <i class="bi bi-building me-1"></i>Ville
+                  </label>
+                  <input type="text"
+                         class="form-control"
+                         id="storeCity"
+                         [(ngModel)]="storeSettings.city"
+                         name="city"
+                         placeholder="Commencez à taper le nom d'une ville...">
+                  <div class="form-text">
+                    <i class="bi bi-info-circle"></i> Sélectionnez une ville dans les suggestions
                   </div>
                 </div>
+
                 <div class="col-md-6">
-                  <div class="mb-3">
-                    <label for="zipCode" class="form-label">Code postal</label>
-                    <input type="text" class="form-control" id="zipCode" [(ngModel)]="storeSettings.zipCode" name="zipCode">
-                  </div>
+                  <label for="storeZipCode" class="form-label">
+                    <i class="bi bi-mailbox me-1"></i>Code postal
+                  </label>
+                  <input type="text"
+                         class="form-control"
+                         id="storeZipCode"
+                         [(ngModel)]="storeSettings.zipCode"
+                         name="zipCode"
+                         placeholder="Code postal">
                 </div>
-              </div>
-              <div class="mb-3">
-                <label for="country" class="form-label">Pays</label>
-                <input type="text" class="form-control" id="country" [(ngModel)]="storeSettings.country" name="country">
-              </div>
-              <div class="mb-3">
-                <label for="taxId" class="form-label">Numéro de TVA</label>
-                <input type="text" class="form-control" id="taxId" [(ngModel)]="storeSettings.taxId" name="taxId">
+
+                <!-- Coordonnées GPS -->
+                <div class="col-md-6">
+                  <label class="form-label">
+                    <i class="bi bi-geo me-1"></i>Latitude
+                  </label>
+                  <input type="number"
+                         class="form-control"
+                         [(ngModel)]="storeSettings.latitude"
+                         name="latitude"
+                         step="0.000001"
+                         readonly>
+                  </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">
+                    <i class="bi bi-geo me-1"></i>Longitude
+                  </label>
+                  <input type="number"
+                         class="form-control"
+                         [(ngModel)]="storeSettings.longitude"
+                         name="longitude"
+                         step="0.000001"
+                         readonly>
+                </div>
               </div>
             </form>
           </div>

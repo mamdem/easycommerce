@@ -5,7 +5,7 @@
       <div class="navbar-content">
       <div class="navbar-brand">
           <a routerLink="/" class="brand-link">
-            <img src="assets/images/logo.png" alt="EasyCommerce Logo" class="brand-logo">
+            <img src="assets/lgo-jokkofy.png" alt="Jokkofy Logo" class="brand-logo">
           </a>
       </div>
         
@@ -14,27 +14,33 @@
           <a href="#how-it-works" class="nav-link" (click)="scrollToSection('how-it-works', $event)">Comment ça marche</a>
           
           <!-- Menu utilisateur -->
-        <div *ngIf="isLoggedIn()" class="user-menu">
-            <div class="user-info" data-bs-toggle="dropdown">
-            <div class="avatar">
-                <img [src]="getUserAvatar()" alt="Avatar" onError="this.src='assets/default-avatar.svg'">
-              </div>
+          <div *ngIf="isLoggedIn()" class="user-menu" ngbDropdown display="dynamic" placement="bottom-end">
+            <button class="user-menu-btn" ngbDropdownToggle type="button">
+              <img [src]="getUserAvatar()" 
+                   alt="Photo de profil"
+                   class="user-avatar"
+                   onError="this.src='assets/default-avatar.svg'">
               <span class="user-name">{{ getUserName() }}</span>
-              <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="dropdown-menu" ngbDropdownMenu>
+              <button ngbDropdownItem routerLink="/dashboard">
+                <i class="bi bi-speedometer2"></i> Dashboard
+              </button>
+              <button ngbDropdownItem routerLink="/dashboard/settings">
+                <i class="bi bi-person"></i> Profil
+              </button>
+              <div class="dropdown-divider"></div>
+              <button ngbDropdownItem (click)="logout()" class="text-danger">
+                <i class="bi bi-box-arrow-right"></i> Déconnexion
+              </button>
             </div>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" routerLink="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-              <li><a class="dropdown-item" routerLink="/profile"><i class="bi bi-person"></i> Profil</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" (click)="logout()"><i class="bi bi-box-arrow-right"></i> Déconnexion</a></li>
-            </ul>
           </div>
           
           <!-- Boutons d'authentification -->
           <div *ngIf="!isLoggedIn()" class="auth-buttons">
             <a routerLink="/auth/login" class="btn btn-outline">Connexion</a>
             <a routerLink="/auth/register" class="btn btn-primary">Inscription</a>
-        </div>
+          </div>
         </div>
       </div>
     </div>
@@ -46,7 +52,7 @@
       <div class="hero-content">
         <h1 class="hero-title">Créez votre boutique en ligne en quelques minutes</h1>
         <p class="hero-subtitle">Une solution complète pour gérer votre business en ligne, de la création à la gestion quotidienne</p>
-        
+      
         <!-- Afficher les boutons CTA si non connecté -->
         <div class="hero-cta" *ngIf="!isLoggedIn()">
           <a routerLink="/auth/register" class="btn btn-primary">
@@ -57,16 +63,16 @@
             <i class="bi bi-info-circle"></i>
             En savoir plus
           </a>
-        </div>
+          </div>
 
         <!-- Afficher la section des boutiques si connecté -->
         <div class="user-stores" *ngIf="isLoggedIn() && isMerchant()">
           <!-- État de chargement -->
           <div class="loading-state" *ngIf="loading">
             <div class="spinner"></div>
-            <p>Chargement de vos boutiques...</p>
-          </div>
-          
+          <p>Chargement de vos boutiques...</p>
+        </div>
+        
           <!-- État vide -->
           <div class="empty-state" *ngIf="!loading && userStores.length === 0">
             <i class="bi bi-shop"></i>
@@ -82,7 +88,7 @@
           <div class="stores-grid" *ngIf="!loading && userStores.length > 0">
             <!-- Carte pour créer une nouvelle boutique -->
             <div class="store-card new-store" (click)="createNewStore()">
-              <div class="add-icon">
+                  <div class="add-icon">
                 <i class="bi bi-plus-lg"></i>
               </div>
               <h3>Nouvelle boutique</h3>
@@ -94,37 +100,37 @@
                 <img [src]="store.bannerUrl || 'assets/default-banner.svg'" [alt]="store.storeName + ' banner'" onError="this.src='assets/default-banner.svg'">
               </div>
               <div class="store-content">
-                <div class="store-logo">
+                  <div class="store-logo">
                   <img [src]="store.logoUrl || 'assets/default-store.svg'" [alt]="store.storeName" onError="this.src='assets/default-store.svg'">
-                </div>
+                  </div>
                 <div class="card-content">
                   <h3>{{ store.storeName }}</h3>
                   <button class="btn btn-primary">
                     <span>Accéder</span>
                     <i class="bi bi-arrow-right"></i>
-                  </button>
+                    </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-            
+      
       <!-- Section "Pourquoi nous choisir" -->
       <div class="benefits-grid">
         <div class="benefit-item">
           <div class="benefit-icon">
             <i class="bi bi-lightning-charge"></i>
-                  </div>
+          </div>
           <div class="benefit-content">
             <h3>Démarrage Rapide</h3>
             <p>Lancez votre boutique en ligne en moins de 5 minutes</p>
-                  </div>
-                </div>
+        </div>
+      </div>
         <div class="benefit-item">
           <div class="benefit-icon">
             <i class="bi bi-shield-check"></i>
-              </div>
+      </div>
           <div class="benefit-content">
             <h3>100% Sécurisé</h3>
             <p>Protection des données et paiements sécurisés</p>
@@ -133,12 +139,12 @@
         <div class="benefit-item">
           <div class="benefit-icon">
             <i class="bi bi-headset"></i>
-      </div>
+            </div>
           <div class="benefit-content">
             <h3>Support 24/7</h3>
             <p>Une équipe dédiée à votre réussite</p>
           </div>
-        </div>
+          </div>
         </div>
       </div>
 
@@ -191,7 +197,7 @@
       <div class="footer-content">
           <div class="footer-brand">
           <div class="brand">
-            <img src="assets/images/logo.png" alt="EasyCommerce Logo" class="footer-logo">
+            <img src="assets/lgo-jokkofy.png" alt="Jokkofy Logo" class="footer-logo">
           </div>
           <p>La solution complète pour créer et gérer votre boutique en ligne. Simple, rapide et efficace.</p>
         </div>

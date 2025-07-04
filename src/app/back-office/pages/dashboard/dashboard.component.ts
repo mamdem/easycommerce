@@ -14,13 +14,46 @@ import { Observable, of, Subscription } from 'rxjs';
 import { SubscriptionService, SubscriptionStatus } from '../../../core/services/subscription.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { NotificationDrawerComponent } from '../../../dashboard/components/notification-drawer/notification-drawer.component';
+import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { trigger, transition, style, animate } from '@angular/animations';
 
 @Component({
   selector: 'app-dashboard', 
   standalone: true,
-  imports: [CommonModule, RouterModule, NotificationDrawerComponent],
+  imports: [
+    CommonModule, 
+    RouterModule, 
+    NotificationDrawerComponent,
+    NgbDropdownModule,
+    FormsModule,
+    MatDialogModule
+  ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
+  animations: [
+    trigger('fadeInOut', [
+      transition(':enter', [
+        style({ opacity: 0 }),
+        animate('200ms ease-out', style({ opacity: 1 }))
+      ]),
+      transition(':leave', [
+        animate('200ms ease-in', style({ opacity: 0 }))
+      ])
+    ]),
+    trigger('liftUpDown', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(20px)' }),
+        animate('300ms cubic-bezier(0.4, 0.0, 0.2, 1)', 
+          style({ opacity: 1, transform: 'translateY(0)' }))
+      ]),
+      transition(':leave', [
+        animate('200ms cubic-bezier(0.4, 0.0, 0.2, 1)', 
+          style({ opacity: 0, transform: 'translateY(20px)' }))
+      ])
+    ])
+  ]
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   // Information de la boutique
@@ -115,6 +148,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   ];
 
+  showLogoutConfirm = false;
+
   constructor(
     private authService: AuthService,
     private storeService: StoreService,
@@ -122,7 +157,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private router: Router,
     private cartService: CartService,
     private subscriptionService: SubscriptionService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private dialog: MatDialog
   ) {
     this.loadUserData();
   }
@@ -189,7 +225,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
             // Charger les données détaillées
             this.loadStoreData();
           } else {
-            this.toastService.error('Boutique non trouvée, veuillez en sélectionner une autre', 'Erreur');
             this.router.navigate(['/home']);
           }
         },
@@ -326,12 +361,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /**
    * Déconnexion
    */
-  async logout(): Promise<void> {
+  logout() {
+    console.log('Ouverture du dialogue de déconnexion');
+    this.showLogoutConfirm = true;
+  }
+
+  async confirmLogout() {
+    console.log('Confirmation de la déconnexion');
     try {
-      await this.authService.signOut();
-      this.router.navigate(['/auth/login']);
+      // Nettoyer les données locales
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Se déconnecter via le service d'authentification
+      await this.authService.logout();
+      
+      // Rediriger vers la page d'accueil
+      this.router.navigate(['/']);
+      this.toastService.success('Vous avez été déconnecté avec succès');
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
+      this.toastService.error('Une erreur est survenue lors de la déconnexion');
+    } finally {
+      this.showLogoutConfirm = false;
     }
   }
 

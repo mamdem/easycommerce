@@ -2,10 +2,10 @@
   <div class="register-content">
     <div class="register-header">
       <a routerLink="/" class="logo-link">
-        <img src="assets/images/logo.png" alt="EasyCommerce Logo" class="auth-logo">
+        <img src="assets/lgo-jokkofy.png" alt="Jokkofy Logo" class="auth-logo">
       </a>
       <h1>Créez votre compte marchand</h1>
-      <p>Rejoignez EasyCommerce et lancez votre boutique en ligne</p>
+      <p>Rejoignez Jokkofy et lancez votre boutique en ligne</p>
     </div>
 
     <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
@@ -14,10 +14,10 @@
           <label for="firstName">Prénom</label>
           <div class="input-group">
             <i class="bi bi-person"></i>
-            <input
-              type="text"
-              id="firstName"
-              formControlName="firstName"
+            <input 
+              type="text" 
+              id="firstName" 
+              formControlName="firstName" 
               placeholder="Votre prénom"
               [class.is-invalid]="firstName?.invalid && (firstName?.dirty || firstName?.touched)"
             >
@@ -32,10 +32,10 @@
           <label for="lastName">Nom</label>
           <div class="input-group">
             <i class="bi bi-person-fill"></i>
-            <input
-              type="text"
-              id="lastName"
-              formControlName="lastName"
+            <input 
+              type="text" 
+              id="lastName" 
+              formControlName="lastName" 
               placeholder="Votre nom"
               [class.is-invalid]="lastName?.invalid && (lastName?.dirty || lastName?.touched)"
             >
@@ -51,10 +51,10 @@
         <label for="email">Email</label>
         <div class="input-group">
           <i class="bi bi-envelope"></i>
-          <input
-            type="email"
-            id="email"
-            formControlName="email"
+          <input 
+            type="email" 
+            id="email" 
+            formControlName="email" 
             placeholder="votre@email.com"
             [class.is-invalid]="email?.invalid && (email?.dirty || email?.touched)"
           >
@@ -69,10 +69,10 @@
         <label for="password">Mot de passe</label>
         <div class="input-group">
           <i class="bi bi-lock"></i>
-          <input
+          <input 
             [type]="showPassword ? 'text' : 'password'"
-            id="password"
-            formControlName="password"
+            id="password" 
+            formControlName="password" 
             placeholder="8 caractères minimum"
             [class.is-invalid]="password?.invalid && (password?.dirty || password?.touched)"
           >
@@ -90,10 +90,10 @@
         <label for="confirmPassword">Confirmer le mot de passe</label>
         <div class="input-group">
           <i class="bi bi-lock-fill"></i>
-          <input
+          <input 
             [type]="showConfirmPassword ? 'text' : 'password'"
-            id="confirmPassword"
-            formControlName="confirmPassword"
+            id="confirmPassword" 
+            formControlName="confirmPassword" 
             placeholder="Confirmez votre mot de passe"
             [class.is-invalid]="confirmPassword?.invalid && (confirmPassword?.dirty || confirmPassword?.touched)"
           >
@@ -107,17 +107,75 @@
         </div>
       </div>
 
-      <div class="form-group terms">
-        <label class="checkbox-container">
-          <input type="checkbox" formControlName="acceptTerms">
-          <span class="checkmark"></span>
-          <span class="terms-text">
-            J'accepte les <a href="/terms" target="_blank">conditions d'utilisation</a> et la 
-            <a href="/privacy" target="_blank">politique de confidentialité</a>
-          </span>
-        </label>
-        <div class="error-message" *ngIf="acceptTerms?.invalid && (acceptTerms?.dirty || acceptTerms?.touched)">
-          <span *ngIf="acceptTerms?.errors?.['required']">Vous devez accepter les conditions d'utilisation</span>
+      <div class="terms-section">
+        <div class="terms-content" [class.expanded]="showTerms">
+          <h3>
+            <i class="bi bi-info-circle me-2"></i>
+            Conditions d'utilisation
+            <button type="button" class="toggle-btn" (click)="toggleTerms()">
+              <i [class]="showTerms ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+            </button>
+          </h3>
+          <div class="terms-text" *ngIf="showTerms">
+            <p>En utilisant Jokkofy, vous acceptez les conditions suivantes :</p>
+            <ul>
+              <li>Avoir au moins 18 ans</li>
+              <li>Être légalement autorisé à exercer une activité commerciale au Sénégal</li>
+              <li>Fournir des informations exactes et complètes lors de l'inscription</li>
+              <li>Maintenir à jour vos informations professionnelles et personnelles</li>
+              <li>Respecter les droits de propriété intellectuelle de tiers</li>
+              <li>Ne pas vendre de produits contrefaits ou illégaux</li>
+              <li>Maintenir la sécurité de votre compte et ne pas le partager</li>
+              <li>Traiter les commandes dans les délais convenus (24-48h)</li>
+              <li>Assurer un service client professionnel et réactif</li>
+              <li>Accepter les moyens de paiement proposés par la plateforme</li>
+              <li>Respecter la politique de retour et de remboursement</li>
+              <li>Participer à la résolution des litiges de manière constructive</li>
+              <li>Maintenir un stock suffisant des produits affichés</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="terms-content" [class.expanded]="showPrivacy">
+          <h3>
+            <i class="bi bi-shield-lock me-2"></i>
+            Politique de confidentialité
+            <button type="button" class="toggle-btn" (click)="togglePrivacy()">
+              <i [class]="showPrivacy ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+            </button>
+          </h3>
+          <div class="terms-text" *ngIf="showPrivacy">
+            <p>Nous protégeons vos données selon les règles suivantes :</p>
+            <ul>
+              <li>Collecte limitée aux informations nécessaires à l'activité</li>
+              <li>Protection des données personnelles selon les normes en vigueur</li>
+              <li>Cryptage des données sensibles (mots de passe, coordonnées bancaires)</li>
+              <li>Pas de partage avec des tiers non autorisés</li>
+              <li>Conservation des données pendant la durée légale requise</li>
+              <li>Droit d'accès, de modification et de suppression de vos données</li>
+              <li>Respect de la réglementation sénégalaise sur la protection des données</li>
+              <li>Utilisation de cookies pour améliorer l'expérience utilisateur</li>
+              <li>Stockage sécurisé sur des serveurs certifiés</li>
+              <li>Surveillance continue des menaces de sécurité</li>
+              <li>Formation régulière des équipes sur la protection des données</li>
+              <li>Notification en cas de violation de données</li>
+              <li>Audit régulier des mesures de sécurité</li>
+              <li>Protection renforcée des données de paiement</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="form-group terms-checkbox">
+          <label class="checkbox-container">
+            <input type="checkbox" formControlName="acceptTerms">
+            <span class="checkmark"></span>
+            <span class="terms-text">
+              J'accepte les conditions d'utilisation et la politique de confidentialité
+            </span>
+          </label>
+          <div class="error-message" *ngIf="acceptTerms?.invalid && (acceptTerms?.dirty || acceptTerms?.touched)">
+            <span *ngIf="acceptTerms?.errors?.['required']">Vous devez accepter les conditions d'utilisation</span>
+          </div>
         </div>
       </div>
 
@@ -134,7 +192,7 @@
         <p>Ou inscrivez-vous avec</p>
         <div class="social-buttons">
           <button type="button" class="social-btn google" (click)="signInWithGoogle()">
-            <img src="assets/images/google-icon.svg" alt="Google">
+            <img src="assets/google-favicon-2025.jpg" alt="Google">
             <span>Google</span>
           </button>
         </div>

@@ -4,20 +4,19 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { StoreService, StoreSettings } from '../../../core/services/store.service';
-import { ToastService } from '../../../core/services/toast.service';
+import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule]
+  imports: [CommonModule, FormsModule, RouterModule, NgbDropdownModule]
 })
 export class HomeComponent implements OnInit {
   private authService = inject(AuthService);
   private storeService = inject(StoreService);
   private router = inject(Router);
-  private toastService = inject(ToastService);
 
   // Liste des boutiques de l'utilisateur
   userStores: StoreSettings[] = [];
@@ -149,7 +148,7 @@ export class HomeComponent implements OnInit {
   // Naviguer vers le dashboard d'une boutique spécifique
   navigateToStoreDashboard(storeId: string): void {
     if (!storeId) {
-      this.toastService.error('ID de boutique invalide');
+      console.error('ID de boutique invalide');
       return;
     }
     localStorage.setItem('selectedStoreId', storeId);
@@ -193,7 +192,6 @@ export class HomeComponent implements OnInit {
   }
 
   // Méthode pour vérifier et stocker en cache le statut de l'utilisateur
-  // Évite les appels multiples aux méthodes qui peuvent créer une boucle
   setUserStatus(): { isMerchant: boolean, hasStore: boolean } {
     const isMerchant = this.authService.isMerchant();
     const hasStore = this.authService.hasStore();
@@ -204,7 +202,7 @@ export class HomeComponent implements OnInit {
   goToStoreCreation(): void {
     this.router.navigate(['/store-creation']);
   }
-  
+
   // Méthode pour se déconnecter
   logout(): void {
     this.authService.logout().then(() => {

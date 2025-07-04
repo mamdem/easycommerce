@@ -14,7 +14,9 @@ export class RegisterComponent implements OnInit {
   isLoading = false;
   showPassword = false;
   showConfirmPassword = false;
-
+  showTerms = false;
+  showPrivacy = false;
+  
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
@@ -54,9 +56,20 @@ export class RegisterComponent implements OnInit {
   togglePasswordVisibility(): void {
     this.showPassword = !this.showPassword;
   }
-
+    
   toggleConfirmPasswordVisibility(): void {
     this.showConfirmPassword = !this.showConfirmPassword;
+  }
+
+  // Méthodes pour basculer l'affichage des conditions
+  toggleTerms(): void {
+    this.showTerms = !this.showTerms;
+    if (this.showTerms) this.showPrivacy = false;
+  }
+
+  togglePrivacy(): void {
+    this.showPrivacy = !this.showPrivacy;
+    if (this.showPrivacy) this.showTerms = false;
   }
 
   // Soumission du formulaire
@@ -74,7 +87,7 @@ export class RegisterComponent implements OnInit {
         lastName,
         phoneNumber: '' // Optionnel
       };
-      
+
       await this.authService.register(email, password, 'merchant', userData);
       
       this.toastService.success('Compte créé avec succès !');

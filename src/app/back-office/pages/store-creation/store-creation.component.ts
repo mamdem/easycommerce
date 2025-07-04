@@ -6,7 +6,42 @@ import { StoreService, StoreData } from '../../../core/services/store.service';
 import { ToastService } from '../../../core/services/toast.service';
 
 // Déclaration pour l'API Google Maps
-declare var google: any;
+declare var google: {
+  maps: {
+    Geocoder: new () => {
+      geocode: (request: {
+        location?: { lat: number; lng: number };
+        address?: string;
+      }, callback: (
+        results: Array<{
+          address_components: Array<{
+            long_name: string;
+            short_name: string;
+            types: string[];
+          }>;
+          formatted_address: string;
+          geometry: {
+            location: {
+              lat: () => number;
+              lng: () => number;
+            };
+          };
+        }>,
+        status: string
+      ) => void) => void;
+    };
+    places: {
+      Autocomplete: new (
+        inputField: HTMLInputElement,
+        options?: {
+          componentRestrictions?: { country: string };
+          fields?: string[];
+          types?: string[];
+        }
+      ) => any;
+    };
+  };
+};
 
 // Interface pour la structure du formulaire
 interface StoreForm {
@@ -53,8 +88,9 @@ export class StoreCreationComponent implements OnInit {
   logoFile: File | null = null;
   bannerFile: File | null = null;
   
-  // Google Maps Autocomplete - utilisation de any pour éviter les erreurs de type
+  // Google Maps Autocomplete
   addressAutocomplete: any = null;
+  cityAutocomplete: any = null;
   isAddressSelected = false;
   
   constructor(
@@ -83,9 +119,6 @@ export class StoreCreationComponent implements OnInit {
       this.router.navigate(['/auth/login']);
       return;
     }
-
-    // Continuer l'initialisation
-    this.initGoogleMapsAutocomplete();
     
     // Initialiser le formulaire avec les valeurs par défaut
     this.initializeFormDefaults();
@@ -96,70 +129,138 @@ export class StoreCreationComponent implements OnInit {
         this.isAddressSelected = false;
       }
     });
+
+    // Initialiser l'autocomplétion après un délai pour s'assurer que le DOM est prêt
+    setTimeout(() => {
+      this.initGoogleMapsAutocomplete();
+    }, 2000);
   }
 
   initGoogleMapsAutocomplete(): void {
-    // Vérifier si l'API Google Maps est chargée
+    console.log('Initialisation de l\'autocomplétion Google Maps...');
+    
     if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
-      // L'API n'est pas encore chargée, on attend un peu et on réessaie
+      console.log('API Google Maps non chargée, nouvelle tentative dans 1s...');
       setTimeout(() => this.initGoogleMapsAutocomplete(), 1000);
       return;
     }
 
-    // Attendre que le DOM soit prêt
-    setTimeout(() => {
       const addressInput = document.getElementById('address') as HTMLInputElement;
-      if (addressInput) {
+    const cityInput = document.getElementById('city') as HTMLInputElement;
+
+    if (!addressInput || !cityInput) {
+      console.log('Champs non trouvés, nouvelle tentative dans 1s...');
+      setTimeout(() => this.initGoogleMapsAutocomplete(), 1000);
+      return;
+    }
+
+    try {
+      // Configuration de l'autocomplétion pour l'adresse
         this.addressAutocomplete = new google.maps.places.Autocomplete(addressInput, {
-          types: ['address'],
-          fields: ['address_components', 'formatted_address', 'geometry']
+        componentRestrictions: { country: 'SN' }, // Restriction au Sénégal
+        fields: ['address_components', 'formatted_address', 'geometry', 'name'],
+        types: ['geocode', 'establishment'] // Permet de rechercher des adresses, établissements, et points d'intérêt
         });
 
-        // Quand l'utilisateur sélectionne une adresse
-        this.addressAutocomplete?.addListener('place_changed', () => {
-          this.ngZone.run(() => {
-            const place = this.addressAutocomplete?.getPlace();
+      // Configuration de l'autocomplétion pour la ville
+      this.cityAutocomplete = new google.maps.places.Autocomplete(cityInput, {
+        componentRestrictions: { country: 'SN' }, // Restriction au Sénégal
+        fields: ['address_components', 'formatted_address', 'geometry'],
+        types: ['(cities)'] // Restriction aux villes uniquement
+      });
+
+      // Gestion de la sélection d'une adresse
+      this.addressAutocomplete.addListener('place_changed', () => {
+        const place = this.addressAutocomplete.getPlace();
+        console.log('Place sélectionnée (adresse):', place);
+        if (place && place.geometry && place.geometry.location) {
+          this.updateFormWithPlaceDetails(place);
+        }
+      });
+
+      // Gestion de la sélection d'une ville
+      this.cityAutocomplete.addListener('place_changed', () => {
+        const place = this.cityAutocomplete.getPlace();
+        console.log('Place sélectionnée (ville):', place);
             if (place && place.geometry && place.geometry.location) {
-              // Récupérer les coordonnées
-              const lat = place.geometry.location.lat();
-              const lng = place.geometry.location.lng();
-              
-              // Extraire les composants de l'adresse
+          this.updateFormWithPlaceDetails(place, true);
+        }
+      });
+
+      console.log('Autocomplétion configurée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la configuration de l\'autocomplétion:', error);
+    }
+  }
+
+  private updateFormWithPlaceDetails(place: any, isCityOnly: boolean = false): void {
+    console.log('Mise à jour du formulaire avec les détails:', place);
+    
               let city = '';
-              let zipCode = '';
+    let subLocality = '';
+    let neighborhood = '';
+    let route = '';
+    let streetNumber = '';
+    let administrativeArea = '';
               let country = '';
               
               if (place.address_components) {
                 for (const component of place.address_components) {
-                  const componentType = component.types[0];
+        const types = component.types;
                   
-                  if (componentType === 'locality') {
+        if (types.includes('locality')) {
                     city = component.long_name;
-                  } else if (componentType === 'postal_code') {
-                    zipCode = component.long_name;
-                  } else if (componentType === 'country') {
+        } else if (types.includes('sublocality') || types.includes('sublocality_level_1')) {
+          subLocality = component.long_name;
+        } else if (types.includes('neighborhood')) {
+          neighborhood = component.long_name;
+        } else if (types.includes('route')) {
+          route = component.long_name;
+        } else if (types.includes('street_number')) {
+          streetNumber = component.long_name;
+        } else if (types.includes('administrative_area_level_2') && !city) {
+          administrativeArea = component.long_name;
+        } else if (types.includes('country')) {
                     country = component.long_name;
                   }
                 }
               }
               
-              // Mettre à jour le formulaire
+    // Déterminer la ville en utilisant la première valeur disponible
+    const cityName = city || subLocality || administrativeArea || neighborhood;
+    
+    // Si c'est une sélection de ville uniquement
+    if (isCityOnly) {
+      this.storeForm.patchValue({
+        city: cityName,
+        country: 'Sénégal' // Par défaut pour le Sénégal puisque nous avons restreint la recherche au Sénégal
+      });
+    } else {
+      // Construire l'adresse détaillée
+      let detailedAddress = '';
+      if (streetNumber) detailedAddress += streetNumber + ' ';
+      if (route) detailedAddress += route + ' ';
+      if (neighborhood) detailedAddress += neighborhood + ' ';
+      if (subLocality) detailedAddress += subLocality + ' ';
+      if (!detailedAddress) detailedAddress = place.name || place.formatted_address;
+
+      // Si c'est une sélection d'adresse complète
               this.storeForm.patchValue({
-                address: place.formatted_address,
-                city: city,
-                zipCode: zipCode,
-                country: country,
-                latitude: lat,
-                longitude: lng,
-                manualCoordinates: false
-              });
+        address: detailedAddress.trim(),
+        city: cityName,
+        country: country || 'Sénégal', // Utiliser le pays détecté ou par défaut 'Sénégal'
+        latitude: place.geometry.location.lat(),
+        longitude: place.geometry.location.lng()
+      });
+
+      // Mettre à jour l'input de la ville visuellement
+      const cityInput = document.getElementById('city') as HTMLInputElement;
+      if (cityInput) {
+        cityInput.value = cityName;
+      }
+    }
               
               this.isAddressSelected = true;
-            }
-          });
-        });
-      }
-    }, 1000);
   }
   
   // Création du formulaire avec validations
@@ -486,10 +587,69 @@ export class StoreCreationComponent implements OnInit {
 
   // Initialiser les valeurs par défaut du formulaire
   private initializeFormDefaults(): void {
+    // Écouter les changements sur le champ storeName
+    this.storeForm.get('storeName')?.valueChanges.subscribe(value => {
+      // Si le champ legalName est vide, on le remplit avec la valeur de storeName
+      const legalNameControl = this.storeForm.get('legalName');
+      if (legalNameControl && !legalNameControl.value && !legalNameControl.touched) {
+        legalNameControl.setValue(value);
+      }
+    });
+
     // Initialiser les couleurs par défaut
     this.storeForm.patchValue({
-      primaryColor: '#3f51b5',
-      secondaryColor: '#ff4081'
+      primaryColor: '#fe7b33',
+      secondaryColor: '#00c3d6'
     });
+  }
+
+  getCurrentLocation(): void {
+    if (!navigator.geolocation) {
+      this.toastService.error('La géolocalisation n\'est pas supportée par votre navigateur', 'Erreur');
+      return;
+    }
+
+    this.toastService.info('Récupération de votre position en cours...', 'Patientez');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        // Utiliser le Geocoding inverse de Google Maps pour obtenir l'adresse
+        const geocoder = new google.maps.Geocoder();
+        const latlng = { lat: latitude, lng: longitude };
+
+        geocoder.geocode({ location: latlng }, (results, status) => {
+          if (status === 'OK' && results[0]) {
+            const place = results[0];
+            this.updateFormWithPlaceDetails(place);
+            this.toastService.success('Position récupérée avec succès', 'Succès');
+          } else {
+            this.toastService.error('Impossible de récupérer l\'adresse pour ces coordonnées', 'Erreur');
+          }
+        });
+      },
+      (error) => {
+        let message = 'Une erreur est survenue lors de la récupération de votre position';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            message = 'Vous devez autoriser l\'accès à votre position';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            message = 'Position non disponible';
+            break;
+          case error.TIMEOUT:
+            message = 'La requête a expiré';
+            break;
+        }
+        this.toastService.error(message, 'Erreur');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
   }
 } 

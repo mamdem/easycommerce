@@ -24,13 +24,13 @@ import { animate, style, transition, trigger } from '@angular/animations';
           </div>
           <div class="modal-actions">
             <button class="btn btn-light" (click)="dialogRef.close()">
-              Annuler
-            </button>
+            Annuler
+          </button>
             <button class="btn btn-primary" 
-                    [disabled]="!reason.trim()"
-                    (click)="onConfirm()">
+            [disabled]="!reason.trim()"
+            (click)="onConfirm()">
               Confirmer
-            </button>
+          </button>
           </div>
         </div>
       </div>
@@ -67,37 +67,37 @@ import { animate, style, transition, trigger } from '@angular/animations';
     .modal-content h3 {
       margin: 0 0 1.5rem;
       font-size: 1.25rem;
-      font-weight: 600;
+          font-weight: 600;
       color: var(--primary-color, #2c3e50);
     }
 
     .form-group {
       text-align: left;
-    }
+      }
 
     .form-group label {
-      display: block;
+          display: block;
       margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: #374151;
-    }
+          font-weight: 500;
+          color: #374151;
+        }
 
     .form-control {
-      width: 100%;
+          width: 100%;
       padding: 0.75rem;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
       font-size: 0.95rem;
-      
-      &:focus {
-        outline: none;
+          
+          &:focus {
+            outline: none;
         border-color: var(--primary-color);
         box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
-      }
-    }
+          }
+        }
 
     small {
-      display: block;
+          display: block;
       margin-top: 0.5rem;
       font-size: 0.875rem;
     }
@@ -113,7 +113,7 @@ import { animate, style, transition, trigger } from '@angular/animations';
       min-width: 100px;
       padding: 0.625rem 1.25rem;
       font-size: 0.95rem;
-      font-weight: 500;
+        font-weight: 500;
       border-radius: 8px;
       transition: all 0.2s ease;
     }
@@ -123,27 +123,27 @@ import { animate, style, transition, trigger } from '@angular/animations';
       border: 1px solid #e2e8f0;
       color: #64748b;
 
-      &:hover {
+          &:hover {
         background: #f1f5f9;
         border-color: #cbd5e1;
         color: #475569;
-      }
-    }
+          }
+        }
 
     .btn-primary {
       background: var(--primary-color, #3b82f6);
-      border: none;
-      color: white;
+          border: none;
+          color: white;
 
-      &:hover {
+          &:hover {
         background: var(--primary-dark-color, #2563eb);
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(var(--primary-rgb, 59, 130, 246), 0.2);
-      }
+          }
 
-      &:disabled {
+          &:disabled {
         background: #93c5fd;
-        cursor: not-allowed;
+            cursor: not-allowed;
         transform: none;
         box-shadow: none;
       }

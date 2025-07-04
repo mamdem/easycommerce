@@ -62,7 +62,7 @@
   </div>
 
   <!-- Liste des clients -->
-  <div class="card shadow-sm mb-4 border-0 rounded-3 overflow-hidden">
+  <div class="card shadow-sm mb-4 border-0 rounded-3 overflow-hidden" *ngIf="customers.length > 0">
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table customers-table align-middle mb-0">
@@ -172,6 +172,17 @@
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+  <!-- État vide -->
+  <div class="empty-state" *ngIf="!loading && customers.length === 0">
+    <div class="text-center py-5">
+      <div class="empty-state-icon mb-4">
+        <i class="bi bi-people display-1"></i>
+      </div>
+      <h3>Aucun client</h3>
+      <p class="text-muted">Vous n'avez pas encore de clients dans votre boutique.</p>
     </div>
   </div>
 

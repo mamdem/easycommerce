@@ -1,15 +1,17 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Observable, Subscription, catchError, map, of, switchMap, tap, take } from 'rxjs';
 import { Product } from '../../../../../core/models/product.model';
+import { Store } from '../../../../../core/models/store.model';
 import { CartService } from '../../../../../core/services/cart.service';
 import { StoreProductsService } from '../../../../../store/services/store-products.service';
 import { PublicCategoryService } from '../../../../../store/services/public-category.service';
-import { Observable, Subscription, catchError, map, of, switchMap, tap } from 'rxjs';
 import { Promotion } from '../../../../../core/services/promotion.service';
 import { PublicPromotionService } from '../../../../../store/services/public-promotion.service';
-import { Category } from '../../../../../core/models/category.model';
 import { PriceService } from '../../../../../core/services/price.service';
+import { PublicStoreService } from '../../../../../public_services/store.service';
+import { Category } from '../../../../../core/models/category.model';
 
 interface ProductWithPromotion extends Product {
   originalPrice: number;
@@ -17,6 +19,9 @@ interface ProductWithPromotion extends Product {
   promotion: Promotion | null;
   promotionId?: string;
   categoryName?: string;
+  finalPrice?: number;
+  reductionAmount?: number;
+  reductionPercentage?: number;
 }
 
 @Component({
@@ -36,7 +41,9 @@ interface ProductWithPromotion extends Product {
     <div class="product-details" *ngIf="product$ | async as product">
       <div class="product-images-section">
         <div class="main-image">
-          <img [src]="product.images && product.images[currentImageIndex] || 'assets/default-product.svg'" [alt]="product.name">
+          <img [src]="product.images && product.images[currentImageIndex] || 'assets/default-product.svg'" 
+               [alt]="product.name"
+               (error)="onImageError($event)">
           <div class="product-badges" *ngIf="product.promotion">
             <span class="discount-badge">
               <i class="bi bi-tag-fill"></i>
@@ -80,7 +87,7 @@ interface ProductWithPromotion extends Product {
 
         <div class="product-description">
           <h3>Description</h3>
-          <p>{{ product.description }}</p>
+          <p>{{ product.description || 'Aucune description disponible.' }}</p>
         </div>
 
         <div class="product-details-grid">
@@ -103,13 +110,29 @@ interface ProductWithPromotion extends Product {
                   {{ product.originalPrice | number:'1.0-0' }} <span class="currency">FCFA</span>
                 </span>
                 <span class="promotional-price">
-                  {{ product.discountedPrice | number:'1.0-0' }} 
+                  {{ product.finalPrice | number:'1.0-0' }} 
                   <span class="currency">FCFA</span>
+                </span>
+                <span class="reduction-badge">
+                  -{{ product.promotion.reduction }}%
                 </span>
               </ng-container>
               <span class="current-price" *ngIf="!product.promotion">
                 {{ product.price | number:'1.0-0' }} <span class="currency">FCFA</span>
               </span>
+            </div>
+            <div class="promotion-info" *ngIf="product.promotion">
+              <div class="promotion-details">
+                <p class="promotion-dates">
+                  <i class="bi bi-calendar-event"></i>
+                  Du {{ product.promotion.dateDebut | date:'dd/MM/yyyy' }} au {{ product.promotion.dateFin | date:'dd/MM/yyyy' }}
+                </p>
+                
+                <p class="savings">
+                  <i class="bi bi-piggy-bank"></i>
+                  Économisez {{ product.reductionAmount | number:'1.0-0' }} FCFA
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -379,6 +402,54 @@ interface ProductWithPromotion extends Product {
         font-weight: 500;
         opacity: 0.8;
       }
+
+      .reduction-badge {
+        background: #dc3545;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+
+      .promotion-info {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: rgba(var(--store-primary-rgb), 0.05);
+        border-radius: 12px;
+
+        .promotion-details {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+
+          p {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+
+            i {
+              color: var(--store-primary-color);
+            }
+          }
+
+          .promotion-dates {
+            color: var(--text-primary);
+          }
+
+          .promotion-usage {
+            color: var(--store-secondary-color);
+          }
+
+          .savings {
+            color: #28a745;
+            font-weight: 500;
+          }
+        }
+      }
     }
 
     .product-actions {
@@ -512,27 +583,27 @@ interface ProductWithPromotion extends Product {
   `]
 })
 export class ProductDetailsComponent implements OnInit, OnDestroy {
-  product$!: Observable<ProductWithPromotion>;
+  product$: Observable<ProductWithPromotion | null> = of();
   storeUrl!: string;
+  storeName: string = '';
   error: string | null = null;
   loading = true;
   currentImageIndex = 0;
   isInCart = false;
   private cartStateSubscription?: Subscription;
   private promotionsSubscription?: Subscription;
+  private categories: Category[] = [];
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private cartService: CartService,
-    private storeProductsService: StoreProductsService,
-    private categoryService: PublicCategoryService,
-    private promotionService: PublicPromotionService,
-    private priceService: PriceService
+    private publicStoreService: PublicStoreService
   ) {}
 
   ngOnInit() {
-    this.route.parent?.paramMap.pipe(
+    // Récupérer les paramètres de l'URL
+    const productData$ = this.route.parent?.paramMap.pipe(
       map(params => params.get('storeUrl')),
       switchMap(storeUrl => {
         if (!storeUrl) {
@@ -547,60 +618,13 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
               throw new Error('Product ID not found');
             }
             
-            console.log('Fetching product:', { storeUrl, productId });
-            return this.storeProductsService.getProduct(storeUrl, productId).pipe(
+            return this.publicStoreService.getProductWithPromotions(storeUrl, productId).pipe(
               tap(product => {
-                // Check if product is in cart when loaded
-                if (product.id) {
+                if (product?.id) {
                   this.isInCart = this.cartService.isProductInCart(product.id, this.storeUrl);
                 }
-              }),
-              switchMap(product => {
-                // Get active promotions for the product
-                return this.promotionService.getPromotions(product.storeId).pipe(
-                  map(promotions => {
-                    const now = Date.now();
-                    const activePromotions = promotions.filter(promo => 
-                      promo.actif && 
-                      promo.dateDebut <= now && 
-                      promo.dateFin >= now &&
-                      (!promo.utilisationsMax || promo.utilisationsActuelles < promo.utilisationsMax)
-                    );
-
-                    const applicablePromotion = this.priceService.getApplicablePromotion(product, activePromotions);
-                    const productWithPromotion: ProductWithPromotion = {
-                      ...product,
-                      originalPrice: product.price,
-                      discountedPrice: null,
-                      promotion: null
-                    };
-
-                    if (applicablePromotion) {
-                      productWithPromotion.promotion = applicablePromotion;
-                      productWithPromotion.discountedPrice = product.price * (1 - applicablePromotion.reduction / 100);
-                    }
-
-                    return productWithPromotion;
-                  })
-                );
-              }),
-              switchMap(product => {
-                if (product.category) {
-                  // Récupérer le nom de la catégorie
-                  return this.categoryService.getCategoryById(product.storeId, product.category).pipe(
-                    map(category => ({
-                      ...product,
-                      categoryName: category.name
-                    })),
-                    catchError(() => of({
-                      ...product,
-                      categoryName: 'Catégorie inconnue'
-                    }))
-                  );
-                }
-                return of(product);
               })
-            ) as Observable<ProductWithPromotion>;
+            );
           })
         );
       }),
@@ -609,17 +633,22 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
         this.loading = false;
         return of(null);
       })
-    ).subscribe(product => {
-      this.loading = false;
-      if (product) {
-        this.product$ = of(product);
-      }
-    });
+    );
 
-    // Subscribe to cart state changes
+    // S'abonner aux données du produit
+    if (productData$) {
+      productData$.subscribe(product => {
+        this.loading = false;
+        if (product) {
+          this.product$ = of(product);
+        }
+      });
+    }
+
+    // S'abonner aux changements du panier
     this.cartStateSubscription = this.cartService.cartState$.subscribe(() => {
-      this.product$.subscribe(product => {
-        if (product.id) {
+      this.product$.pipe(take(1)).subscribe(product => {
+        if (product?.id) {
           this.isInCart = this.cartService.isProductInCart(product.id, this.storeUrl);
         }
       });
@@ -643,28 +672,43 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
     return product.images ? product.images.length - 1 : 0;
   }
 
-  selectImage(index: number): void {
-    this.currentImageIndex = index;
-  }
-
   previousImage(): void {
-    if (this.currentImageIndex > 0) {
-      this.currentImageIndex--;
-    }
-  }
-
-  nextImage(): void {
-    this.product$.subscribe(product => {
-      const lastIndex = this.getLastImageIndex(product);
-      if (this.currentImageIndex < lastIndex) {
-        this.currentImageIndex++;
+    this.product$.pipe(take(1)).subscribe(product => {
+      if (product && this.currentImageIndex > 0) {
+        this.currentImageIndex--;
       }
     });
   }
 
-  calculateDiscountedPrice(product: ProductWithPromotion): number {
-    if (!product.promotion) return product.price;
-    return product.price * (1 - product.promotion.reduction / 100);
+  nextImage(): void {
+    this.product$.pipe(take(1)).subscribe(product => {
+      if (product) {
+        const lastIndex = this.getLastImageIndex(product);
+        if (this.currentImageIndex < lastIndex) {
+          this.currentImageIndex++;
+        }
+      }
+    });
+  }
+
+  selectImage(index: number): void {
+    this.currentImageIndex = index;
+  }
+
+  addToCart(product: ProductWithPromotion): void {
+    if (product.id) {
+      const productToAdd = {
+        ...product,
+        price: product.finalPrice || product.price,
+        originalPrice: product.price,
+        promotion: product.promotion,
+        promotionId: product.promotionId,
+        reductionAmount: product.reductionAmount,
+        reductionPercentage: product.reductionPercentage
+      };
+      this.cartService.addToCart(productToAdd, this.storeUrl, this.storeName);
+      this.isInCart = true;
+    }
   }
 
   getCartButtonLabel(product: ProductWithPromotion): string {
@@ -674,19 +718,12 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
     return this.isInCart ? 'Déjà dans le panier' : 'Ajouter au panier';
   }
 
-  addToCart(product: ProductWithPromotion): void {
-    if (product.stock > 0 && !this.isInCart) {
-      // Use discounted price if available
-      const productToAdd = {
-        ...product,
-        price: product.discountedPrice || product.price
-      };
-      this.cartService.addToCart(productToAdd, this.storeUrl, product.name);
-      this.isInCart = true;
-    }
-  }
-
   goBack(): void {
     this.router.navigate(['../'], { relativeTo: this.route });
+  }
+
+  onImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.src = 'assets/default-product.svg';
   }
 } 

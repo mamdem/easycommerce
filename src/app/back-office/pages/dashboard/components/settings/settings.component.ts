@@ -9,6 +9,44 @@ import { Subscription } from 'rxjs';
 import { Store } from '../../../../../core/models/store.model';
 import { User } from '../../../../../core/models/user.model';
 
+// Déclaration pour l'API Google Maps
+declare var google: {
+  maps: {
+    Geocoder: new () => {
+      geocode: (request: {
+        location?: { lat: number; lng: number };
+        address?: string;
+      }, callback: (
+        results: Array<{
+          address_components: Array<{
+            long_name: string;
+            short_name: string;
+            types: string[];
+          }>;
+          formatted_address: string;
+          geometry: {
+            location: {
+              lat: () => number;
+              lng: () => number;
+            };
+          };
+        }>,
+        status: string
+      ) => void) => void;
+    };
+    places: {
+      Autocomplete: new (
+        inputField: HTMLInputElement,
+        options?: {
+          componentRestrictions?: { country: string };
+          fields?: string[];
+          types?: string[];
+        }
+      ) => any;
+    };
+  };
+};
+
 @Component({
   selector: 'app-settings',
   templateUrl: './settings.component.html',
@@ -85,6 +123,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
   // Indicateur de chargement pour le changement de mot de passe
   isChangingPassword = false;
   
+  // Propriétés pour l'autocomplétion
+  addressAutocomplete: any = null;
+  cityAutocomplete: any = null;
+  isAddressSelected = false;
+  
   constructor(
     private storeService: StoreService,
     private toastService: ToastService,
@@ -113,6 +156,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.toastService.error('Erreur lors du chargement des paramètres');
       }
     });
+
+    // Initialiser l'autocomplétion après un délai pour s'assurer que le DOM est prêt
+    setTimeout(() => {
+      this.initGoogleMapsAutocomplete();
+    }, 2000);
   }
 
   ngOnDestroy(): void {
@@ -295,7 +343,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       }
 
       // Vérifier que les mots de passe correspondent
-      if (this.securitySettings.newPassword !== this.securitySettings.confirmPassword) {
+    if (this.securitySettings.newPassword !== this.securitySettings.confirmPassword) {
         this.toastService.error('Les nouveaux mots de passe ne correspondent pas');
         return;
       }
@@ -310,8 +358,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
       if (!passwordRegex.test(this.securitySettings.newPassword)) {
         this.toastService.error('Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial');
-        return;
-      }
+      return;
+    }
 
       this.isChangingPassword = true;
 
@@ -322,11 +370,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
       );
 
       // Réinitialiser le formulaire
-      this.securitySettings = {
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      };
+    this.securitySettings = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    };
 
       this.toastService.success('Mot de passe mis à jour avec succès');
     } catch (error) {
@@ -490,8 +538,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
         // Mettre à jour l'URL dans le profil
         this.userProfile.avatar = avatarUrl;
         
-        // Mettre à jour le profil utilisateur
-        await this.saveProfile();
+        // Mettre à jour le profil utilisateur avec l'option preventRedirect
+        await this.authService.updateProfile({
+          photoURL: avatarUrl
+        });
+
+        // Recharger les données utilisateur
+        this.loadUserData();
+        
+        // Afficher un message de succès
+        this.toastService.success('Photo de profil mise à jour avec succès');
       } catch (error) {
         console.error('Erreur lors du changement d\'avatar:', error);
         this.toastService.error('Erreur lors du changement de la photo de profil');
@@ -518,6 +574,189 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.userProfile.email !== (this.currentUser.email || '') ||
       this.userProfile.phone !== (this.currentUser.phoneNumber || '') ||
       this.userProfile.avatar !== (this.currentUser.photoURL || '')
+    );
+  }
+
+  // Initialiser l'autocomplétion Google Maps
+  initGoogleMapsAutocomplete(): void {
+    console.log('Initialisation de l\'autocomplétion Google Maps...');
+    
+    if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+      console.log('API Google Maps non chargée, nouvelle tentative dans 1s...');
+      setTimeout(() => this.initGoogleMapsAutocomplete(), 1000);
+      return;
+    }
+
+    const addressInput = document.getElementById('storeAddress') as HTMLInputElement;
+    const cityInput = document.getElementById('storeCity') as HTMLInputElement;
+
+    if (!addressInput || !cityInput) {
+      console.log('Champs non trouvés, nouvelle tentative dans 1s...');
+      setTimeout(() => this.initGoogleMapsAutocomplete(), 1000);
+      return;
+    }
+
+    try {
+      // Configuration de l'autocomplétion pour l'adresse
+      this.addressAutocomplete = new google.maps.places.Autocomplete(addressInput, {
+        componentRestrictions: { country: 'SN' }, // Restriction au Sénégal
+        fields: ['address_components', 'formatted_address', 'geometry', 'name'],
+        types: ['geocode', 'establishment'] // Permet de rechercher des adresses, établissements, et points d'intérêt
+      });
+
+      // Configuration de l'autocomplétion pour la ville
+      this.cityAutocomplete = new google.maps.places.Autocomplete(cityInput, {
+        componentRestrictions: { country: 'SN' }, // Restriction au Sénégal
+        fields: ['address_components', 'formatted_address', 'geometry'],
+        types: ['(cities)'] // Restriction aux villes uniquement
+      });
+
+      // Gestion de la sélection d'une adresse
+      this.addressAutocomplete.addListener('place_changed', () => {
+        const place = this.addressAutocomplete.getPlace();
+        if (place && place.geometry && place.geometry.location) {
+          this.updateFormWithPlaceDetails(place);
+        }
+      });
+
+      // Gestion de la sélection d'une ville
+      this.cityAutocomplete.addListener('place_changed', () => {
+        const place = this.cityAutocomplete.getPlace();
+        if (place && place.geometry && place.geometry.location) {
+          this.updateFormWithPlaceDetails(place, true);
+        }
+      });
+
+      console.log('Autocomplétion configurée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la configuration de l\'autocomplétion:', error);
+    }
+  }
+
+  // Mettre à jour le formulaire avec les détails du lieu
+  private updateFormWithPlaceDetails(place: any, isCityOnly: boolean = false): void {
+    console.log('Place sélectionnée:', place);
+    
+    let city = '';
+    let subLocality = '';
+    let neighborhood = '';
+    let route = '';
+    let streetNumber = '';
+    let administrativeArea = '';
+    
+    if (place.address_components) {
+      for (const component of place.address_components) {
+        const types = component.types;
+        
+        if (types.includes('locality')) {
+          city = component.long_name;
+        } else if (types.includes('sublocality') || types.includes('sublocality_level_1')) {
+          subLocality = component.long_name;
+        } else if (types.includes('neighborhood')) {
+          neighborhood = component.long_name;
+        } else if (types.includes('route')) {
+          route = component.long_name;
+        } else if (types.includes('street_number')) {
+          streetNumber = component.long_name;
+        } else if (types.includes('administrative_area_level_2') && !city) {
+          administrativeArea = component.long_name;
+        }
+      }
+    }
+
+    // Déterminer la ville en utilisant la première valeur disponible
+    const cityName = city || subLocality || administrativeArea || neighborhood;
+    
+    // Si c'est une sélection de ville uniquement
+    if (isCityOnly) {
+      this.storeSettings = {
+        ...this.storeSettings,
+        city: cityName
+      };
+    } else {
+      // Construire l'adresse détaillée
+      let detailedAddress = '';
+      if (streetNumber) detailedAddress += streetNumber + ' ';
+      if (route) detailedAddress += route + ' ';
+      if (neighborhood) detailedAddress += neighborhood + ' ';
+      if (subLocality) detailedAddress += subLocality + ' ';
+      if (!detailedAddress) detailedAddress = place.name || place.formatted_address;
+
+      // Si c'est une sélection d'adresse complète, mettre à jour l'adresse et la ville
+      this.storeSettings = {
+        ...this.storeSettings,
+        address: detailedAddress.trim(),
+        city: cityName, // Remplir automatiquement la ville
+        country: 'Sénégal',
+        latitude: place.geometry.location.lat(),
+        longitude: place.geometry.location.lng()
+      };
+
+      // Mettre à jour l'input de la ville visuellement
+      const cityInput = document.getElementById('storeCity') as HTMLInputElement;
+      if (cityInput) {
+        cityInput.value = cityName;
+      }
+    }
+    
+    this.isAddressSelected = true;
+  }
+
+  // Récupérer la position actuelle
+  getCurrentLocation(): void {
+    if (!navigator.geolocation) {
+      this.toastService.error('La géolocalisation n\'est pas supportée par votre navigateur', 'Erreur');
+      return;
+    }
+
+    this.toastService.info('Récupération de votre position en cours...', 'Patientez');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        // Mettre à jour les coordonnées dans le formulaire
+        this.storeSettings = {
+          ...this.storeSettings,
+          latitude: latitude,
+          longitude: longitude
+        };
+
+        // Utiliser le Geocoding inverse de Google Maps pour obtenir l'adresse
+        const geocoder = new google.maps.Geocoder();
+        const latlng = { lat: latitude, lng: longitude };
+
+        geocoder.geocode({ location: latlng }, (results, status) => {
+          if (status === 'OK' && results[0]) {
+            const place = results[0];
+            this.updateFormWithPlaceDetails(place);
+            this.toastService.success('Position récupérée avec succès', 'Succès');
+          } else {
+            this.toastService.error('Impossible de récupérer l\'adresse pour ces coordonnées', 'Erreur');
+          }
+        });
+      },
+      (error) => {
+        let message = 'Une erreur est survenue lors de la récupération de votre position';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            message = 'Vous devez autoriser l\'accès à votre position';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            message = 'Position non disponible';
+            break;
+          case error.TIMEOUT:
+            message = 'La requête a expiré';
+            break;
+        }
+        this.toastService.error(message, 'Erreur');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
     );
   }
 } 

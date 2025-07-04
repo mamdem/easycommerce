@@ -137,7 +137,7 @@ body {
         
         p {
           color: $text-color;
-          margin: 0;
+          font-size: 0.95rem;
         }
       }
       
@@ -150,7 +150,7 @@ body {
         border: 1px solid rgba(255, 255, 255, 0.2);
         
         i {
-          font-size: 3rem;
+          font-size: 2.5rem;
           color: $primary-color;
           margin-bottom: 1rem;
         }
@@ -164,6 +164,7 @@ body {
         p {
           color: $text-color;
           margin-bottom: 1.5rem;
+          font-size: 0.95rem;
         }
         
         .btn-primary {
@@ -171,71 +172,57 @@ body {
           align-items: center;
           gap: 0.5rem;
           padding: 0.75rem 1.5rem;
-          border-radius: $border-radius;
-          background: $primary-color;
-          color: white;
-          border: none;
-          font-weight: 600;
-          transition: $transition;
+          font-size: 0.95rem;
           
-          &:hover {
-            background: $primary-color-dark;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+          i {
+            font-size: 1.1rem;
+            margin: 0;
+            color: white;
           }
         }
       }
       
       .stores-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 2rem;
-        padding: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 1.5rem;
         
         .store-card {
-          background: rgba(255, 255, 255, 0.95);
-          border-radius: 20px;
-          cursor: pointer;
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          text-align: center;
-          height: 320px;
-          display: flex;
-          flex-direction: column;
-          position: relative;
+          background: white;
+          border-radius: 12px;
           overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          transition: all 0.3s ease;
+          height: 260px;
+          cursor: pointer;
+          border: 1px solid rgba(0, 0, 0, 0.05);
           
           &:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
-            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+            border-color: $primary-color;
             
             .store-banner img {
               transform: scale(1.05);
             }
             
-            .store-logo img {
-              transform: scale(1.05);
+            .store-logo {
               border-color: $primary-color;
             }
             
             .btn {
-              background: linear-gradient(45deg, $primary-color, $secondary-color);
-              transform: translateY(-2px);
+              background: linear-gradient(45deg, $primary-color, lighten($primary-color, 10%));
               
               i {
                 transform: translateX(3px);
               }
             }
           }
-
+          
           .store-banner {
-            width: 100%;
-            height: 140px;
+            height: 100px;
             overflow: hidden;
             position: relative;
-            border-radius: 20px 20px 0 0;
             
             &::after {
               content: '';
@@ -251,131 +238,121 @@ body {
               width: 100%;
               height: 100%;
               object-fit: cover;
-              transition: transform 0.4s ease;
+              transition: transform 0.3s ease;
             }
           }
           
           .store-content {
-            padding: 0 1.5rem 1.5rem;
-            margin-top: -45px;
+            padding: 1rem;
+            text-align: center;
             position: relative;
-            z-index: 1;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            margin-top: -40px;
             
             .store-logo {
-              width: 90px;
-              height: 90px;
+              width: 70px;
+              height: 70px;
               margin: 0 auto;
-              padding: 4px;
+              border-radius: 12px;
+              padding: 3px;
               background: white;
-              border-radius: 50%;
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+              border: 2px solid rgba($primary-color, 0.2);
+              transition: all 0.3s ease;
               
               img {
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
-                border-radius: 50%;
-                border: 2px solid rgba($primary-color, 0.2);
-                transition: all 0.3s ease;
-                background-color: white;
+                border-radius: 8px;
               }
             }
             
             .card-content {
-              margin-top: 1.25rem;
-              text-align: center;
-              flex: 1;
-              display: flex;
-              flex-direction: column;
-              justify-content: space-between;
+              margin-top: 1rem;
               
               h3 {
-                font-size: 1.25rem;
-                color: $dark-color;
+                font-size: 1.1rem;
                 font-weight: 600;
-                letter-spacing: -0.02em;
-                margin-bottom: 1.25rem;
+                color: $dark-color;
+                margin-bottom: 1rem;
+                display: -webkit-box;
+                -webkit-line-clamp: 1;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
               }
               
               .btn {
-                padding: 0.75rem 1.75rem;
-                border-radius: 12px;
-                background: $primary-color;
-                color: white;
-                border: none;
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 0.5rem;
-                font-weight: 500;
+                width: 100%;
+                background: $primary-color;
+                color: white;
+                border: none;
+                border-radius: 8px;
                 transition: all 0.3s ease;
-                width: auto;
-                margin: 0 auto;
-                font-size: 0.95rem;
-                letter-spacing: 0.02em;
-                
-                span {
-                  display: inline-block;
-                }
                 
                 i {
                   transition: transform 0.3s ease;
-                  font-size: 1.1rem;
                 }
               }
             }
           }
           
           &.new-store {
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px dashed rgba($secondary-color, 0.3);
+            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 2rem;
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px dashed rgba($primary-color, 0.3);
+            height: 260px;
             
             &:hover {
-              background: rgba(255, 255, 255, 0.98);
-              border-color: $secondary-color;
+              background: rgba(255, 255, 255, 0.95);
+              border-color: $primary-color;
               
               .add-icon {
-                background: linear-gradient(45deg, $primary-color, $secondary-color);
-                transform: scale(1.05);
+                background: $primary-color;
+                transform: scale(1.1);
                 
                 i {
                   color: white;
-                  transform: scale(1.1);
+                  transform: rotate(180deg);
                 }
+              }
+              
+              h3 {
+                color: $primary-color;
               }
             }
             
             .add-icon {
-              width: 80px;
-              height: 80px;
-              background: rgba($secondary-color, 0.1);
-              border-radius: 50%;
+              width: 60px;
+              height: 60px;
+              border-radius: 12px;
+              background: rgba($primary-color, 0.1);
               display: flex;
               align-items: center;
               justify-content: center;
-              margin-bottom: 1.5rem;
+              margin-bottom: 1rem;
               transition: all 0.3s ease;
               
               i {
-                font-size: 2rem;
-                color: $secondary-color;
+                font-size: 1.8rem;
+                color: $primary-color;
                 transition: all 0.3s ease;
               }
             }
             
             h3 {
-              font-size: 1.25rem;
+              font-size: 1.1rem;
+              font-weight: 600;
               color: $dark-color;
               margin: 0;
-              font-weight: 600;
-              opacity: 0.9;
+              transition: color 0.3s ease;
             }
           }
         }
@@ -664,7 +641,7 @@ body {
   left: 0;
   right: 0;
   z-index: 1000;
-  padding: 1rem 0;
+  padding: 0.35rem 0;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 
   .navbar-content {
@@ -677,14 +654,12 @@ body {
     .brand-link {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
       text-decoration: none;
-      color: $dark-color;
-      font-weight: 700;
-      font-size: 1.5rem;
       
-      i {
-        color: $primary-color;
+      .brand-logo {
+        height: 55px;
+        width: auto;
+        object-fit: contain;
       }
     }
   }
@@ -1545,5 +1520,90 @@ body {
         flex-direction: column;
       }
     }
+  }
+}
+
+/* Styles pour le menu utilisateur */
+.user-menu {
+  position: relative;
+  
+  .user-menu-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: $border-radius;
+    transition: $transition;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+    
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    
+    .user-name {
+      font-weight: 500;
+      color: $text-color;
+    }
+    
+    i {
+      font-size: 0.8rem;
+      color: $text-color;
+      transition: $transition;
+    }
+  }
+}
+
+/* Styles pour le dropdown menu */
+.dropdown-menu {
+  min-width: 200px;
+  padding: 0.5rem;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: $border-radius;
+  margin-top: 0.5rem;
+  
+  button {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: $text-color;
+    transition: $transition;
+    border-radius: $border-radius;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: transparent;
+    
+    i {
+      font-size: 1.1rem;
+    }
+    
+    &:hover {
+      background-color: rgba($primary-color, 0.1);
+      color: $primary-color;
+    }
+    
+    &.text-danger {
+      color: var(--danger-color);
+      
+      &:hover {
+        background-color: rgba(var(--danger-color), 0.1);
+      }
+    }
+  }
+  
+  .dropdown-divider {
+    margin: 0.5rem 0;
+    border-color: rgba(0, 0, 0, 0.1);
   }
 } 

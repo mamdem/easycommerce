@@ -171,18 +171,18 @@ export class ProductsComponent implements OnInit {
         return this.categoryService.getStoreCategories(store.id);
       })
     ).subscribe({
-      next: (categories) => {
+        next: (categories) => {
         this.categories = categories;
         categories.forEach(cat => this.categoryMap.set(cat.id, cat));
         this.categories$ = of(categories);
-        this.loadingCategories = false;
-      },
-      error: (error) => {
+          this.loadingCategories = false;
+        },
+        error: (error) => {
         console.error('Erreur lors du chargement des catégories:', error);
-        this.toastService.error('Erreur lors du chargement des catégories');
-        this.loadingCategories = false;
-      }
-    });
+          this.toastService.error('Erreur lors du chargement des catégories');
+          this.loadingCategories = false;
+        }
+      });
   }
 
   private loadProducts(): void {
@@ -195,16 +195,16 @@ export class ProductsComponent implements OnInit {
         }
         this.currentStore = store;
 
-        // Charger les promotions actives
+      // Charger les promotions actives
         return this.promotionService.getPromotions(store.id).pipe(
           map(promotions => {
-            const now = Date.now();
+      const now = Date.now();
             return promotions.filter(promo => 
-              promo.actif && 
-              promo.dateDebut <= now && 
-              promo.dateFin >= now &&
-              (!promo.utilisationsMax || promo.utilisationsActuelles < promo.utilisationsMax)
-            );
+        promo.actif && 
+        promo.dateDebut <= now && 
+        promo.dateFin >= now &&
+        (!promo.utilisationsMax || promo.utilisationsActuelles < promo.utilisationsMax)
+      );
           }),
           switchMap(activePromotions => {
             this.activePromotions = activePromotions;
@@ -219,8 +219,8 @@ export class ProductsComponent implements OnInit {
                   map(products => {
                     return products.map(product => {
                       const productWithPromo: ProductWithPromotion = {
-                        ...product,
-                        originalPrice: product.price,
+          ...product,
+          originalPrice: product.price,
                         discountedPrice: null,
                         promotion: null,
                         categoryName: product.category ? categoryMap.get(product.category)?.name || 'Non catégorisé' : 'Non catégorisé'
@@ -249,9 +249,9 @@ export class ProductsComponent implements OnInit {
       },
       error: (error) => {
         console.error('Erreur lors du chargement des produits:', error);
-        this.toastService.error('Erreur lors du chargement des produits');
-        this.loadingProducts = false;
-      }
+      this.toastService.error('Erreur lors du chargement des produits');
+      this.loadingProducts = false;
+    }
     });
   }
 
@@ -363,24 +363,24 @@ export class ProductsComponent implements OnInit {
   async confirmDeleteCategory(): Promise<void> {
     if (!this.categoryToDelete || this.actionLoading) return;
 
-    this.actionLoading = true;
-    try {
+        this.actionLoading = true;
+        try {
       const store = await this.storeService.getSelectedStore().pipe(take(1)).toPromise();
-      if (!store) {
-        throw new Error('Aucune boutique sélectionnée');
-      }
+          if (!store) {
+            throw new Error('Aucune boutique sélectionnée');
+          }
 
       await this.categoryService.deleteCategory(store.id, this.categoryToDelete.id);
-      this.toastService.success('Catégorie supprimée avec succès');
+          this.toastService.success('Catégorie supprimée avec succès');
       this.loadCategories(); // Recharger les catégories
       this.showDeleteConfirm = null;
       this.categoryToDelete = null;
-    } catch (error) {
-      console.error('Erreur lors de la suppression de la catégorie:', error);
-      this.toastService.error('Erreur lors de la suppression de la catégorie');
-    } finally {
-      this.actionLoading = false;
-    }
+        } catch (error) {
+          console.error('Erreur lors de la suppression de la catégorie:', error);
+          this.toastService.error('Erreur lors de la suppression de la catégorie');
+        } finally {
+          this.actionLoading = false;
+        }
   }
 
   onSearch(): void {
@@ -536,7 +536,7 @@ export class ProductsComponent implements OnInit {
     } else {
       container.scrollLeft += scrollAmount;
     }
-
+    
     // Update scroll buttons after scrolling
     this.updateScrollButtons();
   }
@@ -547,11 +547,11 @@ export class ProductsComponent implements OnInit {
     const container = this.categoriesContainer.nativeElement;
     
     // Disable left button if at start
-    this.scrollLeftBtn.nativeElement.disabled = container.scrollLeft <= 0;
+      this.scrollLeftBtn.nativeElement.disabled = container.scrollLeft <= 0;
     
     // Disable right button if at end
-    const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
-    this.scrollRightBtn.nativeElement.disabled = isAtEnd;
+      const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
+      this.scrollRightBtn.nativeElement.disabled = isAtEnd;
   }
 
   ngAfterViewInit(): void {
