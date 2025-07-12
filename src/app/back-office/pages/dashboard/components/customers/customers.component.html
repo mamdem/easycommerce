@@ -151,22 +151,13 @@
               </td>
               <td class="text-center fw-bold">{{ formatAmount(customer.totalSpent) }}</td>
               <td class="text-end pe-3">
-                <div class="btn-group">
-                  <button class="btn btn-sm btn-light" title="Voir profil">
-                    <i class="bi bi-person text-primary"></i>
-                  </button>
-                  <button class="btn btn-sm btn-light" title="Voir les commandes">
-                    <i class="bi bi-cart text-success"></i>
-                  </button>
-                  <button class="btn btn-sm btn-light" title="Envoyer un email">
-                    <i class="bi bi-envelope text-secondary"></i>
-                  </button>
-                  <button class="btn btn-sm btn-light" 
-                          title="Gérer les doublons"
-                          *ngIf="hasDuplicates(customer)">
-                    <i class="bi bi-people text-warning"></i>
-                  </button>
-                </div>
+                <a [href]="'https://wa.me/' + normalizePhoneForWhatsApp(customer.phone)" 
+                   target="_blank" 
+                   class="btn btn-sm btn-light text-success" 
+                   title="Contacter sur WhatsApp"
+                   *ngIf="customer.phone">
+                  <i class="bi bi-whatsapp"></i>
+                </a>
               </td>
             </tr>
           </tbody>

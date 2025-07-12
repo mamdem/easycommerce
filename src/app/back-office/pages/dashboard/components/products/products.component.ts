@@ -1,6 +1,6 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
-import { Observable, map, firstValueFrom, combineLatest, of, switchMap } from 'rxjs';
+import { Observable, map, firstValueFrom, combineLatest, of, switchMap, takeUntil, filter, Subject } from 'rxjs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { CommonModule } from '@angular/common';
@@ -10,7 +10,7 @@ import { take } from 'rxjs/operators';
 import { Product } from '../../../../../core/models/product.model';
 import { Category } from '../../../../../core/models/category.model';
 import { ProductService } from '../../../../../core/services/product.service';
-import { StoreService } from '../../../../../core/services/store.service';
+import { StoreService, StoreSettings } from '../../../../../core/services/store.service';
 import { CategoryService } from '../../../../../core/services/category.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { PriceService } from '../../../../../core/services/price.service';
@@ -66,7 +66,7 @@ interface ProductWithPromotion extends Product {
     ])
   ]
 })
-export class ProductsComponent implements OnInit {
+export class ProductsComponent implements OnInit, OnDestroy {
   @ViewChild('categoriesContainer') categoriesContainer!: ElementRef;
   @ViewChild('scrollLeftBtn') scrollLeftBtn!: ElementRef;
   @ViewChild('scrollRightBtn') scrollRightBtn!: ElementRef;
@@ -116,6 +116,9 @@ export class ProductsComponent implements OnInit {
   showDeleteConfirm: string | null = null;
   categoryToDelete: Category | null = null;
 
+  // Pour la gestion de la destruction du composant
+  private destroy$ = new Subject<void>();
+
   constructor(
     private productService: ProductService,
     private storeService: StoreService,
@@ -140,6 +143,31 @@ export class ProductsComponent implements OnInit {
   ngOnInit(): void {
     this.loadCategories();
     this.loadProducts();
+
+    // S'abonner aux changements de boutique
+    this.storeService.selectedStore$.pipe(
+      takeUntil(this.destroy$),
+      switchMap(storeId => {
+        if (!storeId) {
+          return of(null);
+        }
+        return this.storeService.getSelectedStore();
+      }),
+      filter(store => !!store) // Ignorer les valeurs null
+    ).subscribe({
+      next: (store) => {
+        if (store) {
+          this.currentStore = store;
+          this.loadCategories();
+          this.loadProducts();
+          this.loadPromotions();
+        }
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement de la boutique:', error);
+        this.loading = false;
+      }
+    });
   }
 
   private async loadStore(): Promise<void> {
@@ -209,21 +237,22 @@ export class ProductsComponent implements OnInit {
           switchMap(activePromotions => {
             this.activePromotions = activePromotions;
             
-            // Charger les catégories d'abord
-            return this.categoryService.getStoreCategories(store.id).pipe(
-              switchMap(categories => {
-                const categoryMap = new Map(categories.map(cat => [cat.id, cat]));
-                
-                // Puis charger les produits
+            // Charger les produits avec le filtre de catégorie
                 return this.productService.getStoreProducts(store.id).pipe(
                   map(products => {
-                    return products.map(product => {
+                // Filtrer par catégorie si une catégorie est sélectionnée
+                let filteredProducts = products;
+                if (this.selectedCategory) {
+                  filteredProducts = products.filter(product => product.category === this.selectedCategory);
+                }
+
+                return filteredProducts.map(product => {
                       const productWithPromo: ProductWithPromotion = {
           ...product,
           originalPrice: product.price,
                         discountedPrice: null,
                         promotion: null,
-                        categoryName: product.category ? categoryMap.get(product.category)?.name || 'Non catégorisé' : 'Non catégorisé'
+                    categoryName: product.category ? this.getCategoryName(product.category) : 'Non catégorisé'
                       };
 
                       // Appliquer la promotion si disponible
@@ -235,8 +264,6 @@ export class ProductsComponent implements OnInit {
 
                       return productWithPromo;
                     });
-                  })
-                );
               })
             );
           })
@@ -526,10 +553,8 @@ export class ProductsComponent implements OnInit {
   }
 
   scrollCategories(direction: 'left' | 'right'): void {
-    if (!this.categoriesContainer) return;
-
     const container = this.categoriesContainer.nativeElement;
-    const scrollAmount = container.clientWidth * 0.8; // Défilement de 80% de la largeur visible
+    const scrollAmount = container.offsetWidth * 0.8; // Défilement de 80% de la largeur visible
     
     if (direction === 'left') {
       container.scrollLeft -= scrollAmount;
@@ -537,32 +562,48 @@ export class ProductsComponent implements OnInit {
       container.scrollLeft += scrollAmount;
     }
     
-    // Update scroll buttons after scrolling
-    this.updateScrollButtons();
+    // Mettre à jour la visibilité des boutons après le défilement
+    this.updateScrollButtonsVisibility();
   }
 
-  private updateScrollButtons(): void {
-    if (!this.categoriesContainer || !this.scrollLeftBtn || !this.scrollRightBtn) return;
-
+  private updateScrollButtonsVisibility(): void {
     const container = this.categoriesContainer.nativeElement;
     
-    // Disable left button if at start
+    // Désactiver le bouton gauche si on est au début
+    if (this.scrollLeftBtn) {
       this.scrollLeftBtn.nativeElement.disabled = container.scrollLeft <= 0;
+    }
     
-    // Disable right button if at end
-      const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
-      this.scrollRightBtn.nativeElement.disabled = isAtEnd;
+    // Désactiver le bouton droit si on est à la fin
+    if (this.scrollRightBtn) {
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      this.scrollRightBtn.nativeElement.disabled = container.scrollLeft >= maxScroll;
+    }
   }
 
   ngAfterViewInit(): void {
-    // Observer les changements de scroll
-    if (this.categoriesContainer) {
-      const container = this.categoriesContainer.nativeElement;
-      container.addEventListener('scroll', () => this.updateScrollButtons());
+    // Observer les changements de taille du conteneur
+    if (typeof ResizeObserver !== 'undefined') {
+      const resizeObserver = new ResizeObserver(() => {
+        this.updateScrollButtonsVisibility();
+      });
       
-      // Mise à jour initiale des boutons
-      this.updateScrollButtons();
+      if (this.categoriesContainer) {
+        resizeObserver.observe(this.categoriesContainer.nativeElement);
+      }
     }
+
+    // Observer le scroll du conteneur
+    if (this.categoriesContainer) {
+      this.categoriesContainer.nativeElement.addEventListener('scroll', () => {
+        this.updateScrollButtonsVisibility();
+      });
+    }
+      
+    // Vérification initiale
+    setTimeout(() => {
+      this.updateScrollButtonsVisibility();
+    });
   }
 
   showAllCategories(): void {
@@ -646,5 +687,10 @@ export class ProductsComponent implements OnInit {
     } finally {
       this.actionLoading = false;
     }
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 } 

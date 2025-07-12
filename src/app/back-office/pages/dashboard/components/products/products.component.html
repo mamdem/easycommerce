@@ -78,14 +78,14 @@
   </app-loading-spinner>
 
   <!-- Liste des catégories -->
-  <div class="categories-wrapper" #categoriesContainer *ngIf="!loadingCategories">
+  <div class="categories-wrapper">
     <!-- Bouton de défilement gauche -->
     <button class="scroll-button scroll-left" (click)="scrollCategories('left')" #scrollLeftBtn>
       <i class="bi bi-chevron-left"></i>
     </button>
 
     <!-- Liste des catégories -->
-    <div class="categories-grid">
+    <div class="categories-grid" #categoriesContainer>
       <!-- Carte "Voir tout" -->
       <div class="category-card view-all" 
            *ngIf="(categories$ | async)?.length"

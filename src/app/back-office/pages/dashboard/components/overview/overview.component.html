@@ -107,9 +107,30 @@
               </div>
             </div>
             <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
-              <span><i class="bi bi-circle-fill me-2 text-success"></i>Statut</span>
-              <span class="badge bg-success">{{ storeInfo.status }}</span>
+              <span>
+                <i class="bi" [ngClass]="getStatusIcon()" [class.text-success]="isSubscriptionActive"
+                   [class.text-warning]="isSubscriptionExpired"
+                   [class.text-info]="isTrialPeriod"
+                   [class.text-danger]="!isSubscriptionActive && !isSubscriptionExpired && !isTrialPeriod && !isSubscriptionLoading"
+                   [class.text-secondary]="isSubscriptionLoading"></i>
+                Statut
+              </span>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge" [ngClass]="getStatusClass()">
+                  <span *ngIf="isSubscriptionLoading" class="spinner-border spinner-border-sm me-1" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                  </span>
+                  {{ storeInfo.status }}
+                </span>
+                <button *ngIf="(!isTrialPeriod && !isSubscribed && paymentStatus !== 'paid') || isSubscriptionExpired"
+                        (click)="goToSubscriptionPage()"
+                        class="btn btn-sm btn-outline-primary">
+                  <i class="bi" [ngClass]="isSubscriptionExpired ? 'bi-arrow-clockwise' : 'bi-cart-plus'"></i>
+                  <span>{{ isSubscriptionExpired ? 'Renouveler l\'abonnement' : 'S\'abonner' }}</span>
+                </button>
+              </div>
             </div>
+            
             <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
               <span><i class="bi bi-box-seam me-2"></i>Total commandes</span>
               <span class="fw-bold">{{ storeInfo.orders.total }}</span>

@@ -6,6 +6,45 @@
       <p class="creation-subtitle">Suivez les étapes ci-dessous pour configurer votre espace de vente en ligne</p>
     </div>
   </div>
+
+  <!-- Bannière d'informations influenceur -->
+  <div *ngIf="influenceurCode" class="influencer-banner">
+    <div class="container">
+      <div class="influencer-card" [ngClass]="{
+        'loading': isValidatingInfluenceur,
+        'valid': influenceurData && influenceurData.statut === 'active',
+        'invalid': !influenceurData || influenceurData.statut !== 'active'
+      }">
+        <div class="influencer-icon">
+          <i *ngIf="isValidatingInfluenceur" class="bi bi-hourglass-split"></i>
+          <i *ngIf="!isValidatingInfluenceur && influenceurData && influenceurData.statut === 'active'" class="bi bi-check-circle-fill"></i>
+          <i *ngIf="!isValidatingInfluenceur && (!influenceurData || influenceurData.statut !== 'active')" class="bi bi-x-circle-fill"></i>
+        </div>
+        <div class="influencer-content">
+          <h3 class="influencer-title" *ngIf="isValidatingInfluenceur">
+            Vérification du code influenceur...
+          </h3>
+          <h3 class="influencer-title" *ngIf="!isValidatingInfluenceur && influenceurData && influenceurData.statut === 'active'">
+            Code influenceur validé !
+          </h3>
+          <h3 class="influencer-title" *ngIf="!isValidatingInfluenceur && (!influenceurData || influenceurData.statut !== 'active')">
+            Code influenceur invalide
+          </h3>
+          <p class="influencer-message">{{ influenceurValidationMessage }}</p>
+          <div *ngIf="influenceurData && influenceurData.statut === 'active'" class="influencer-details">
+            <div class="influencer-info">
+              <span class="influencer-name">{{ influenceurData.prenom }} {{ influenceurData.nom }}</span>
+              <span class="influencer-code">Code: {{ influenceurCode }}</span>
+            </div>
+            <div class="influencer-discount">
+              <span class="discount-label">Réduction</span>
+              <span class="discount-value">{{ influenceurData.reductionPourcentage }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   
   <div class="container">
     <div class="content-wrapper">
@@ -69,7 +108,7 @@
 
         <!-- Formulaire de création de boutique -->
         <div class="creation-form-card">
-          <form [formGroup]="storeForm" (ngSubmit)="submitForm()">
+          <form [formGroup]="storeForm" (ngSubmit)="onSubmit()">
             
             <!-- Étape 1: Informations de base -->
             <div *ngIf="currentStep === 1" class="step-content">

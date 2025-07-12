@@ -1,220 +1,523 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { StripeService } from '../../../core/services/stripe.service';
+import { NabooPayService } from '../../../core/services/naboo-pay.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { StoreService, StoreSettings } from '../../../core/services/store.service';
+import { TransactionService, Transaction } from '../../../core/services/transaction.service';
 import { ActivatedRoute, Router } from '@angular/router';
+import { trigger, transition, style, animate } from '@angular/animations';
+import { environment } from '../../../../environments/environment';
+import { AdminInfluenceurService } from '../../../admin/services/admin-influenceur.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-payment',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
+  animations: [
+    trigger('fadeInUp', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(20px)' }),
+        animate('0.4s ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+      ])
+    ])
+  ],
   template: `
     <div class="payment-page">
-      <div class="pricing-card">
+      <div class="hero-section">
         <a routerLink="/dashboard" class="back-link">
           <i class="bi bi-arrow-left"></i>
-          Retour
         </a>
 
+        <div class="pricing-card">
+          <div class="left-section">
         <div class="price-header">
-          <h1>Tribix</h1>
+            <div class="logo-container">
+              <img src="assets/lgo-jokkofy.png" alt="Jokkofy Logo" class="brand-logo">
+            </div>
           <p class="subtitle">Solution E-commerce Complète</p>
+            
+            <!-- Informations de la boutique -->
+            <div *ngIf="store" class="store-info">
+              <div class="store-logo">
+                <img [src]="store.logoUrl || 'assets/default-store.svg'" 
+                     [alt]="store.storeName"
+                     (error)="onImageError($event)">
+              </div>
+              <h2 class="store-name">{{ store.storeName }}</h2>
+            </div>
           
           <div class="price">
-            <span class="amount">19.99€</span>
-            <span class="period">/mois</span>
+                <span class="amount">{{ finalAmount }}</span>
+                <span class="currency">{{ paymentConfig.currency }}</span>
           </div>
-          <p class="trial">30 jours d'essai gratuit</p>
-        </div>
-
-        <div class="features">
-          <div class="feature-group">
-            <div class="feature-item">
-              <i class="bi bi-shop"></i>
-              <span>Interface de gestion complète</span>
+              <p class="trial">{{ paymentConfig.description }}</p>
+              <div *ngIf="reduction > 0" class="reduction-info">
+                <p>Réduction appliquée: {{ reduction }}%</p>
+                <p>Code promo: {{ store?.influenceurCode }}</p>
             </div>
-            <div class="feature-item">
-              <i class="bi bi-globe"></i>
-              <span>Site web personnalisé (www.tribix.com/votreboutique)</span>
-            </div>
-            <div class="feature-item">
-              <i class="bi bi-tools"></i>
-              <span>Outils marketing et statistiques</span>
-            </div>
-            <div class="feature-item">
-              <i class="bi bi-headset"></i>
-              <span>Support prioritaire 7j/7</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Messages de statut -->
-        <div *ngIf="paymentSuccess" class="status-message success">
-          <i class="bi bi-check-circle-fill"></i>
-          <p>Votre abonnement est actif</p>
-        </div>
-
-        <div *ngIf="paymentCanceled" class="status-message warning">
-          <i class="bi bi-exclamation-circle-fill"></i>
-          <p>Paiement annulé</p>
         </div>
 
         <!-- Bouton de paiement -->
         <button 
-          *ngIf="!paymentSuccess"
-          (click)="startSubscription()" 
+            *ngIf="!paymentSuccess && store"
+            (click)="startPayment()" 
           [disabled]="loading"
           class="subscribe-button">
-          <span *ngIf="!loading">Commencer l'essai gratuit</span>
+            <span *ngIf="!loading">Procéder au paiement</span>
           <div *ngIf="loading" class="spinner"></div>
         </button>
+          </div>
+
+          <div class="right-section">
+            <div class="features">
+              <h3>Fonctionnalités incluses</h3>
+              <div class="feature-list">
+                <div class="feature-item">
+                  <i class="bi bi-shop"></i>
+                  <span>Interface de gestion complète avec tableau de bord personnalisé</span>
+                </div>
+                <div class="feature-item">
+                  <i class="bi bi-globe"></i>
+                  <span>Site web personnalisé avec votre nom de domaine (www.tribix.com/votreboutique)</span>
+                </div>
+                <div class="feature-item">
+                  <i class="bi bi-tools"></i>
+                  <span>Outils marketing avancés et statistiques détaillées pour suivre vos performances</span>
+                </div>
+                <div class="feature-item">
+                  <i class="bi bi-headset"></i>
+                  <span>Support prioritaire 7j/7 avec une équipe dédiée à votre succès</span>
+                </div>
+                <div class="feature-item">
+                  <i class="bi bi-cart-check"></i>
+                  <span>Gestion des commandes et des stocks en temps réel</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Messages de statut -->
+            <div *ngIf="paymentSuccess" class="status-message success" @fadeInUp>
+              <i class="bi bi-check-circle-fill"></i>
+              <p>Votre abonnement est actif</p>
+              <a routerLink="/dashboard" class="action-link">Accéder au tableau de bord</a>
+            </div>
+
+            <div *ngIf="paymentCanceled" class="status-message warning" @fadeInUp>
+              <i class="bi bi-exclamation-circle-fill"></i>
+              <p>Paiement annulé</p>
+              <button class="retry-button" (click)="startPayment()">Réessayer</button>
+            </div>
+
+            <!-- Message d'erreur si pas de boutique -->
+            <div *ngIf="!store && !loading" class="status-message warning" @fadeInUp>
+              <i class="bi bi-exclamation-circle-fill"></i>
+              <p>Aucune boutique sélectionnée</p>
+              <a routerLink="/dashboard/stores" class="action-link">Sélectionner une boutique</a>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `,
   styles: [`
+    $primary-color: #fe7b33;
+    $primary-color-dark: darken(#fe7b33, 10%);
+    $secondary-color: #00c3d6;
+    $secondary-color-dark: darken(#00c3d6, 10%);
+    $dark-color: #1a1f36;
+    $text-color: #4a5568;
+    $border-radius: 16px;
+    $box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    $transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
     .payment-page {
       min-height: 100vh;
-      background: #f8f9fa;
+      background: #f8fafc;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      padding: 2rem;
+    }
+
+    .hero-section {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: linear-gradient(135deg, rgba($secondary-color, 0.05) 0%, rgba($primary-color, 0.05) 100%);
+      position: relative;
+      overflow: hidden;
+      min-height: calc(100vh - 4rem);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 1rem;
+      border-radius: 24px;
     }
 
     .pricing-card {
       background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      padding: 2rem;
+      border-radius: $border-radius;
+      box-shadow: $box-shadow;
       width: 100%;
-      max-width: 500px;
+      max-width: 1000px;
+      margin: 2rem;
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      overflow: hidden;
       position: relative;
+      z-index: 1;
+
+      .left-section {
+        padding: 3rem;
+        background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+        border-right: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .right-section {
+        padding: 3rem;
+        background: white;
+      }
     }
 
     .back-link {
       position: absolute;
-      top: 1rem;
-      left: 1rem;
-      color: #666;
+      top: 2rem;
+      left: 2rem;
+      color: $dark-color;
       text-decoration: none;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      font-size: 0.9rem;
+      justify-content: center;
+      transition: $transition;
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      z-index: 2;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+
+      i {
+        font-size: 1.4rem;
+        transition: $transition;
+      }
+
+      &:hover {
+        color: $primary-color;
+        background: white;
+        transform: translateX(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+
+        i {
+          transform: translateX(-2px);
+        }
+      }
+
+      @media (max-width: 768px) {
+        top: 1rem;
+        left: 1rem;
+        width: 40px;
+        height: 40px;
+
+        i {
+          font-size: 1.2rem;
+        }
+      }
     }
 
     .price-header {
       text-align: center;
       margin-bottom: 2rem;
 
-      h1 {
-        font-size: 2rem;
-        margin: 0;
+      .logo-container {
+        margin-bottom: 1.5rem;
+        
+        .brand-logo {
+          height: 60px;
+          width: auto;
+          object-fit: contain;
+        }
       }
 
       .subtitle {
-        color: #666;
-        margin: 0.5rem 0 1.5rem;
+        color: $text-color;
+        margin: 0.75rem 0;
+        font-size: 1.1rem;
+        letter-spacing: -0.01em;
+      }
+
+      .store-info {
+        margin: 2rem 0;
+        
+        .store-logo {
+          width: 80px;
+          height: 80px;
+          margin: 0 auto 1rem;
+          border-radius: 50%;
+          overflow: hidden;
+          border: 2px solid rgba($primary-color, 0.1);
+          padding: 2px;
+          background: white;
+          
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+          }
+        }
+        
+        .store-name {
+          font-size: 1.5rem;
+          color: $dark-color;
+          margin: 0;
+          font-weight: 600;
+        }
       }
 
       .price {
+        margin: 1.5rem 0;
+        
         .amount {
-          font-size: 2.5rem;
+          font-size: 3.5rem;
           font-weight: 700;
+          color: $primary-color;
+          letter-spacing: -0.02em;
         }
 
-        .period {
-          color: #666;
+        .currency {
+          color: $text-color;
+          margin-left: 0.5rem;
+          font-size: 1.2rem;
+          font-weight: 500;
         }
       }
 
       .trial {
-        color: #2563eb;
-        margin-top: 0.5rem;
+        color: $secondary-color;
+        margin-top: 0.75rem;
+        font-weight: 500;
       }
     }
 
     .features {
-      margin: 2rem 0;
+      margin-top: 2rem;
+
+      h3 {
+        font-size: 1.25rem;
+        color: $dark-color;
+        margin-bottom: 1.5rem;
+        font-weight: 600;
+      }
     }
 
-    .feature-group {
-      display: grid;
+    .feature-list {
+      display: flex;
+      flex-direction: column;
       gap: 1rem;
     }
 
     .feature-item {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 1rem;
-      padding: 0.75rem;
-      background: #f8f9fa;
-      border-radius: 8px;
+      padding: 1.25rem;
+      background: rgba($primary-color, 0.02);
+      border-radius: $border-radius;
+      transition: $transition;
+      border: 1px solid rgba($primary-color, 0.05);
+
+      &:hover {
+        background: rgba($primary-color, 0.05);
+        transform: translateX(8px);
+      }
 
       i {
-        color: #2563eb;
-        font-size: 1.2rem;
+        color: $primary-color;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+        margin-top: 0.2rem;
       }
 
       span {
-        color: #333;
+        color: $dark-color;
+        font-size: 0.95rem;
+        font-weight: 500;
+        line-height: 1.5;
+      }
+    }
+
+    .status-message {
+      text-align: center;
+      padding: 1.5rem;
+      border-radius: $border-radius;
+      margin: 2rem 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+
+      i {
+        font-size: 2rem;
+      }
+
+      p {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+
+      &.success {
+        background: rgba(#10B981, 0.1);
+        color: #059669;
+      }
+
+      &.warning {
+        background: rgba(#F59E0B, 0.1);
+        color: #B45309;
+      }
+
+      .action-link {
+        color: inherit;
+        text-decoration: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.5);
+        transition: $transition;
+        margin-top: 0.5rem;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.8);
+        }
+      }
+
+      .retry-button {
+        background: none;
+        border: none;
+        color: inherit;
+        font-size: 1rem;
+        font-weight: 500;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: $transition;
+        background: rgba(255, 255, 255, 0.5);
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.8);
+        }
+      }
+    }
+
+    .reduction-info {
+      margin-top: 1rem;
+      padding: 1.25rem;
+      background: rgba($primary-color, 0.05);
+      border-radius: $border-radius;
+      border: 1px solid rgba($primary-color, 0.1);
+      
+      p {
+        margin: 0;
+        color: $primary-color;
+        font-size: 0.95rem;
+        
+        &:first-child {
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+        }
       }
     }
 
     .subscribe-button {
       width: 100%;
-      padding: 1rem;
-      background: #2563eb;
-      color: white;
+      padding: 1.25rem;
       border: none;
-      border-radius: 8px;
-      font-size: 1rem;
+      background: $primary-color;
+      color: white;
+      font-size: 1.1rem;
       font-weight: 600;
+      border-radius: $border-radius;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: $transition;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      position: relative;
+      overflow: hidden;
+      margin-top: 2rem;
 
       &:hover {
-        background: #1d4ed8;
+        background: $primary-color-dark;
+        transform: translateY(-2px);
+      }
+
+      &:active {
+        transform: translateY(0);
       }
 
       &:disabled {
-        background: #94a3b8;
-      }
-    }
-
-    .status-message {
-      margin: 1rem 0;
-      padding: 1rem;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-
-      &.success {
-        background: #dcfce7;
-        color: #166534;
-      }
-
-      &.warning {
-        background: #fff7ed;
-        color: #9a3412;
-      }
+        background: #CBD5E0;
+        cursor: not-allowed;
+        transform: none;
     }
 
     .spinner {
-      display: inline-block;
       width: 20px;
       height: 20px;
-      border: 2px solid rgba(255,255,255,0.3);
+        border: 2px solid rgba(255, 255, 255, 0.3);
       border-radius: 50%;
       border-top-color: white;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
+        animation: spin 0.8s linear infinite;
+      }
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    // Responsive design
+    @media (max-width: 1024px) {
+      .pricing-card {
+        grid-template-columns: 1fr;
+        max-width: 600px;
+
+        .left-section {
+          border-right: none;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+      }
+    }
+
+    @media (max-width: 768px) {
+      .payment-page {
+        padding: 1rem;
+      }
+
+      .pricing-card {
+        margin: 1rem;
+
+        .left-section,
+        .right-section {
+          padding: 2rem;
+        }
+      }
+
+      .feature-list {
+        grid-template-columns: 1fr;
+      }
+
+      .price-header {
+        .price {
+          .amount {
+            font-size: 2.5rem;
+          }
+        }
+      }
     }
   `]
 })
@@ -222,65 +525,130 @@ export class PaymentComponent implements OnInit {
   loading = false;
   paymentSuccess = false;
   paymentCanceled = false;
+  store: StoreSettings | null = null;
+  currentTransactionId: string | null = null;
+  paymentConfig = environment.payment;
+  reduction = 0;
+  finalAmount: number = this.paymentConfig.amount;
 
   constructor(
     private stripeService: StripeService,
+    private nabooPayService: NabooPayService,
     private toastService: ToastService,
+    private storeService: StoreService,
+    private transactionService: TransactionService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private influenceurService: AdminInfluenceurService
   ) {}
 
-  ngOnInit() {
-    this.route.queryParams.subscribe(params => {
-      if (params['success'] === 'true' && params['session_id']) {
-        this.checkPaymentStatus(params['session_id']);
-      } else if (params['canceled'] === 'true') {
-        this.paymentCanceled = true;
-        this.toastService.warning('Le paiement a été annulé');
+  async ngOnInit() {
+    this.loading = true;
+    
+    // Vérifier d'abord les paramètres de route
+    const routeStoreId = this.route.snapshot.params['storeId'];
+    // Puis les query params
+    const queryStoreId = this.route.snapshot.queryParamMap.get('storeId');
+    
+    const storeId = routeStoreId || queryStoreId;
+    
+      if (storeId) {
+      await this.loadStoreData(storeId);
+    } else {
+      // Si pas de storeId, essayer de charger la boutique par défaut de l'utilisateur
+      const userStore = await firstValueFrom(this.storeService.getUserStore());
+      if (userStore) {
+        await this.loadStoreData(userStore.id!);
+      } else {
+        this.loading = false;
+        this.toastService.error('Veuillez d\'abord sélectionner une boutique');
       }
-    });
+    }
   }
 
-  startSubscription() {
-    this.loading = true;
-    this.stripeService.createSubscriptionSession().subscribe({
-      next: async (response) => {
-        if (response.sessionId) {
-          try {
-            await this.stripeService.redirectToCheckout(response.sessionId);
-          } catch (error) {
-            this.toastService.error('Erreur lors de la redirection vers le paiement');
-          }
-        } else {
-          this.toastService.error('Erreur lors de la création de la session de paiement');
-        }
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('Erreur:', error);
-        this.toastService.error('Erreur lors de l\'initialisation du paiement');
-        this.loading = false;
+  async loadStoreData(storeId: string) {
+    try {
+      const storeData = await firstValueFrom(this.storeService.getStoreById(storeId));
+      if (storeData) {
+        this.store = storeData;
+        await this.checkInfluenceurReduction();
+      } else {
+        this.toastService.error('Boutique non trouvée');
       }
-    });
+    } catch (error) {
+      console.error('Erreur lors du chargement de la boutique:', error);
+      this.toastService.error('Erreur lors du chargement de la boutique');
+    } finally {
+      this.loading = false;
+    }
   }
 
-  private checkPaymentStatus(sessionId: string) {
-    this.loading = true;
-    this.stripeService.getSubscriptionStatus(sessionId).subscribe({
-      next: (response) => {
-        if (response.status === 'complete') {
-          this.paymentSuccess = true;
-          this.toastService.success('Paiement réussi ! Votre abonnement est actif');
-        } else {
-          this.toastService.error('Le statut du paiement est incertain');
+  async checkInfluenceurReduction() {
+    if (this.store?.influenceurCode) {
+      try {
+        const influenceur = await firstValueFrom(
+          this.influenceurService.getInfluenceurByCodePromo(this.store.influenceurCode)
+        );
+        
+        if (influenceur && influenceur.statut === 'active') {
+          this.reduction = influenceur.reductionPourcentage;
+          this.finalAmount = this.calculateReducedAmount(this.paymentConfig.amount, this.reduction);
         }
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('Erreur lors de la vérification du paiement:', error);
-        this.toastService.error('Erreur lors de la vérification du paiement');
-        this.loading = false;
+      } catch (error) {
+        console.error('Erreur lors de la vérification du code promo:', error);
       }
-    });
+    }
+  }
+
+  calculateReducedAmount(amount: number, reduction: number): number {
+    return Math.round(amount * (1 - reduction / 100));
+  }
+
+  async startPayment() {
+    if (!this.store) {
+      this.toastService.error('Veuillez sélectionner une boutique');
+      return;
+    }
+
+    this.loading = true;
+
+    try {
+      // Créer d'abord la transaction dans Firestore
+      const transactionData: Partial<Transaction> = {
+        amount: this.finalAmount,
+        description: this.paymentConfig.description,
+        paymentMethod: 'wave',
+        status: 'pending'
+      };
+
+      this.currentTransactionId = await this.transactionService.createTransaction(
+        this.store.id!,
+        transactionData
+      );
+
+      // Initier le paiement avec NabooPay
+      const paymentData = {
+        amount: this.finalAmount,
+        storeId: this.store.id!
+      };
+
+      const paymentResponse = await this.nabooPayService.initiatePayment(paymentData);
+
+      if (paymentResponse.success && paymentResponse.paymentUrl) {
+        // Rediriger vers la page de paiement
+        window.location.href = paymentResponse.paymentUrl;
+          } else {
+        throw new Error(paymentResponse.error || 'Échec de l\'initialisation du paiement');
+      }
+    } catch (error) {
+      console.error('Erreur lors du paiement:', error);
+      this.toastService.error('Une erreur est survenue lors du paiement');
+      this.loading = false;
+    }
+  }
+
+  onImageError(event: Event) {
+    const img = event.target as HTMLImageElement;
+    img.src = 'assets/default-store.svg';
   }
 } 

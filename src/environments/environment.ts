@@ -12,5 +12,10 @@ export const environment = {
   apiUrl: 'http://localhost:3000/api',
   stripe: {
     publicKey: 'pk_test_51RZvh4PMfqUqZ3cAVjE03VByo2Buraxy4DHEqds2WTJc1VUpHBqurLP56AFfO0co8VfzvOcVLdPV61JlLU9Rv6MC00RuKcY2JF'
+  },
+  payment: {
+    amount: 12700,
+    currency: 'FCFA',
+    description: 'Paiement de Jokkofy'
   }
 };

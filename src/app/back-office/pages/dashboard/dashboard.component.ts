@@ -6,18 +6,21 @@ import { AuthService } from '../../../core/services/auth.service';
 import { StoreService, StoreData, StoreSettings } from '../../../core/services/store.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { NavbarComponent } from '../../../shared/navbar/navbar.component';
-import { map, switchMap } from 'rxjs/operators';
+import { map, switchMap, catchError } from 'rxjs/operators';
 import { Store } from '../../../core/models/store.model';
 import { User } from '../../../core/models/user.model';
 import { CartService } from '../../../core/services/cart.service';
-import { Observable, of, Subscription } from 'rxjs';
+import { Observable, of, Subscription, forkJoin } from 'rxjs';
 import { SubscriptionService, SubscriptionStatus } from '../../../core/services/subscription.service';
-import { NotificationService } from '../../../core/services/notification.service';
+import { NotificationService, Notification } from '../../../core/services/notification.service';
 import { NotificationDrawerComponent } from '../../../dashboard/components/notification-drawer/notification-drawer.component';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { TransactionService, Transaction, StoreTransaction } from '../../../core/services/transaction.service';
+import { NabooPayService } from '../../../core/services/naboo-pay.service';
+import { OverviewComponent } from './components/overview/overview.component';
 
 @Component({
   selector: 'app-dashboard', 
@@ -28,7 +31,8 @@ import { trigger, transition, style, animate } from '@angular/animations';
     NotificationDrawerComponent,
     NgbDropdownModule,
     FormsModule,
-    MatDialogModule
+    MatDialogModule,
+    OverviewComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
@@ -81,6 +85,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   selectedStoreId: string | null = null;
   loading: boolean = true;
   
+  // États de l'abonnement
+  isSubscribed: boolean = false;
+  isSubscriptionExpired: boolean = false;
+  paymentStatus: 'pending' | 'paid' | 'failed' = 'pending';
+  isTrialPeriod: boolean = false;
+  trialDaysLeft: number = 0;
+  
   // Produits récents
   recentProducts: any[] = [
     { id: 'P001', name: 'Produit 1', category: 'Électronique', price: 99.99, stock: 15 },
@@ -116,39 +127,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   storeUrl: string = '';
 
   notificationsCount = 0;
+  notifications: Notification[] = [];
 
   subscriptionStatus: SubscriptionStatus | null = null;
   private subscriptionStatusSub: Subscription | null = null;
 
   isNotificationDrawerOpen = false;
-  notifications: any[] = [
-    {
-      id: 1,
-      type: 'order',
-      icon: 'bi-cart-check',
-      message: 'Nouvelle commande reçue',
-      time: 'Il y a 5 minutes',
-      isUnread: true
-    },
-    {
-      id: 2,
-      type: 'review',
-      icon: 'bi-star',
-      message: 'Nouvel avis client',
-      time: 'Il y a 2 heures',
-      isUnread: false
-    },
-    {
-      id: 3,
-      type: 'stock',
-      icon: 'bi-box-seam',
-      message: 'Stock faible pour "Produit X"',
-      time: 'Il y a 1 jour',
-      isUnread: false
-    }
-  ];
 
   showLogoutConfirm = false;
+
+  // Ajouter les propriétés pour les transactions
+  storeTransactions: Transaction[] = [];
+  transactionDetails: any[] = [];
+
+  currentTransaction: StoreTransaction | null = null;
+
+  // Ajouter cette propriété
+  lastPaymentDate: Date | null = null;
 
   constructor(
     private authService: AuthService,
@@ -158,7 +153,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private cartService: CartService,
     private subscriptionService: SubscriptionService,
     private notificationService: NotificationService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private transactionService: TransactionService,
+    private nabooPayService: NabooPayService
   ) {
     this.loadUserData();
   }
@@ -168,8 +165,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.updateUserStatus();
     this.loadSelectedStore();
     this.loadUserStores();
-    this.loadNotifications();
-    this.loadNotificationsCount();
+    this.checkTransactionStatus();
 
     // S'abonner aux changements du panier
     this.cartService.cartItems$.subscribe(items => {
@@ -202,21 +198,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
       
       // Charger les données de la boutique sélectionnée
       this.storeService.getStoreById(this.selectedStoreId).subscribe(
-        (store) => {
-          this.selectedStore = store as any;
-          this.loading = false;
-          
+        (store: StoreSettings | null) => {
           if (store) {
+            this.selectedStore = store;
+            this.loading = false;
+            this.checkTrialPeriod();
+            
+            // Vérifier le statut d'abonnement
+            this.checkStoreSubscriptionStatus(store);
+            
             // Mettre à jour les informations de la boutique
             this.storeInfo.name = store.storeName || store.legalName || this.storeInfo.name;
             this.storeInfo.url = store.id || this.storeInfo.url;
             
             // Appliquer le thème de la boutique avec les couleurs
-            console.log('Couleurs de la boutique:', {
-              primary: store.primaryColor,
-              secondary: store.secondaryColor
-            });
-            
             if (store.primaryColor && store.secondaryColor) {
               this.storeService.applyStoreTheme(store.primaryColor, store.secondaryColor);
               this.setRgbValues(store.primaryColor, store.secondaryColor);
@@ -224,6 +219,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
             
             // Charger les données détaillées
             this.loadStoreData();
+            
+            // Charger les notifications maintenant que la boutique est sélectionnée
+            this.loadNotifications();
+            this.loadNotificationsCount();
           } else {
             this.router.navigate(['/home']);
           }
@@ -237,32 +236,39 @@ export class DashboardComponent implements OnInit, OnDestroy {
     } else {
       // S'il n'y a pas de boutique sélectionnée, charger la première boutique de l'utilisateur
       this.loading = true;
-      this.storeService.getStoreSettings().subscribe(
+      this.storeService.getUserStores().subscribe(
         (stores) => {
           if (stores && stores.length > 0) {
-            const firstStore = stores[0] as any;
+            const firstStore = stores[0];
             this.selectedStore = firstStore;
-            this.selectedStoreId = firstStore.id;
+            this.selectedStoreId = firstStore.id || null;
+            
+            // Récupérer la transaction courante depuis le document de la première boutique
+            if (firstStore.currentTransaction) {
+              this.currentTransaction = firstStore.currentTransaction;
+              console.log('Transaction courante de la première boutique:', this.currentTransaction);
+            }
             
             // Stocker l'ID pour les prochaines visites
-            localStorage.setItem('selectedStoreId', firstStore.id || '');
+            if (firstStore.id) {
+              localStorage.setItem('selectedStoreId', firstStore.id);
+            }
             
             // Mettre à jour les informations de la boutique
             this.storeInfo.name = firstStore.storeName || firstStore.legalName || this.storeInfo.name;
             this.storeInfo.url = firstStore.id || this.storeInfo.url;
             
             // Appliquer le thème de la boutique
-            console.log('Couleurs de la première boutique:', {
-              primary: firstStore.primaryColor,
-              secondary: firstStore.secondaryColor
-            });
-            
             if (firstStore.primaryColor && firstStore.secondaryColor) {
               this.storeService.applyStoreTheme(firstStore.primaryColor, firstStore.secondaryColor);
             }
             
             // Charger les données détaillées
             this.loadStoreData();
+            
+            // Charger les notifications maintenant que la boutique est sélectionnée
+            this.loadNotifications();
+            this.loadNotificationsCount();
           } else {
             this.toastService.warning('Vous n\'avez pas encore de boutique, créez-en une !', 'Information');
             this.router.navigate(['/store-creation']);
@@ -497,6 +503,69 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Vérifier si l'abonnement est expiré (plus de 30 jours)
+   */
+  private checkSubscriptionExpiration(transactionDate: string): boolean {
+    const paymentDate = new Date(transactionDate);
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - paymentDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 30;
+  }
+
+  /**
+   * Vérifie le statut d'abonnement pour une boutique donnée
+   */
+  private checkStoreSubscriptionStatus(store: StoreSettings): void {
+    if (store.currentTransaction?.orderId) {
+      this.nabooPayService.getTransactionDetails(store.currentTransaction.orderId).subscribe({
+        next: (transactionDetails) => {
+          console.log('Détails de la transaction:', transactionDetails);
+          
+          // Vérifier l'expiration
+          this.isSubscriptionExpired = this.checkSubscriptionExpiration(transactionDetails.created_at);
+          
+          this.isSubscribed = transactionDetails.transaction_status === 'paid' && !this.isSubscriptionExpired;
+          this.paymentStatus = this.isSubscriptionExpired ? 'failed' : transactionDetails.transaction_status;
+          
+          if (transactionDetails.created_at) {
+            this.lastPaymentDate = new Date(transactionDetails.created_at);
+          }
+
+          // Mettre à jour les informations de période d'essai
+          this.checkTrialPeriod();
+
+          // Mettre à jour le localStorage
+          if (this.isSubscribed) {
+            localStorage.setItem('subscriptionStatus', 'active');
+            localStorage.setItem('lastPaymentDate', this.lastPaymentDate?.toISOString() || '');
+          } else {
+            localStorage.setItem('subscriptionStatus', 'inactive');
+          }
+        },
+        error: (error) => {
+          console.error('Erreur lors de la vérification du statut de la transaction:', error);
+          this.isSubscribed = false;
+          this.paymentStatus = 'failed';
+          localStorage.setItem('subscriptionStatus', 'inactive');
+          
+          // Mettre à jour les informations de période d'essai même en cas d'erreur
+          this.checkTrialPeriod();
+        }
+      });
+    } else {
+      // Réinitialiser le statut si pas de transaction
+      this.isSubscribed = false;
+      this.paymentStatus = 'pending';
+      this.lastPaymentDate = null;
+      localStorage.setItem('subscriptionStatus', 'inactive');
+      
+      // Mettre à jour les informations de période d'essai
+      this.checkTrialPeriod();
+    }
+  }
+
+  /**
    * Sélectionne une boutique
    */
   selectStore(storeId: string): void {
@@ -541,6 +610,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.storeService.applyStoreTheme(store.primaryColor, store.secondaryColor);
             this.setRgbValues(store.primaryColor, store.secondaryColor);
           }
+
+          // Vérifier le statut d'abonnement
+          this.checkStoreSubscriptionStatus(store);
+          
+          // Mettre à jour les informations de période d'essai
+          this.checkTrialPeriod();
           
           // Charger les données de la boutique
           this.loadStoreData();
@@ -563,11 +638,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /**
    * Gère le changement de sélection dans le select
    */
-  onStoreSelect(event: Event): void {
-    const select = event.target as HTMLSelectElement;
-    if (select) {
-      this.selectStore(select.value);
+  onStoreSelect(event: any) {
+    const selectedStoreId = event.target.value;
+    
+    if (selectedStoreId === 'new') {
+      this.router.navigate(['/store-creation']);
+      return;
     }
+    
+    this.loading = true;
+    this.storeService.updateSelectedStore(selectedStoreId);
+    
+    this.storeService.getStoreById(selectedStoreId).subscribe({
+      next: (store) => {
+        if (store) {
+          this.selectedStore = store;
+          this.checkStoreSubscriptionStatus(store);
+          // Mettre à jour les informations de période d'essai
+          this.checkTrialPeriod();
+        }
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement de la boutique:', error);
+        this.loading = false;
+      }
+    });
   }
 
   async loadUserData() {
@@ -609,20 +705,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Charge les notifications (à implémenter avec votre service de notifications)
+   * Charge les notifications
    */
   private loadNotifications(): void {
-    // Pour l'instant, on compte juste les notifications non lues
-    this.notificationsCount = this.notifications.filter(n => n.isUnread).length;
+    if (this.selectedStore?.id) {
+      this.notificationService.getStoreNotifications(this.selectedStore.id).subscribe({
+        next: (notifications: Notification[]) => {
+          this.notifications = notifications;
+          this.notificationsCount = notifications.filter(n => n.status === 'UNREAD').length;
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement des notifications:', error);
+        }
+      });
+    }
   }
 
   getSubscriptionStatusText(status: SubscriptionStatus): string {
     if (!status?.status) return 'S\'abonner';
     
     switch (status.status.toLowerCase()) {
-      case 'trialing':
-        const days = status.daysLeftInTrial || 30;
-        return `Essai gratuit (${days}j)`;
       case 'active':
         return 'Abonné';
       case 'past_due':
@@ -640,8 +742,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!status?.status) return 'btn-primary';
     
     switch (status.status.toLowerCase()) {
-      case 'trialing':
-        return 'btn-info';
       case 'active':
         return 'btn-success';
       case 'past_due':
@@ -658,8 +758,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!status?.status) return 'bi-cart-plus';
     
     switch (status.status.toLowerCase()) {
-      case 'trialing':
-        return 'bi-hourglass-split';
       case 'active':
         return 'bi-check-circle-fill';
       case 'past_due':
@@ -675,7 +773,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   goToSubscriptionPage(): void {
     console.log('🟣 Navigation vers la page d\'abonnement');
-    this.router.navigate(['/payment']);
+    if (this.selectedStore?.id) {
+      this.router.navigate(['/payment', this.selectedStore.id]);
+    } else {
+      this.toastService.error('Veuillez d\'abord sélectionner une boutique');
+    }
   }
 
   toggleNotificationDrawer() {
@@ -685,12 +787,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   markAllNotificationsAsRead() {
+    if (this.selectedStore?.id) {
+      this.notificationService.markAllAsRead(this.selectedStore.id).then(() => {
     this.notifications = this.notifications.map(notification => ({
       ...notification,
-      isUnread: false
+          status: 'READ' as const
     }));
     this.notificationsCount = 0;
+        this.loadNotificationsCount(); // Recharger le compteur
     this.toastService.success('Toutes les notifications ont été marquées comme lues');
+      }).catch(error => {
+        console.error('Erreur lors du marquage des notifications:', error);
+        this.toastService.error('Erreur lors du marquage des notifications');
+      });
+    }
   }
 
   private loadNotificationsCount() {
@@ -700,6 +810,117 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.notificationsCount = count;
         }
       );
+    }
+  }
+
+  /**
+   * Vérifie si la boutique est en période d'essai
+   * @returns boolean
+   */
+  checkTrialPeriod(): void {
+    if (this.selectedStore) {
+      const creationDate = new Date(this.selectedStore.createdAt);
+      const today = new Date();
+      const diffTime = Math.abs(today.getTime() - creationDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      this.isTrialPeriod = diffDays <= 15;
+      this.trialDaysLeft = Math.max(15 - diffDays, 0);
+    }
+  }
+
+  /**
+   * Charge les transactions de la boutique
+   */
+  loadStoreTransactions(): void {
+    if (!this.selectedStore?.id) return;
+
+    this.transactionService.getStoreTransactions(this.selectedStore.id)
+      .subscribe({
+        next: (transactions) => {
+          this.storeTransactions = transactions;
+          console.log('Transactions de la boutique:', transactions);
+
+          // Pour chaque transaction, récupérer les détails depuis NabooPay
+          const detailsRequests = transactions
+            .filter(transaction => {
+              // Vérifier si la transaction a un ID valide
+              if (!transaction.transactionId) {
+                console.log('Transaction sans ID trouvée:', transaction);
+                return false;
+              }
+              return true;
+            })
+            .map(transaction => {
+              console.log('Récupération des détails pour la transaction:', transaction.transactionId);
+              return this.nabooPayService.getTransactionDetails(transaction.transactionId!).pipe(
+                catchError(error => {
+                  // Log détaillé de l'erreur
+                  console.error(`Erreur détaillée pour la transaction ${transaction.transactionId}:`, {
+                    error,
+                    transaction,
+                    timestamp: new Date().toISOString()
+                  });
+                  
+                  // Si l'erreur est "Resource not found", on peut marquer la transaction comme échouée
+                  if (error?.message?.includes('Resource not found')) {
+                    this.transactionService.updateTransactionStatus(
+                      this.selectedStore!.id!,
+                      transaction.transactionId!,
+                      'failed'
+                    ).catch(updateError => {
+                      console.error('Erreur lors de la mise à jour du statut de la transaction:', updateError);
+                    });
+                  }
+                  
+                  return of(null);
+                })
+              );
+            });
+
+          if (detailsRequests.length > 0) {
+            // Attendre que toutes les requêtes soient terminées
+            forkJoin(detailsRequests).subscribe(details => {
+              // Filtrer les résultats null (erreurs)
+              this.transactionDetails = details.filter(detail => detail !== null);
+              console.log('Détails des transactions depuis NabooPay:', this.transactionDetails);
+            });
+          } else {
+            console.log('Aucune transaction avec transactionId trouvée');
+          }
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement des transactions:', error);
+          this.toastService.error('Impossible de charger les transactions');
+        }
+      });
+  }
+
+  private checkTransactionStatus(): void {
+    const lastTransactionId = localStorage.getItem('lastTransactionId');
+    if (lastTransactionId) {
+      this.nabooPayService.getTransactionDetails(lastTransactionId).subscribe({
+        next: (response) => {
+          console.log('Statut de la transaction:', response);
+          
+          // Vérifier l'expiration
+          this.isSubscriptionExpired = this.checkSubscriptionExpiration(response.created_at);
+          
+          if (response.transaction_status === 'paid' && !this.isSubscriptionExpired) {
+            this.isSubscribed = true;
+            this.paymentStatus = 'paid';
+            this.lastPaymentDate = new Date(response.created_at);
+            localStorage.setItem('subscriptionStatus', 'active');
+          } else if (response.transaction_status === 'failed' || this.isSubscriptionExpired) {
+            this.isSubscribed = false;
+            this.paymentStatus = 'failed';
+            localStorage.setItem('subscriptionStatus', 'inactive');
+          }
+        },
+        error: (error) => {
+          console.error('Erreur lors de la vérification du statut:', error);
+        }
+      });
     }
   }
 } 

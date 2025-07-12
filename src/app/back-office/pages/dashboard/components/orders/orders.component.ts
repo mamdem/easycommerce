@@ -1,8 +1,9 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
+import { Subject, takeUntil, switchMap, filter, of } from 'rxjs';
 import { OrderService } from '../../../../../core/services/order.service';
 import { StoreService } from '../../../../../core/services/store.service';
 import { Order, OrderStatus } from '../../../../../core/models/order.model';
@@ -13,6 +14,7 @@ import { LoadingSpinnerComponent } from '../../../../../shared/components/loadin
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { Store } from '../../../../../core/models/store.model';
 
 type SortColumn = 'customerName' | 'itemsCount' | 'total' | 'date' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -29,12 +31,16 @@ type SortDirection = 'asc' | 'desc';
     LoadingSpinnerComponent
   ]
 })
-export class OrdersComponent implements OnInit {
+export class OrdersComponent implements OnInit, OnDestroy {
   // Propriété Math pour l'utiliser dans le template
   Math = Math;
 
   orders: Order[] = [];
   loading = true;
+  currentStore!: Store;
+  
+  // Pour la gestion de la destruction du composant
+  private destroy$ = new Subject<void>();
   
   // Propriétés pour le tri
   sortColumn: SortColumn = 'date';
@@ -81,14 +87,33 @@ export class OrdersComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    // S'abonner aux changements de boutique
+    this.storeService.selectedStore$.pipe(
+      takeUntil(this.destroy$),
+      switchMap(storeId => {
+        if (!storeId) {
+          return of(null);
+        }
+        return this.storeService.getSelectedStore();
+      }),
+      filter(store => !!store) // Ignorer les valeurs null
+    ).subscribe({
+      next: (store) => {
+        if (store) {
+          this.currentStore = store;
     this.loadOrders();
+        }
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement de la boutique:', error);
+        this.loading = false;
+      }
+    });
   }
 
   private loadOrders(): void {
     this.loading = true;
-    this.storeService.getSelectedStore().subscribe(store => {
-      if (store) {
-        const storeUrl = store.id?.split('_')[1] || '';
+    const storeUrl = this.currentStore.id?.split('_')[1] || '';
         this.orderService.getOrdersByStore(storeUrl).subscribe({
           next: (orders) => {
             console.log('Commandes chargées:', orders);
@@ -100,8 +125,6 @@ export class OrdersComponent implements OnInit {
             console.error('Erreur lors du chargement des commandes:', error);
             this.loading = false;
             this.toastService.error('Erreur lors du chargement des commandes');
-          }
-        });
       }
     });
   }
@@ -607,5 +630,10 @@ export class OrdersComponent implements OnInit {
         this.closeExportDialog();
       }
     }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 } 

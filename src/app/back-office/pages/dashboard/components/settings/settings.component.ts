@@ -5,7 +5,7 @@ import { StoreService, StoreSettings } from '../../../../../core/services/store.
 import { ToastService } from '../../../../../core/services/toast.service';
 import { StorageService, STORE_IMAGE_DIMENSIONS } from '../../../../../core/services/storage.service';
 import { AuthService } from '../../../../../core/services/auth.service';
-import { Subscription } from 'rxjs';
+import { Subject, takeUntil, switchMap, filter, of } from 'rxjs';
 import { Store } from '../../../../../core/models/store.model';
 import { User } from '../../../../../core/models/user.model';
 
@@ -116,9 +116,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
   bannerFile: File | null = null;
   resizedLogoFile: File | null = null;
   resizedBannerFile: File | null = null;
-
-  // Subscription pour le store
-  private storeSubscription: Subscription | null = null;
   
   // Indicateur de chargement pour le changement de mot de passe
   isChangingPassword = false;
@@ -127,6 +124,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
   addressAutocomplete: any = null;
   cityAutocomplete: any = null;
   isAddressSelected = false;
+  
+  // Pour la gestion de la destruction du composant
+  private destroy$ = new Subject<void>();
+  currentStore!: Store;
   
   constructor(
     private storeService: StoreService,
@@ -140,10 +141,20 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.loadUserData();
 
     // S'abonner aux changements de boutique
-    this.storeSubscription = this.storeService.getSelectedStore().subscribe({
-      next: (store: Store | null) => {
+    this.storeService.selectedStore$.pipe(
+      takeUntil(this.destroy$),
+      switchMap(storeId => {
+        if (!storeId) {
+          return of(null);
+        }
+        return this.storeService.getSelectedStore();
+      }),
+      filter(store => !!store) // Ignorer les valeurs null
+    ).subscribe({
+      next: (store) => {
         if (store) {
-          this.storeSettings = store;
+          this.currentStore = store;
+          this.storeSettings = { ...store };
           // Appliquer les couleurs
           this.storeService.applyStoreTheme(
             this.storeSettings.primaryColor || '#4f46e5',
@@ -151,7 +162,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
           );
         }
       },
-      error: (error: Error) => {
+      error: (error) => {
         console.error('Erreur lors du chargement des paramètres', error);
         this.toastService.error('Erreur lors du chargement des paramètres');
       }
@@ -164,10 +175,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Se désabonner pour éviter les fuites de mémoire
-    if (this.storeSubscription) {
-      this.storeSubscription.unsubscribe();
-    }
+    this.destroy$.next();
+    this.destroy$.complete();
   }
   
   // Charger les données de l'utilisateur

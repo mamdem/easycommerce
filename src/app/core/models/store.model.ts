@@ -1,3 +1,12 @@
+export interface StoreTransaction {
+  id: string;
+  orderId: string;
+  status: 'pending' | 'paid' | 'failed';
+  createdAt: number;
+  updatedAt: number;
+  amount: number;
+}
+
 export interface Store {
   id: string;
   ownerId: string;
@@ -24,4 +33,5 @@ export interface Store {
   openingHours?: {
     [key: string]: string; // Format: "Lundi": "9h00 - 18h00"
   };
+  currentTransaction?: StoreTransaction | null;
 } 
