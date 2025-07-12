@@ -31,6 +31,7 @@ export interface StoreData {
   email: string;
   latitude: number;
   longitude: number;
+  influenceurCode?: string; // Code de l'influenceur qui a référé cette boutique
   createdAt: number;
   updatedAt: number;
   isPublic: boolean;
@@ -61,6 +62,12 @@ export interface StoreSettings {
   createdAt: number;
   updatedAt: number;
   status?: 'active' | 'inactive' | 'pending';
+  currentTransaction?: {
+    id: string;
+    orderId: string;
+    status: Transaction['status'];
+    updatedAt: number;
+  } | null;
 }
 
 // Interface pour les URLs de boutique
@@ -68,6 +75,17 @@ interface StoreUrl {
   userId: string;
   storeId: string;
   createdAt: number;
+}
+
+// Interface pour les transactions
+export interface Transaction {
+  id?: string;
+  orderId: string;
+  amount: number;
+  status: 'pending' | 'paid' | 'failed';
+  paymentMethod: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 @Injectable({
@@ -78,6 +96,8 @@ export class StoreService {
   private storeSettingsSource = new BehaviorSubject<StoreSettings | null>(null);
   storeSettings$ = this.storeSettingsSource.asObservable();
   private selectedStore: Store | null = null;
+  private selectedStoreSubject = new BehaviorSubject<string | null>(localStorage.getItem('selectedStoreId'));
+  public selectedStore$ = this.selectedStoreSubject.asObservable();
 
   private readonly storeData: Store = {
     id: '1',
@@ -912,5 +932,113 @@ export class StoreService {
       console.error('❌ Erreur lors de la synchronisation des données:', error);
       throw error;
     }
+  }
+
+  /**
+   * Sauvegarde une transaction pour une boutique
+   * @param storeId ID de la boutique
+   * @param transaction Données de la transaction
+   */
+  async saveTransaction(storeId: string, transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const currentUser = this.authService.getCurrentUser();
+    
+    if (!currentUser?.uid) {
+      throw new Error('Utilisateur non connecté');
+    }
+
+    try {
+      const timestamp = Date.now();
+      const transactionData: Transaction = {
+        ...transaction,
+        createdAt: timestamp,
+        updatedAt: timestamp
+      };
+
+      // Créer la transaction dans la sous-collection transactions de la boutique
+      const transactionRef = await this.firestore
+        .collection('stores')
+        .doc(currentUser.uid)
+        .collection('userStores')
+        .doc(storeId)
+        .collection('transactions')
+        .add(transactionData);
+
+      // Mettre à jour le document de la boutique avec la transaction en cours
+      await this.firestore
+        .collection('stores')
+        .doc(currentUser.uid)
+        .collection('userStores')
+        .doc(storeId)
+        .update({
+          currentTransaction: {
+            id: transactionRef.id,
+            orderId: transaction.orderId,
+            status: transaction.status
+          }
+        });
+
+      return transactionRef.id;
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde de la transaction:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Met à jour le statut d'une transaction
+   * @param storeId ID de la boutique
+   * @param transactionId ID de la transaction
+   * @param status Nouveau statut
+   */
+  async updateTransactionStatus(storeId: string, transactionId: string, status: Transaction['status']): Promise<void> {
+    const currentUser = this.authService.getCurrentUser();
+    
+    if (!currentUser?.uid) {
+      throw new Error('Utilisateur non connecté');
+    }
+
+    try {
+      const timestamp = Date.now();
+
+      // Mettre à jour la transaction
+      await this.firestore
+        .collection('stores')
+        .doc(currentUser.uid)
+        .collection('userStores')
+        .doc(storeId)
+        .collection('transactions')
+        .doc(transactionId)
+        .update({
+          status,
+          updatedAt: timestamp
+        });
+
+      // Si la transaction est terminée (paid ou failed), supprimer la référence de la transaction en cours
+      if (status === 'paid' || status === 'failed') {
+        await this.firestore
+          .collection('stores')
+          .doc(currentUser.uid)
+          .collection('userStores')
+          .doc(storeId)
+          .update({
+            currentTransaction: null
+          });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut de la transaction:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Met à jour la boutique sélectionnée
+   */
+  updateSelectedStore(storeId: string | null) {
+    if (storeId) {
+      localStorage.setItem('selectedStoreId', storeId);
+    } else {
+      localStorage.removeItem('selectedStoreId');
+    }
+    this.selectedStoreSubject.next(storeId);
   }
 } 

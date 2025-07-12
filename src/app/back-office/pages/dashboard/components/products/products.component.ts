@@ -1,6 +1,6 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
-import { Observable, map, firstValueFrom, combineLatest, of, switchMap } from 'rxjs';
+import { Observable, map, firstValueFrom, combineLatest, of, switchMap, takeUntil, filter, Subject } from 'rxjs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { CommonModule } from '@angular/common';
@@ -10,7 +10,7 @@ import { take } from 'rxjs/operators';
 import { Product } from '../../../../../core/models/product.model';
 import { Category } from '../../../../../core/models/category.model';
 import { ProductService } from '../../../../../core/services/product.service';
-import { StoreService } from '../../../../../core/services/store.service';
+import { StoreService, StoreSettings } from '../../../../../core/services/store.service';
 import { CategoryService } from '../../../../../core/services/category.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { PriceService } from '../../../../../core/services/price.service';
@@ -66,7 +66,7 @@ interface ProductWithPromotion extends Product {
     ])
   ]
 })
-export class ProductsComponent implements OnInit {
+export class ProductsComponent implements OnInit, OnDestroy {
   @ViewChild('categoriesContainer') categoriesContainer!: ElementRef;
   @ViewChild('scrollLeftBtn') scrollLeftBtn!: ElementRef;
   @ViewChild('scrollRightBtn') scrollRightBtn!: ElementRef;
@@ -116,6 +116,9 @@ export class ProductsComponent implements OnInit {
   showDeleteConfirm: string | null = null;
   categoryToDelete: Category | null = null;
 
+  // Pour la gestion de la destruction du composant
+  private destroy$ = new Subject<void>();
+
   constructor(
     private productService: ProductService,
     private storeService: StoreService,
@@ -140,6 +143,31 @@ export class ProductsComponent implements OnInit {
   ngOnInit(): void {
     this.loadCategories();
     this.loadProducts();
+
+    // S'abonner aux changements de boutique
+    this.storeService.selectedStore$.pipe(
+      takeUntil(this.destroy$),
+      switchMap(storeId => {
+        if (!storeId) {
+          return of(null);
+        }
+        return this.storeService.getSelectedStore();
+      }),
+      filter(store => !!store) // Ignorer les valeurs null
+    ).subscribe({
+      next: (store) => {
+        if (store) {
+          this.currentStore = store;
+          this.loadCategories();
+          this.loadProducts();
+          this.loadPromotions();
+        }
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement de la boutique:', error);
+        this.loading = false;
+      }
+    });
   }
 
   private async loadStore(): Promise<void> {
@@ -646,5 +674,10 @@ export class ProductsComponent implements OnInit {
     } finally {
       this.actionLoading = false;
     }
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 } 

@@ -1,0 +1,161 @@
+<div class="proprietaires-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <h1>
+          <i class="bi bi-person-badge"></i>
+          Gestion des Propriétaires
+        </h1>
+        <p class="subtitle">Gérez tous les propriétaires de boutiques de la plateforme</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-section">
+    <div class="search-box">
+      <i class="bi bi-search"></i>
+      <input 
+        type="text" 
+        placeholder="Rechercher un propriétaire..." 
+        [(ngModel)]="searchTerm"
+        (input)="filterProprietaires()">
+    </div>
+
+    <div class="filter-controls">
+      <select [(ngModel)]="selectedStatus" (change)="filterProprietaires()" class="filter-select">
+        <option value="all">Tous les statuts</option>
+        <option value="active">Actif</option>
+        <option value="inactive">Inactif</option>
+        <option value="suspended">Suspendu</option>
+      </select>
+
+      <select [(ngModel)]="selectedType" (change)="filterProprietaires()" class="filter-select">
+        <option value="all">Tous les types</option>
+        <option value="individual">Particulier</option>
+        <option value="professional">Professionnel</option>
+      </select>
+
+      <button class="sort-btn" (click)="toggleSort()">
+        <i class="bi" [ngClass]="sortDirection === 'asc' ? 'bi-sort-alpha-down' : 'bi-sort-alpha-up'"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Proprietaires Table -->
+  <div class="table-container">
+    <ng-container *ngIf="!isLoading; else loadingTemplate">
+      <div class="table-wrapper">
+        <table class="proprietaires-table">
+          <thead>
+            <tr>
+              <th>Propriétaire</th>
+              <th>Contact</th>
+              <th>Type</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let proprietaire of filteredProprietaires; trackBy: trackByProprietaireId" class="table-row">
+              <td class="proprietaire-info">
+                <div class="info-main">
+                  <div class="avatar">
+                    {{ getInitials(proprietaire) }}
+                  </div>
+                  <div class="details">
+                    <h4>{{ proprietaire.prenom }} {{ proprietaire.nom }}</h4>
+                    <p class="location">
+                      <i class="bi bi-geo-alt"></i>
+                      {{ proprietaire.ville }}, {{ proprietaire.region }}
+                    </p>
+                    <p class="boutiques-count">
+                      <i class="bi bi-shop"></i>
+                      {{ proprietaire.nombreBoutiques }} boutique{{ proprietaire.nombreBoutiques > 1 ? 's' : '' }}
+                    </p>
+                  </div>
+                </div>
+              </td>
+              
+              <td class="contact-info">
+                <div class="contact-details">
+                  <div class="email">
+                    <i class="bi bi-envelope"></i>
+                    <span>{{ proprietaire.email }}</span>
+                  </div>
+                  <div class="phone">
+                    <i class="bi bi-telephone"></i>
+                    <span>{{ proprietaire.telephone }}</span>
+                  </div>
+                </div>
+              </td>
+              
+              <td class="type-info">
+                <span class="type-badge" [ngClass]="getTypeClass(proprietaire.typeCompte)">
+                  <i class="bi" [ngClass]="proprietaire.typeCompte === 'professional' ? 'bi-briefcase' : 'bi-person'"></i>
+                  {{ getTypeText(proprietaire.typeCompte) }}
+                </span>
+              </td>
+              
+              <td class="status-info">
+                <div class="status-container">
+                  <span class="status-badge" [ngClass]="getStatusClass(proprietaire.statut)">
+                    {{ getStatusText(proprietaire.statut) }}
+                  </span>
+                  <div class="verification-indicator">
+                    <div class="score-circle" [ngClass]="getVerificationClass(proprietaire.scoreVerification)">
+                      {{ proprietaire.scoreVerification }}%
+                    </div>
+                  </div>
+                </div>
+              </td>
+              
+              <td class="actions">
+                <div class="action-buttons">
+                  <button 
+                    *ngIf="proprietaire.statut !== 'active'"
+                    class="btn-action activate"
+                    (click)="updateProprietaireStatus(proprietaire.id, 'active')"
+                    title="Activer">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                  
+                  <button 
+                    *ngIf="proprietaire.statut !== 'suspended'"
+                    class="btn-action suspend"
+                    (click)="updateProprietaireStatus(proprietaire.id, 'suspended')"
+                    title="Suspendre">
+                    <i class="bi bi-pause"></i>
+                  </button>
+                  
+                  <button 
+                    *ngIf="proprietaire.statut !== 'inactive'"
+                    class="btn-action deactivate"
+                    (click)="updateProprietaireStatus(proprietaire.id, 'inactive')"
+                    title="Désactiver">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredProprietaires.length === 0" class="empty-state">
+        <i class="bi bi-person-badge"></i>
+        <h3>Aucun propriétaire trouvé</h3>
+        <p>{{ searchTerm || selectedStatus !== 'all' || selectedType !== 'all' ? 'Essayez de modifier vos filtres de recherche.' : 'Aucun propriétaire n\'est encore enregistré.' }}</p>
+      </div>
+    </ng-container>
+
+    <ng-template #loadingTemplate>
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Chargement des propriétaires...</p>
+      </div>
+    </ng-template>
+  </div>
+</div>

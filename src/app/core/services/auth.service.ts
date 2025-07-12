@@ -473,22 +473,40 @@ export class AuthService {
 
   // Méthode pour mettre à jour le statut de boutique de l'utilisateur
   async updateStoreStatus(hasStore: boolean): Promise<void> {
-    const currentUser = this.userSubject.value;
-    if (currentUser) {
-      // Mettre à jour dans Firestore
-      const userRef = doc(this.firestore, 'users', currentUser.uid);
-      await updateDoc(userRef, {
-        hasStore: hasStore,
-        updatedAt: Date.now()
-      });
+    try {
+      console.log('🔄 Mise à jour du statut hasStore:', hasStore);
       
-      // Mettre à jour l'état local
+      const currentUser = this.userSubject.value;
+      if (!currentUser) {
+        console.log('⚠️ Aucun utilisateur courant trouvé');
+        return;
+      }
+
+      // Mettre à jour dans Firestore avec gestion d'erreur
+      try {
+        const userRef = doc(this.firestore, 'users', currentUser.uid);
+        await updateDoc(userRef, {
+          hasStore: hasStore,
+          updatedAt: Date.now()
+        });
+        console.log('✅ Firestore mis à jour avec succès');
+      } catch (firestoreError) {
+        console.error('❌ Erreur Firestore (non bloquante):', firestoreError);
+        // Continuer même si Firestore échoue
+      }
+      
+      // Mettre à jour l'état local (toujours faire ceci)
       const updatedUser = {
         ...currentUser,
         hasStore
       };
       this.userSubject.next(updatedUser);
       localStorage.setItem('hasStore', hasStore.toString());
+      
+      console.log('✅ État local mis à jour avec succès');
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du statut hasStore:', error);
+      // Ne pas rejeter l'erreur pour éviter de bloquer le processus
     }
   }
   

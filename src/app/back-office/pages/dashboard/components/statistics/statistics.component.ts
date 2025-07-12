@@ -1,13 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StoreService, StoreSettings } from '../../../../../core/services/store.service';
 import { OrderService } from '../../../../../core/services/order.service';
 import { Order } from '../../../../../core/models/order.model';
+import { Store } from '../../../../../core/models/store.model';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { RouterModule } from '@angular/router';
 import { LoadingSpinnerComponent } from '../../../../../shared/components/loading-spinner/loading-spinner.component';
+import { Subject, takeUntil, switchMap, filter, of } from 'rxjs';
 
 // Enregistrer la locale française
 registerLocaleData(localeFr, 'fr-FR');
@@ -24,7 +26,7 @@ registerLocaleData(localeFr, 'fr-FR');
     LoadingSpinnerComponent
   ]
 })
-export class StatisticsComponent implements OnInit {
+export class StatisticsComponent implements OnInit, OnDestroy {
   // Référence à l'objet Math pour l'utiliser dans le template
   Math = Math;
   
@@ -75,8 +77,12 @@ export class StatisticsComponent implements OnInit {
 
   // Données des commandes
   private orders: Order[] = [];
+  currentStore!: Store;
 
   loading = true;
+
+  // Pour la gestion de la destruction du composant
+  private destroy$ = new Subject<void>();
 
   constructor(
     private storeService: StoreService,
@@ -85,29 +91,45 @@ export class StatisticsComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('Statistics component initialized');
+    
+    // S'abonner aux changements de boutique
+    this.storeService.selectedStore$.pipe(
+      takeUntil(this.destroy$),
+      switchMap(storeId => {
+        if (!storeId) {
+          return of(null);
+        }
+        return this.storeService.getSelectedStore();
+      }),
+      filter(store => !!store) // Ignorer les valeurs null
+    ).subscribe({
+      next: (store) => {
+        if (store) {
+          this.currentStore = store;
     this.loadStoreSettings();
     this.loadOrders();
-
-    // Simuler un chargement
-    setTimeout(() => {
+        }
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement de la boutique:', error);
       this.loading = false;
-    }, 1000);
+      }
+    });
   }
 
   // Charger les commandes
   loadOrders(): void {
-    this.storeService.getSelectedStore().subscribe(store => {
-      if (store) {
-        const storeUrl = store.id?.split('_')[1] || '';
+    this.loading = true;
+    const storeUrl = this.currentStore.id?.split('_')[1] || '';
         this.orderService.getOrdersByStore(storeUrl).subscribe({
           next: (orders) => {
             this.orders = orders;
             this.processOrders();
+        this.loading = false;
           },
           error: (error) => {
             console.error('Erreur lors du chargement des commandes:', error);
-          }
-        });
+        this.loading = false;
       }
     });
   }
@@ -276,6 +298,8 @@ export class StatisticsComponent implements OnInit {
 
   // Charger les paramètres de la boutique
   loadStoreSettings(): void {
+    if (!this.currentStore) return;
+    
     this.storeService.getStoreSettings().subscribe(settings => {
       if (settings && settings.length > 0) {
         this.storeSettings = settings[0];
@@ -371,5 +395,10 @@ export class StatisticsComponent implements OnInit {
     
     // Formater le numéro de téléphone (XX XX XX XX XX)
     return phone.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5');
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 } 

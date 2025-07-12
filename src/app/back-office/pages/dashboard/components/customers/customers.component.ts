@@ -1,12 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { Subject, takeUntil, switchMap, filter, of } from 'rxjs';
 import { OrderService } from '../../../../../core/services/order.service';
 import { CustomerService } from '../../../../../core/services/customer.service';
 import { StoreService } from '../../../../../core/services/store.service';
 import { Customer } from '../../../../../core/models/customer.model';
 import { Order } from '../../../../../core/models/order.model';
+import { Store } from '../../../../../core/models/store.model';
 import { LoadingSpinnerComponent } from '../../../../../shared/components/loading-spinner/loading-spinner.component';
 import * as XLSX from 'xlsx';
 import { ToastService } from '../../../../../core/services/toast.service';
@@ -23,13 +25,17 @@ import { ToastService } from '../../../../../core/services/toast.service';
     LoadingSpinnerComponent
   ]
 })
-export class CustomersComponent implements OnInit {
+export class CustomersComponent implements OnInit, OnDestroy {
   // Propriété Math pour l'utiliser dans le template
   Math = Math;
 
   customers: Customer[] = [];
   loading = true;
   error = false;
+  currentStore!: Store;
+
+  // Pour la gestion de la destruction du composant
+  private destroy$ = new Subject<void>();
 
   // Filtres
   searchTerm: string = '';
@@ -49,16 +55,35 @@ export class CustomersComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // S'abonner aux changements de boutique
+    this.storeService.selectedStore$.pipe(
+      takeUntil(this.destroy$),
+      switchMap(storeId => {
+        if (!storeId) {
+          return of(null);
+        }
+        return this.storeService.getSelectedStore();
+      }),
+      filter(store => !!store) // Ignorer les valeurs null
+    ).subscribe({
+      next: (store) => {
+        if (store) {
+          this.currentStore = store;
     this.loadCustomers();
+        }
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement de la boutique:', error);
+        this.loading = false;
+      }
+    });
   }
 
   loadCustomers(): void {
     this.loading = true;
     this.error = false;
 
-    this.storeService.getSelectedStore().subscribe(store => {
-      if (store) {
-        const storeUrl = store.id?.split('_')[1] || '';
+    const storeUrl = this.currentStore.id?.split('_')[1] || '';
         console.log('[CustomersComponent] Chargement des commandes pour la boutique:', storeUrl);
         
         this.orderService.getOrdersByStore(storeUrl).subscribe({
@@ -79,11 +104,6 @@ export class CustomersComponent implements OnInit {
           error: (error) => {
             console.error('[CustomersComponent] Erreur lors du chargement des commandes:', error);
             this.error = true;
-            this.loading = false;
-          }
-        });
-      } else {
-        console.log('[CustomersComponent] Aucune boutique sélectionnée');
         this.loading = false;
       }
     });
@@ -420,5 +440,25 @@ export class CustomersComponent implements OnInit {
       console.error('Erreur lors de l\'export des clients:', error);
       this.toastService.error('Une erreur est survenue lors de l\'export des clients');
     }
+  }
+
+  normalizePhoneForWhatsApp(phone: string): string {
+    if (!phone) return '';
+    // Supprimer tous les caractères non numériques
+    const cleaned = phone.replace(/\D/g, '');
+    // Si le numéro commence par 0, le remplacer par 221
+    if (cleaned.startsWith('0')) {
+      return '221' + cleaned.substring(1);
+    }
+    // Si le numéro ne commence pas par 221, l'ajouter
+    if (!cleaned.startsWith('221')) {
+      return '221' + cleaned;
+    }
+    return cleaned;
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 } 

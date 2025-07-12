@@ -23,7 +23,9 @@ export class AddPromotionComponent implements OnInit {
   selectedStore: any;
   isLoading: boolean = false;
   products$: Observable<Product[]> = of([]);
-  categories$: Observable<Category[]> = of([]);
+  allProducts: Product[] = [];
+  selectedProducts: Product[] = [];
+  reductionPercentage: number = 0;
 
   constructor(
     private fb: FormBuilder,
@@ -31,71 +33,30 @@ export class AddPromotionComponent implements OnInit {
     private promotionService: PromotionService,
     private storeService: StoreService,
     private productService: ProductService,
-    private categoryService: CategoryService,
     private toastService: ToastService
   ) {
+    // Obtenir la date d'aujourd'hui au format YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
+
     this.promotionForm = this.fb.group({
-      type: ['CODE_PROMO', Validators.required],
+      type: ['REDUCTION_PRODUIT'],
       nom: ['', Validators.required],
-      code: [''],
       reduction: ['', [Validators.required, Validators.min(0), Validators.max(100)]],
-      dateDebut: ['', Validators.required],
+      dateDebut: [today, Validators.required],
       dateFin: ['', Validators.required],
       actif: [true],
-      applicationScope: ['PANIER_ENTIER'],
-      produitIds: [[]],
-      categorieIds: [[]],
-      minimumAchat: [null],
-      utilisationsMax: [null],
+      produitIds: [[], Validators.required],
       afficherAutomatiquement: [true]
     });
 
-    // Ajout des validateurs conditionnels
-    this.promotionForm.get('type')?.valueChanges.subscribe(type => {
-      const codeControl = this.promotionForm.get('code');
-      const applicationScopeControl = this.promotionForm.get('applicationScope');
-      const produitsControl = this.promotionForm.get('produitIds');
-      const categoriesControl = this.promotionForm.get('categorieIds');
-
-      if (type === 'CODE_PROMO') {
-        codeControl?.setValidators([Validators.required, Validators.minLength(3)]);
-      } else {
-        codeControl?.clearValidators();
-      }
-
-      if (type === 'REDUCTION_PRODUIT') {
-        applicationScopeControl?.setValue('PRODUITS');
-        produitsControl?.setValidators([Validators.required]);
-      } else if (type === 'CODE_PROMO') {
-        produitsControl?.clearValidators();
-        if (applicationScopeControl?.value === 'PRODUITS') {
-          produitsControl?.setValidators([Validators.required]);
-        } else if (applicationScopeControl?.value === 'CATEGORIES') {
-          categoriesControl?.setValidators([Validators.required]);
-        }
-      }
-
-      codeControl?.updateValueAndValidity();
-      produitsControl?.updateValueAndValidity();
-      categoriesControl?.updateValueAndValidity();
+    // Écouter les changements de sélection des produits
+    this.promotionForm.get('produitIds')?.valueChanges.subscribe(selectedIds => {
+      this.updateSelectedProducts(selectedIds);
     });
 
-    // Gestion des changements de scope d'application
-    this.promotionForm.get('applicationScope')?.valueChanges.subscribe(scope => {
-      const produitsControl = this.promotionForm.get('produitIds');
-      const categoriesControl = this.promotionForm.get('categorieIds');
-
-      produitsControl?.clearValidators();
-      categoriesControl?.clearValidators();
-
-      if (scope === 'PRODUITS') {
-        produitsControl?.setValidators([Validators.required]);
-      } else if (scope === 'CATEGORIES') {
-        categoriesControl?.setValidators([Validators.required]);
-      }
-
-      produitsControl?.updateValueAndValidity();
-      categoriesControl?.updateValueAndValidity();
+    // Écouter les changements du pourcentage de réduction
+    this.promotionForm.get('reduction')?.valueChanges.subscribe(reduction => {
+      this.reductionPercentage = reduction || 0;
     });
   }
 
@@ -104,11 +65,35 @@ export class AddPromotionComponent implements OnInit {
       if (store) {
         this.selectedStore = store;
         this.products$ = this.productService.getStoreProducts(store.id!);
-        this.categories$ = this.categoryService.getStoreCategories(store.id!);
+        
+        // Stocker tous les produits pour les calculs
+        this.products$.subscribe(products => {
+          this.allProducts = products;
+        });
       } else {
         this.router.navigate(['/dashboard/promotions']);
       }
     });
+  }
+
+  updateSelectedProducts(selectedIds: string[]): void {
+    this.selectedProducts = this.allProducts.filter(product => 
+      selectedIds.includes(product.id!)
+    );
+  }
+
+  calculatePromotionalPrice(originalPrice: number): number {
+    if (!this.reductionPercentage || this.reductionPercentage <= 0) {
+      return originalPrice;
+    }
+    return originalPrice * (1 - this.reductionPercentage / 100);
+  }
+
+  formatPrice(price: number): string {
+    return new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(price) + ' FCFA';
   }
 
   onSubmit(): void {
@@ -124,8 +109,8 @@ export class AddPromotionComponent implements OnInit {
       dateDebut: new Date(formValue.dateDebut).getTime(),
       dateFin: new Date(formValue.dateFin).getTime(),
       utilisationsActuelles: 0,
-      produitIds: formValue.applicationScope === 'PRODUITS' ? formValue.produitIds : [],
-      categorieIds: formValue.applicationScope === 'CATEGORIES' ? formValue.categorieIds : []
+      applicationScope: 'PRODUITS',
+      categorieIds: []
     };
 
     this.promotionService.createPromotion(this.selectedStore.id, promotion).subscribe({

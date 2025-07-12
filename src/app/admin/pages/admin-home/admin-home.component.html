@@ -1,0 +1,305 @@
+<div class="admin-container" [class.nav-open]="isMobileMenuOpen">
+  <button class="mobile-menu-btn" (click)="toggleMobileMenu()">
+    <i class="bi" [class.bi-list]="!isMobileMenuOpen" [class.bi-x-lg]="isMobileMenuOpen"></i>
+  </button>
+
+  <header class="admin-header">
+    <div class="header-content">
+      <div class="header-main">
+        <div class="header-title">
+          <div class="title-icon">
+            <i class="bi bi-grid-3x3-gap-fill"></i>
+          </div>
+          <div class="title-text">
+            <h1>Administration Jokkofy</h1>
+            <p class="subtitle">Tableau de bord administrateur</p>
+          </div>
+        </div>
+        <div class="header-stats">
+          <ng-container *ngIf="!isLoading; else headerLoading">
+            <div class="stat-item">
+              <i class="bi bi-shop"></i>
+              <div class="stat-info">
+                <span class="stat-value">{{ dashboardStats.totalStores }}</span>
+                <span class="stat-label">Boutiques</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <i class="bi bi-people"></i>
+              <div class="stat-info">
+                <span class="stat-value">{{ dashboardStats.totalUsers }}</span>
+                <span class="stat-label">Utilisateurs</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <i class="bi bi-person-check"></i>
+              <div class="stat-info">
+                <span class="stat-value">{{ dashboardStats.totalCustomers }}</span>
+                <span class="stat-label">Clients</span>
+              </div>
+            </div>
+          </ng-container>
+          
+          <ng-template #headerLoading>
+            <div class="stat-item">
+              <i class="bi bi-shop"></i>
+              <div class="stat-info">
+                <span class="stat-value loading">--</span>
+                <span class="stat-label">Boutiques</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <i class="bi bi-people"></i>
+              <div class="stat-info">
+                <span class="stat-value loading">--</span>
+                <span class="stat-label">Utilisateurs</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <i class="bi bi-person-check"></i>
+              <div class="stat-info">
+                <span class="stat-value loading">--</span>
+                <span class="stat-label">Clients</span>
+              </div>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="admin-nav" [class.open]="isMobileMenuOpen">
+    <div class="nav-content">
+      <div class="nav-group">
+        <h2>Gestion</h2>
+        <ul>
+          <li>
+            <a routerLink="stores" routerLinkActive="active" class="nav-item">
+              <i class="bi bi-shop"></i>
+              <span>Boutiques</span>
+              <span class="badge">{{ dashboardStats.totalStores }}</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="proprietaires" routerLinkActive="active" class="nav-item">
+              <i class="bi bi-person-badge"></i>
+              <span>Propriétaires</span>
+              <span class="badge">{{ dashboardStats.totalUsers }}</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="influenceurs" routerLinkActive="active" class="nav-item">
+              <i class="bi bi-star"></i>
+              <span>Influenceurs</span>
+              <span class="badge">12</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="nav-group">
+        <h2>Configuration</h2>
+        <ul>
+          <li>
+            <a routerLink="/admin/settings" routerLinkActive="active" class="nav-item">
+              <i class="bi bi-gear"></i>
+              <span>Paramètres</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/admin/security" routerLinkActive="active" class="nav-item">
+              <i class="bi bi-shield-check"></i>
+              <span>Sécurité</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="nav-group mt-auto">
+        <ul>
+          <li>
+            <a (click)="logout()" class="nav-item">
+              <i class="bi bi-box-arrow-right"></i>
+              <span>Déconnexion</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="admin-content">
+    <router-outlet></router-outlet>
+    
+    <!-- Contenu par défaut quand aucune route enfant n'est active -->
+    <div class="default-content" *ngIf="!hasChildRoute">
+      <div class="page-header">
+        <h2>Vue d'ensemble</h2>
+        <div class="date-range">
+          <i class="bi bi-calendar3"></i>
+          <span>Derniers 30 jours</span>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon">
+              <i class="bi bi-shop"></i>
+            </div>
+            <div class="stat-trend" [ngClass]="getTrendClass(dashboardStats.storesChange)">
+              <i class="bi" [ngClass]="getTrendIcon(dashboardStats.storesChange)"></i>
+              <span>{{ formatChange(dashboardStats.storesChange) }}</span>
+            </div>
+          </div>
+          <div class="stat-info">
+            <h3>Total Boutiques</h3>
+            <p class="stat-value">{{ dashboardStats.totalStores }}</p>
+            <p class="stat-detail">
+              <span [ngClass]="dashboardStats.storesChange >= 0 ? 'positive' : 'negative'">
+                {{ dashboardStats.storesChange >= 0 ? '+' : '' }}{{ dashboardStats.storesChange }}
+              </span> ce mois
+            </p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon">
+              <i class="bi bi-people"></i>
+            </div>
+            <div class="stat-trend" [ngClass]="getTrendClass(dashboardStats.usersChange)">
+              <i class="bi" [ngClass]="getTrendIcon(dashboardStats.usersChange)"></i>
+              <span>{{ formatChange(dashboardStats.usersChange) }}</span>
+            </div>
+          </div>
+          <div class="stat-info">
+            <h3>Utilisateurs</h3>
+            <p class="stat-value">{{ dashboardStats.totalUsers }}</p>
+            <p class="stat-detail">
+              <span [ngClass]="dashboardStats.usersChange >= 0 ? 'positive' : 'negative'">
+                {{ dashboardStats.usersChange >= 0 ? '+' : '' }}{{ dashboardStats.usersChange }}
+              </span> ce mois
+            </p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon">
+              <i class="bi bi-person-check"></i>
+            </div>
+            <div class="stat-trend" [ngClass]="getTrendClass(dashboardStats.customersChange)">
+              <i class="bi" [ngClass]="getTrendIcon(dashboardStats.customersChange)"></i>
+              <span>{{ formatChange(dashboardStats.customersChange) }}</span>
+            </div>
+          </div>
+          <div class="stat-info">
+            <h3>Clients Acheteurs</h3>
+            <p class="stat-value">{{ dashboardStats.totalCustomers }}</p>
+            <p class="stat-detail">
+              <span [ngClass]="dashboardStats.customersChange >= 0 ? 'positive' : 'negative'">
+                {{ dashboardStats.customersChange >= 0 ? '+' : '' }}{{ dashboardStats.customersChange }}
+              </span> ce mois
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="data-tables">
+        <div class="recent-stores">
+          <div class="table-header">
+            <h3>Nouvelles Boutiques</h3>
+            <a href="#" class="view-all">Voir tout</a>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Boutique</th>
+                  <th>Propriétaire</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="store-info">
+                      <div class="store-logo">MS</div>
+                      <div class="store-name">Ma Super Boutique</div>
+                    </div>
+                  </td>
+                  <td>Mamadou Diallo</td>
+                  <td>Il y a 2 heures</td>
+                  <td><span class="status active">Active</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="store-info">
+                      <div class="store-logo">FD</div>
+                      <div class="store-name">Fashion Dakar</div>
+                    </div>
+                  </td>
+                  <td>Fatou Sow</td>
+                  <td>Il y a 5 heures</td>
+                  <td><span class="status pending">En attente</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="store-info">
+                      <div class="store-logo">ET</div>
+                      <div class="store-name">Électro Tech</div>
+                    </div>
+                  </td>
+                  <td>Omar Kane</td>
+                  <td>Il y a 1 jour</td>
+                  <td><span class="status active">Active</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="recent-orders">
+          <div class="table-header">
+            <h3>Dernières Commandes</h3>
+            <a href="#" class="view-all">Voir tout</a>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Client</th>
+                  <th>Montant</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>#ORD-789</td>
+                  <td>Aminata Ndiaye</td>
+                  <td>45,000 FCFA</td>
+                  <td><span class="status completed">Livrée</span></td>
+                </tr>
+                <tr>
+                  <td>#ORD-788</td>
+                  <td>Moussa Fall</td>
+                  <td>28,500 FCFA</td>
+                  <td><span class="status pending">En cours</span></td>
+                </tr>
+                <tr>
+                  <td>#ORD-787</td>
+                  <td>Aissatou Diop</td>
+                  <td>75,000 FCFA</td>
+                  <td><span class="status cancelled">Annulée</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div> 

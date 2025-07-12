@@ -1,9 +1,11 @@
 import { Component, OnInit, NgZone } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { StoreService, StoreData } from '../../../core/services/store.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { AdminInfluenceurService, Influenceur } from '../../../admin/services/admin-influenceur.service';
+import { environment } from '../../../../environments/environment';
 
 // Déclaration pour l'API Google Maps
 declare var google: {
@@ -93,13 +95,21 @@ export class StoreCreationComponent implements OnInit {
   cityAutocomplete: any = null;
   isAddressSelected = false;
   
+  // Influenceur
+  influenceurCode: string | null = null;
+  influenceurData: Influenceur | null = null;
+  isValidatingInfluenceur = false;
+  influenceurValidationMessage = '';
+  
   constructor(
     private fb: FormBuilder,
     private router: Router,
+    private route: ActivatedRoute,
     private authService: AuthService,
     private storeService: StoreService,
     private toastService: ToastService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private influenceurService: AdminInfluenceurService
   ) {
     this.storeForm = this.createStoreForm();
   }
@@ -119,6 +129,19 @@ export class StoreCreationComponent implements OnInit {
       this.router.navigate(['/auth/login']);
       return;
     }
+
+    // Récupérer le code influenceur depuis l'URL
+    this.route.paramMap.subscribe(params => {
+      const influenceurCodeParam = params.get('influenceurCode');
+      if (influenceurCodeParam) {
+        // Normaliser le code : majuscules et suppression des espaces
+        this.influenceurCode = influenceurCodeParam.toUpperCase().trim();
+        console.log('🔗 Code influenceur détecté dans l\'URL:', influenceurCodeParam, '-> normalisé:', this.influenceurCode);
+        this.validateInfluenceurCode();
+      } else {
+        console.log('ℹ️ Aucun code influenceur dans l\'URL');
+      }
+    });
     
     // Initialiser le formulaire avec les valeurs par défaut
     this.initializeFormDefaults();
@@ -134,6 +157,81 @@ export class StoreCreationComponent implements OnInit {
     setTimeout(() => {
       this.initGoogleMapsAutocomplete();
     }, 2000);
+
+    // Exposer une méthode de test dans la console en mode développement
+    if (!environment.production) {
+      (window as any).createTestInfluenceur = () => this.createTestInfluenceur();
+      console.log('🧪 Mode développement: Utilisez createTestInfluenceur() dans la console pour créer un influenceur de test');
+    }
+  }
+
+  /**
+   * Valide le code influenceur depuis l'URL
+   */
+  private async validateInfluenceurCode(): Promise<void> {
+    if (!this.influenceurCode) return;
+
+    console.log('🔍 Validation du code influenceur:', this.influenceurCode);
+    this.isValidatingInfluenceur = true;
+    this.influenceurValidationMessage = 'Vérification du code influenceur...';
+
+    try {
+      // Normaliser le code en majuscules et supprimer les espaces
+      const normalizedCode = this.influenceurCode.toUpperCase().trim();
+      console.log('📝 Code normalisé:', normalizedCode);
+      
+      // Récupérer l'influenceur par son code promo (qui est aussi son ID)
+      this.influenceurService.getInfluenceurByCodePromo(normalizedCode)
+        .subscribe({
+          next: (influenceur) => {
+            console.log('📦 Résultat de la recherche:', influenceur);
+            
+            if (influenceur && influenceur.statut === 'active') {
+              this.influenceurData = influenceur;
+              this.influenceurValidationMessage = `✅ Code valide ! Vous bénéficierez d'une réduction de ${influenceur.reductionPourcentage}% grâce à ${influenceur.prenom} ${influenceur.nom}`;
+              console.log('✅ Code influenceur validé avec succès');
+              this.toastService.success(
+                `Code influenceur "${normalizedCode}" validé ! Réduction de ${influenceur.reductionPourcentage}%`,
+                'Code valide'
+              );
+            } else if (influenceur && influenceur.statut !== 'active') {
+              this.influenceurValidationMessage = `❌ Le code "${normalizedCode}" n'est plus actif`;
+              console.log('⚠️ Code influenceur trouvé mais inactif:', influenceur.statut);
+              this.toastService.warning(
+                `Le code influenceur "${normalizedCode}" n'est plus actif`,
+                'Code inactif'
+              );
+              this.influenceurCode = null;
+              this.influenceurData = null;
+            } else {
+              this.influenceurValidationMessage = `❌ Code "${normalizedCode}" invalide`;
+              console.log('❌ Code influenceur non trouvé');
+              this.toastService.error(
+                `Le code influenceur "${normalizedCode}" n'existe pas`,
+                'Code invalide'
+              );
+              this.influenceurCode = null;
+              this.influenceurData = null;
+            }
+            this.isValidatingInfluenceur = false;
+          },
+          error: (error) => {
+            console.error('❌ Erreur lors de la validation du code influenceur:', error);
+            this.influenceurValidationMessage = `❌ Erreur lors de la validation du code "${normalizedCode}"`;
+            this.toastService.error(
+              'Erreur lors de la validation du code influenceur',
+              'Erreur'
+            );
+            this.influenceurCode = null;
+            this.influenceurData = null;
+            this.isValidatingInfluenceur = false;
+          }
+        });
+    } catch (error) {
+      console.error('❌ Erreur générale lors de la validation du code influenceur:', error);
+      this.influenceurValidationMessage = `❌ Erreur lors de la validation du code "${this.influenceurCode}"`;
+      this.isValidatingInfluenceur = false;
+    }
   }
 
   initGoogleMapsAutocomplete(): void {
@@ -457,70 +555,110 @@ export class StoreCreationComponent implements OnInit {
     });
   }
   
-  // Soumettre le formulaire
-  async submitForm(): Promise<void> {
-    // Vérifier que le formulaire est valide et que les conditions sont acceptées
-    const termsControl = this.storeForm.get('termsAccepted');
-    if (this.storeForm.valid && termsControl && termsControl.value) {
-      this.isSubmitting = true;
-      this.errorMessage = '';
-      
-      try {
-        // 1. Télécharger les images si présentes
-        const formData = this.storeForm.value as StoreForm;
-        let logoUrl = formData.logoUrl;
-        let bannerUrl = formData.bannerUrl;
-        
-        // NOTE: Upload vers Firebase Storage temporairement désactivé
-        // En attendant l'activation des buckets storage, nous utilisons directement
-        // les URL base64 des aperçus d'images pour le stockage dans Firestore
-        /*
-        // Télécharger le logo si un fichier a été sélectionné
-        if (this.logoFile) {
-          logoUrl = await this.storeService.uploadImage(this.logoFile, 'store-logos');
-        }
-        
-        // Télécharger la bannière si un fichier a été sélectionné
-        if (this.bannerFile) {
-          bannerUrl = await this.storeService.uploadImage(this.bannerFile, 'store-banners');
-        }
-        */
-        
-        // 2. Enregistrer les données de la boutique dans Firestore
-        const storeData: Partial<StoreData> = {
-          storeName: formData.storeName,
-          storeDescription: formData.storeDescription,
-          logoUrl: logoUrl, // URL base64 de l'aperçu du logo
-          bannerUrl: bannerUrl, // URL base64 de l'aperçu de la bannière
-          primaryColor: formData.primaryColor,
-          secondaryColor: formData.secondaryColor,
-          legalName: formData.legalName,
-          taxId: formData.taxId,
-          address: formData.address,
-          city: formData.city,
-          zipCode: formData.zipCode,
-          country: formData.country,
-          phoneNumber: formData.phoneNumber,
-          email: formData.email,
-          latitude: formData.latitude,
-          longitude: formData.longitude
-        };
-        
-        // Sauvegarder dans Firebase
-        await this.storeService.saveStore(storeData);
-        
-        // Rediriger vers le tableau de bord après la création
-        this.isSubmitting = false;
-        this.router.navigate(['/dashboard']);
-      } catch (error) {
-        this.isSubmitting = false;
-        this.errorMessage = 'Une erreur est survenue lors de la création de votre boutique. Veuillez réessayer.';
-        console.error('Erreur lors de la création de la boutique:', error);
-      }
-    } else {
-      // Marquer tous les champs comme touchés pour afficher les erreurs
+  /**
+   * Sauvegarde les données de la boutique
+   */
+  async onSubmit(): Promise<void> {
+    console.log('🚀 Début de la soumission du formulaire');
+    
+    const termsAccepted = this.storeForm.get('termsAccepted')?.value;
+    
+    if (!this.storeForm.valid || !termsAccepted) {
+      console.log('❌ Formulaire invalide ou conditions non acceptées');
       this.markFormGroupTouched(this.confirmationForm);
-      this.errorMessage = 'Veuillez vérifier les informations et accepter les conditions.';
+      this.toastService.error('Veuillez remplir tous les champs obligatoires et accepter les conditions', 'Formulaire incomplet');
+      return;
+    }
+
+    this.isSubmitting = true;
+    console.log('⏳ isSubmitting défini à true');
+
+    try {
+      // Récupérer l'utilisateur courant
+      const currentUser = this.authService.getCurrentUser();
+      if (!currentUser || !currentUser.uid) {
+        throw new Error('Utilisateur non authentifié');
+      }
+      console.log('👤 Utilisateur courant récupéré:', currentUser.uid);
+
+      // Préparer les données de la boutique
+      const formData = this.storeForm.value;
+      const storeData: Partial<StoreData> = {
+        ...formData,
+        influenceurCode: this.influenceurCode // Inclure le code influenceur s'il existe
+      };
+      console.log('📦 Données de la boutique préparées:', { 
+        storeName: storeData.storeName, 
+        influenceurCode: storeData.influenceurCode 
+      });
+
+      // Sauvegarder la boutique avec timeout
+      console.log('💾 Sauvegarde de la boutique...');
+      const storeId = await Promise.race([
+        this.storeService.saveStore(storeData),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout lors de la sauvegarde')), 30000)
+        )
+      ]);
+      console.log('✅ Boutique sauvegardée avec l\'ID:', storeId);
+
+      // Si un code influenceur est valide, enregistrer l'utilisation avec la nouvelle logique
+      if (this.influenceurCode && this.influenceurData) {
+        console.log('🎯 Enregistrement de l\'utilisation du code influenceur...');
+        try {
+          await Promise.race([
+            this.influenceurService.enregistrerUtilisation(
+              this.influenceurCode,
+              currentUser.uid,
+              storeId
+            ),
+            new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout lors de l\'enregistrement influenceur')), 15000)
+            )
+          ]);
+          console.log('✅ Utilisation du code influenceur enregistrée avec succès');
+        } catch (error) {
+          console.error('❌ Erreur lors de l\'enregistrement de l\'utilisation du code influenceur:', error);
+          // Ne pas faire échouer la création de boutique pour cette erreur
+        }
+      }
+
+      // Mettre à jour le statut hasStore de l'utilisateur avec timeout
+      console.log('👤 Mise à jour du statut hasStore...');
+      try {
+        await Promise.race([
+          this.authService.updateStoreStatus(true),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout lors de la mise à jour du statut')), 10000)
+          )
+        ]);
+        console.log('✅ Statut hasStore mis à jour');
+      } catch (error) {
+        console.error('⚠️ Erreur lors de la mise à jour du statut hasStore, mais boutique créée:', error);
+        // Continuer même si cette étape échoue
+      }
+
+      // Afficher le message de succès
+      this.toastService.success('Boutique créée avec succès !', 'Succès');
+      
+      // Rediriger vers le dashboard avec un délai pour s'assurer que le toast s'affiche
+      console.log('🔄 Redirection vers le dashboard...');
+      setTimeout(() => {
+        this.router.navigate(['/dashboard']).then(
+          (success) => console.log('Navigation réussie:', success),
+          (error) => console.error('Erreur de navigation:', error)
+        );
+      }, 500);
+      
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la création de la boutique:', error);
+      this.toastService.error(error.message || 'Une erreur est survenue lors de la création de la boutique', 'Erreur');
+    } finally {
+      // S'assurer que le loading se termine toujours
+      setTimeout(() => {
+        this.isSubmitting = false;
+        console.log('🔄 isSubmitting remis à false');
+      }, 100);
     }
   }
   
@@ -651,5 +789,59 @@ export class StoreCreationComponent implements OnInit {
         maximumAge: 0
       }
     );
+  }
+
+  /**
+   * Méthode de test pour créer un influenceur avec le code MACDIDIOP
+   * Accessible uniquement en mode développement via la console
+   */
+  private async createTestInfluenceur(): Promise<void> {
+    try {
+      const result = await this.influenceurService.createTestInfluenceur();
+      console.log('✅ Influenceur de test créé avec le code:', result);
+      this.toastService.success('Influenceur de test MACDIDIOP créé avec succès!', 'Test réussi');
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de l\'influenceur de test:', error);
+      this.toastService.error('Erreur lors de la création de l\'influenceur de test', 'Erreur');
+    }
+  }
+
+  /**
+   * Méthode de test pour déboguer le problème de soumission
+   * Accessible depuis la console: window.debugStoreCreation()
+   */
+  debugStoreCreation(): void {
+    console.log('🔍 État actuel du composant:');
+    console.log('- isSubmitting:', this.isSubmitting);
+    console.log('- currentStep:', this.currentStep);
+    console.log('- storeForm.valid:', this.storeForm.valid);
+    console.log('- termsAccepted:', this.storeForm.get('termsAccepted')?.value);
+    console.log('- influenceurCode:', this.influenceurCode);
+    console.log('- influenceurData:', this.influenceurData);
+    console.log('- Formulaire values:', this.storeForm.value);
+    
+    // Exposer cette méthode globalement pour le débogage
+    (window as any).debugStoreCreation = () => this.debugStoreCreation();
+    (window as any).testStoreSubmission = () => this.testStoreSubmission();
+  }
+
+  /**
+   * Méthode de test pour simuler la soumission sans vraiment créer la boutique
+   */
+  private async testStoreSubmission(): Promise<void> {
+    console.log('🧪 Test de soumission (simulation)');
+    
+    this.isSubmitting = true;
+    
+    try {
+      // Simuler les étapes
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('✅ Simulation réussie');
+      this.toastService.success('Test de soumission réussi!', 'Test');
+    } catch (error) {
+      console.error('❌ Erreur dans le test:', error);
+    } finally {
+      this.isSubmitting = false;
+    }
   }
 } 

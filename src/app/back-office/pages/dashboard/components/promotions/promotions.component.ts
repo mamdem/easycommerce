@@ -1,13 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { PromotionService, Promotion } from '../../../../../core/services/promotion.service';
 import { StoreService } from '../../../../../core/services/store.service';
 import { ToastService } from '../../../../../core/services/toast.service';
-import { Observable, of } from 'rxjs';
+import { Observable, of, Subject, takeUntil, switchMap, filter } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { LoadingSpinnerComponent } from '../../../../../shared/components/loading-spinner/loading-spinner.component';
+import { Store } from '../../../../../core/models/store.model';
 
 @Component({
   selector: 'app-promotions',
@@ -22,42 +23,50 @@ import { LoadingSpinnerComponent } from '../../../../../shared/components/loadin
   templateUrl: './promotions.component.html',
   styleUrls: ['./promotions.component.scss']
 })
-export class PromotionsComponent implements OnInit {
+export class PromotionsComponent implements OnInit, OnDestroy {
   activePromotions$: Observable<Promotion[]> = of([]);
   expiredPromotions$: Observable<Promotion[]> = of([]);
   upcomingPromotions$: Observable<Promotion[]> = of([]);
-  private storeId: string = '';
+  currentStore!: Store;
   loading = true;
+
+  // Pour la gestion de la destruction du composant
+  private destroy$ = new Subject<void>();
 
   constructor(
     private promotionService: PromotionService,
     private storeService: StoreService,
     private toastService: ToastService
-  ) {
-    this.initializePromotions();
-  }
+  ) {}
 
   ngOnInit(): void {
-    // Simuler un chargement
-    setTimeout(() => {
-      this.loading = false;
-    }, 1000);
-  }
-
-  private initializePromotions(): void {
-    this.loading = true;
-    this.storeService.getSelectedStore().subscribe(store => {
+    // S'abonner aux changements de boutique
+    this.storeService.selectedStore$.pipe(
+      takeUntil(this.destroy$),
+      switchMap(storeId => {
+        if (!storeId) {
+          return of(null);
+        }
+        return this.storeService.getSelectedStore();
+      }),
+      filter(store => !!store) // Ignorer les valeurs null
+    ).subscribe({
+      next: (store) => {
       if (store) {
-        this.storeId = store.id!;
+          this.currentStore = store;
         this.loadPromotions();
-      } else {
+        }
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement de la boutique:', error);
         this.loading = false;
       }
     });
   }
 
   private loadPromotions(): void {
-    this.promotionService.getPromotions(this.storeId).subscribe({
+    this.loading = true;
+    this.promotionService.getPromotions(this.currentStore.id!).subscribe({
       next: (promotions) => {
         const now = new Date().getTime();
         
@@ -84,11 +93,12 @@ export class PromotionsComponent implements OnInit {
   }
 
   desactiverPromotion(promotion: Promotion): void {
-    if (!this.storeId || !promotion.id) return;
+    if (!this.currentStore.id || !promotion.id) return;
 
-    this.promotionService.updatePromotion(this.storeId, promotion.id, { actif: false }).subscribe({
+    this.promotionService.updatePromotion(this.currentStore.id, promotion.id, { actif: false }).subscribe({
       next: () => {
         this.toastService.success('Promotion désactivée');
+        this.loadPromotions(); // Recharger les promotions après la désactivation
       },
       error: (error) => {
         console.error('Erreur lors de la désactivation de la promotion:', error);
@@ -98,13 +108,13 @@ export class PromotionsComponent implements OnInit {
   }
 
   deletePromotion(id: string | undefined): void {
-    if (!id) return;
+    if (!id || !this.currentStore.id) return;
     
     if (confirm('Êtes-vous sûr de vouloir supprimer cette promotion ?')) {
-      this.promotionService.deletePromotion(this.storeId, id).subscribe({
+      this.promotionService.deletePromotion(this.currentStore.id, id).subscribe({
         next: () => {
           this.toastService.success('Promotion supprimée');
-          this.initializePromotions();
+          this.loadPromotions(); // Recharger les promotions après la suppression
         },
         error: (error) => {
           console.error('Erreur lors de la suppression de la promotion:', error);
@@ -146,5 +156,10 @@ export class PromotionsComponent implements OnInit {
       month: 'short',
       year: 'numeric'
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 } 

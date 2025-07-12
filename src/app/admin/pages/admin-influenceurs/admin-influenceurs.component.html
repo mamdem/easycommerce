@@ -1,0 +1,311 @@
+<div class="influenceurs-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <h1>
+          <i class="bi bi-star"></i>
+          Gestion des Influenceurs
+        </h1>
+        <p class="subtitle">Gérez tous les influenceurs et leurs codes promo</p>
+      </div>
+      <button class="btn-primary" (click)="openAddModal()">
+        <i class="bi bi-plus-lg"></i>
+        Ajouter un influenceur
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-section">
+    <div class="search-box">
+      <i class="bi bi-search"></i>
+      <input 
+        type="text" 
+        placeholder="Rechercher un influenceur..." 
+        [(ngModel)]="searchTerm"
+        (input)="applyFilters()">
+    </div>
+
+    <div class="filter-controls">
+      <select [(ngModel)]="selectedStatus" (change)="applyFilters()" class="filter-select">
+        <option value="all">Tous les statuts</option>
+        <option value="active">Actif</option>
+        <option value="inactive">Inactif</option>
+        <option value="expired">Expiré</option>
+      </select>
+
+      <button class="sort-btn" (click)="toggleSort()">
+        <i class="bi" [ngClass]="sortDirection === 'asc' ? 'bi-sort-alpha-down' : 'bi-sort-alpha-up'"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Influenceurs Table -->
+  <div class="table-container">
+    <ng-container *ngIf="!isLoading; else loadingTemplate">
+      <div class="table-wrapper">
+        <table class="influenceurs-table">
+          <thead>
+            <tr>
+              <th>Influenceur</th>
+              <th>Code Promo</th>
+              <th>Réduction</th>
+              <th>Utilisation</th>
+              <th>Commission</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let influenceur of filteredInfluenceurs; trackBy: trackByInfluenceurId" class="table-row">
+              <td class="influenceur-info">
+                <div class="info-main">
+                  <h4>{{ influenceur.prenom }} {{ influenceur.nom }}</h4>
+                  <p class="email">{{ influenceur.email }}</p>
+                </div>
+                <div class="social-links">
+                  <span *ngIf="influenceur.instagram" class="social-tag instagram">
+                    <i class="bi bi-instagram"></i>
+                    Instagram
+                  </span>
+                  <span *ngIf="influenceur.tiktok" class="social-tag tiktok">
+                    <i class="bi bi-tiktok"></i>
+                    TikTok
+                  </span>
+                  <span *ngIf="influenceur.youtube" class="social-tag youtube">
+                    <i class="bi bi-youtube"></i>
+                    YouTube
+                  </span>
+                </div>
+              </td>
+              
+              <td class="promo-code">
+                <span class="code">{{ influenceur.codePromo }}</span>
+                <span class="expiry">Validité: {{ formatValiditeMois(influenceur.validiteMois) }}</span>
+              </td>
+              
+              <td class="reduction">
+                <span class="percentage">{{ influenceur.reductionPourcentage }}%</span>
+              </td>
+              
+              <td class="usage">
+                <div class="usage-info">
+                  <span class="usage-text">{{ influenceur.utilisations || 0 }} utilisations</span>
+                  <div class="usage-bar">
+                    <div class="usage-progress" [style.width.%]="getUsagePercentage(influenceur)"></div>
+                  </div>
+                  <span class="usage-percent">{{ getUsagePercentage(influenceur) | number:'1.0-0' }}%</span>
+                </div>
+              </td>
+              
+              <td class="commission">
+                <span class="amount">{{ (influenceur.commissionGagnee || 0) | currency:'€':'symbol':'1.2-2':'fr-FR' }}</span>
+              </td>
+              
+              <td class="status">
+                <span class="status-badge" [ngClass]="getStatusClass(influenceur.statut)">
+                  {{ getStatusText(influenceur.statut) }}
+                </span>
+              </td>
+              
+              <td class="actions">
+                <div class="action-buttons">
+                  <button 
+                    class="btn-action edit"
+                    (click)="openEditModal(influenceur)"
+                    title="Modifier">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  
+                  <button 
+                    class="btn-action toggle"
+                    (click)="updateStatut(influenceur, influenceur.statut === 'active' ? 'inactive' : 'active')"
+                    title="{{ influenceur.statut === 'active' ? 'Désactiver' : 'Activer' }}">
+                    <i class="bi" [ngClass]="influenceur.statut === 'active' ? 'bi-pause' : 'bi-play'"></i>
+                  </button>
+                  
+                  <button 
+                    class="btn-action delete"
+                    (click)="deleteInfluenceur(influenceur)"
+                    title="Supprimer">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredInfluenceurs.length === 0" class="empty-state">
+        <i class="bi bi-star"></i>
+        <h3>Aucun influenceur trouvé</h3>
+        <p>{{ searchTerm || selectedStatus !== 'all' ? 'Essayez de modifier vos filtres de recherche.' : 'Aucun influenceur n\'est encore enregistré.' }}</p>
+      </div>
+    </ng-container>
+
+    <ng-template #loadingTemplate>
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Chargement des influenceurs...</p>
+      </div>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Modal d'ajout/modification -->
+<div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="bi bi-star"></i>
+        {{ isEditMode ? 'Modifier l\'influenceur' : 'Ajouter un influenceur' }}
+      </h2>
+      <button class="modal-close" (click)="closeModal()">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <!-- Message d'erreur -->
+      <div *ngIf="errorMessage" class="error-message">
+        <i class="bi bi-exclamation-triangle"></i>
+        {{ errorMessage }}
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="prenom">Prénom *</label>
+          <input 
+            type="text" 
+            id="prenom"
+            [(ngModel)]="currentInfluenceur.prenom"
+            (input)="onNameChange()"
+            placeholder="Prénom de l'influenceur"
+            required>
+        </div>
+        
+        <div class="form-group">
+          <label for="nom">Nom *</label>
+          <input 
+            type="text" 
+            id="nom"
+            [(ngModel)]="currentInfluenceur.nom"
+            (input)="onNameChange()"
+            placeholder="Nom de l'influenceur"
+            required>
+        </div>
+        
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input 
+            type="email" 
+            id="email"
+            [(ngModel)]="currentInfluenceur.email"
+            placeholder="email@exemple.com"
+            required>
+        </div>
+        
+        <div class="form-group">
+          <label for="telephone">Téléphone</label>
+          <input 
+            type="tel" 
+            id="telephone"
+            [(ngModel)]="currentInfluenceur.telephone"
+            placeholder="+221 77 123 45 67">
+        </div>
+        
+        <div class="form-group code-group">
+          <label for="codePromo">Code Promo * (sera l'identifiant unique)</label>
+          <div class="code-input">
+            <input 
+              type="text" 
+              id="codePromo"
+              [(ngModel)]="currentInfluenceur.codePromo"
+              (blur)="checkPromoCodeUniqueness()"
+              placeholder="CODE_PROMO"
+              required>
+            <button type="button" class="generate-btn" (click)="generateNewCode()">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+          <small class="code-help">Ce code servira d'identifiant unique pour cet influenceur</small>
+        </div>
+        
+        <div class="form-group">
+          <label for="reduction">Réduction (%) *</label>
+          <div class="input-with-unit">
+            <input 
+              type="number" 
+              id="reduction"
+              [(ngModel)]="currentInfluenceur.reductionPourcentage"
+              min="1" 
+              max="100"
+              placeholder="10"
+              required>
+            <span class="unit">%</span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="validiteMois">Validité (mois) *</label>
+          <div class="input-with-unit">
+            <input 
+              type="number" 
+              id="validiteMois"
+              [(ngModel)]="currentInfluenceur.validiteMois"
+              min="1" 
+              max="24"
+              placeholder="2"
+              required>
+            <span class="unit">mois</span>
+          </div>
+          <small class="validity-help">Nombre de mois pendant lesquels chaque client bénéficiera de la réduction</small>
+        </div>
+        
+        <div class="form-group">
+          <label for="instagram">Instagram</label>
+          <input 
+            type="text" 
+            id="instagram"
+            [(ngModel)]="currentInfluenceur.instagram"
+            placeholder="@username">
+        </div>
+        
+        <div class="form-group">
+          <label for="tiktok">TikTok</label>
+          <input 
+            type="text" 
+            id="tiktok"
+            [(ngModel)]="currentInfluenceur.tiktok"
+            placeholder="@username">
+        </div>
+        
+        <div class="form-group">
+          <label for="youtube">YouTube</label>
+          <input 
+            type="text" 
+            id="youtube"
+            [(ngModel)]="currentInfluenceur.youtube"
+            placeholder="Nom de la chaîne">
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" (click)="closeModal()">
+          Annuler
+        </button>
+        <button 
+          type="button" 
+          class="btn-primary" 
+          (click)="saveInfluenceur()"
+          [disabled]="isSaving || !!errorMessage">
+          <i class="bi" [ngClass]="isSaving ? 'bi-hourglass-split' : 'bi-check-lg'"></i>
+          {{ isSaving ? 'Sauvegarde...' : (isEditMode ? 'Modifier' : 'Ajouter') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -259,8 +259,13 @@
   }
 
   &:hover {
-    background: var(--store-primary-dark);
-    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--store-primary-color) 80%, black 20%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(var(--store-primary-rgb), 0.2);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 }
 
@@ -279,14 +284,20 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  font-size: 1.05rem;
 
   i {
     font-size: 1.2rem;
   }
 
   &:hover {
-    background: var(--store-primary-dark);
-    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--store-primary-color) 80%, black 20%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(var(--store-primary-rgb), 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 }
 

@@ -13,7 +13,7 @@ const routes: Routes = [
     loadChildren: () => import('./back-office/pages/auth/auth.module').then(m => m.AuthModule) 
   },
   { 
-    path: 'payment',
+    path: 'payment/:storeId',
     loadComponent: () => import('./back-office/pages/payment/payment.component').then(m => m.PaymentComponent)
   },
   { 
@@ -31,6 +31,10 @@ const routes: Routes = [
   {
     path: 'boutique/:storeUrl',
     loadChildren: () => import('./store/store.module').then(m => m.StoreModule)
+  },
+  {
+    path: 'admin-page',
+    loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule)
   },
   { path: '**', redirectTo: '/home' }
 ];

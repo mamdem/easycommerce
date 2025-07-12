@@ -46,7 +46,7 @@ $transition: all 0.3s ease;
   color: $dark-color;
   text-align: center;
   padding: 3.5rem 0;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem; // Réduit de 2.5rem à 1.5rem pour moins d'espace avec la bannière
   box-shadow: 0 4px 20px -5px rgba($primary-color, 0.1);
   position: relative;
   overflow: hidden;
@@ -996,6 +996,182 @@ $transition: all 0.3s ease;
 
     i {
       color: $success-color;
+    }
+  }
+} 
+
+// Bannière d'informations influenceur
+.influencer-banner {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  padding: 0.5rem 0 0.75rem 0; // Padding asymétrique : moins en haut (0.5rem), normal en bas (0.75rem)
+  border-bottom: 1px solid #dee2e6;
+  margin-top: -0.5rem; // Marge négative pour rapprocher de l'en-tête
+
+  .influencer-card {
+    background: white;
+    border-radius: 12px; // Réduit de 15px à 12px
+    padding: 1rem; // Réduit de 1.5rem à 1rem
+    display: flex;
+    align-items: center;
+    gap: 0.75rem; // Réduit de 1rem à 0.75rem
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); // Ombre plus discrète
+    border-left: 3px solid #6c757d; // Réduit de 4px à 3px
+    transition: all 0.3s ease;
+
+    &.loading {
+      border-left-color: #fe7b33;
+      background: linear-gradient(135deg, #fff8f0, #ffeee0);
+
+      .influencer-icon i {
+        color: #fe7b33;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+    }
+
+    &.valid {
+      border-left-color: #28a745;
+      background: linear-gradient(135deg, #f0fff4, #e6ffed);
+
+      .influencer-icon i {
+        color: #28a745;
+      }
+
+      .discount-value {
+        background: linear-gradient(135deg, #28a745, #34ce57);
+        color: white;
+        padding: 0.2rem 0.6rem; // Réduit le padding
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.95rem; // Réduit de 1.1rem à 0.95rem
+      }
+    }
+
+    &.invalid {
+      border-left-color: #dc3545;
+      background: linear-gradient(135deg, #fff5f5, #ffebee);
+
+      .influencer-icon i {
+        color: #dc3545;
+      }
+    }
+
+    .influencer-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px; // Réduit de 50px à 40px
+      height: 40px; // Réduit de 50px à 40px
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      flex-shrink: 0; // Empêche la réduction
+
+      i {
+        font-size: 1.25rem; // Réduit de 1.5rem à 1.25rem
+      }
+    }
+
+    .influencer-content {
+      flex: 1;
+
+      .influencer-title {
+        margin: 0 0 0.3rem 0; // Réduit de 0.5rem à 0.3rem
+        font-size: 1.1rem; // Réduit de 1.25rem à 1.1rem
+        font-weight: 600;
+        color: #495057;
+      }
+
+      .influencer-message {
+        margin: 0 0 0.75rem 0; // Réduit de 1rem à 0.75rem
+        color: #6c757d;
+        font-size: 0.9rem; // Réduit de 0.95rem à 0.9rem
+        line-height: 1.3; // Améliore la lisibilité avec moins d'espace
+      }
+
+      .influencer-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem; // Réduit de 1rem à 0.75rem
+        flex-wrap: wrap;
+
+        .influencer-info {
+          display: flex;
+          flex-direction: column;
+          gap: 0.2rem; // Réduit de 0.25rem à 0.2rem
+
+          .influencer-name {
+            font-weight: 600;
+            color: #495057;
+            font-size: 1rem; // Réduit de 1.1rem à 1rem
+          }
+
+          .influencer-code {
+            color: #6c757d;
+            font-size: 0.85rem; // Réduit de 0.9rem à 0.85rem
+            font-family: 'Courier New', monospace;
+          }
+        }
+
+        .influencer-discount {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 0.2rem; // Réduit de 0.25rem à 0.2rem
+
+          .discount-label {
+            color: #6c757d;
+            font-size: 0.8rem; // Réduit de 0.85rem à 0.8rem
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+        }
+      }
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+// Responsive pour la bannière influenceur
+@media (max-width: 768px) {
+  .influencer-banner {
+    padding: 0.25rem 0 0.5rem 0; // Encore plus compact sur mobile : padding asymétrique réduit
+    margin-top: -0.25rem; // Marge négative réduite sur mobile
+    
+    .influencer-card {
+      padding: 0.75rem; // Réduit le padding sur mobile
+      flex-direction: column;
+      text-align: center;
+      gap: 0.75rem;
+
+      .influencer-content {
+        .influencer-title {
+          font-size: 1rem; // Taille réduite sur mobile
+        }
+
+        .influencer-message {
+          font-size: 0.85rem; // Taille réduite sur mobile
+          margin-bottom: 0.5rem;
+        }
+
+        .influencer-details {
+          flex-direction: column;
+          align-items: center;
+          gap: 0.5rem; // Espace réduit sur mobile
+
+          .influencer-discount {
+            align-items: center;
+          }
+        }
+      }
     }
   }
 } 

@@ -48,30 +48,29 @@
     
     <div class="navbar-right">
       <div class="action-buttons">
-        <!-- Subscription Status -->
-        <ng-container *ngIf="subscriptionStatus">
-          <button *ngIf="subscriptionStatus.status && ['canceled', 'unpaid', 'past_due'].includes(subscriptionStatus.status)"
-                  (click)="goToSubscriptionPage()"
-                  class="btn subscription-status-btn"
-                  [ngClass]="getSubscriptionStatusClass(subscriptionStatus)">
-            <i [class]="'bi ' + getSubscriptionIcon(subscriptionStatus)"></i>
-            <span>{{ getSubscriptionStatusText(subscriptionStatus) }}</span>
-          </button>
-
-          <div *ngIf="subscriptionStatus.status && ['trialing', 'active'].includes(subscriptionStatus.status)"
-               class="subscription-status"
-               [ngClass]="getSubscriptionStatusClass(subscriptionStatus)"
-               [title]="subscriptionStatus.isInTrial ? 'Votre période d\'essai se termine le ' + (subscriptionStatus.trialEnd | date) : ''">
-            <i [class]="'bi ' + getSubscriptionIcon(subscriptionStatus)"></i>
-            <span>{{ getSubscriptionStatusText(subscriptionStatus) }}</span>
+        <!-- Trial Period Status -->
+        <ng-container *ngIf="selectedStore">
+          <div *ngIf="isTrialPeriod" class="trial-status">
+            <i class="bi bi-clock-history"></i>
+            <span>Période d'essai : {{ trialDaysLeft }} jours restants</span>
           </div>
 
-          <button *ngIf="!subscriptionStatus.status"
+          <!-- Bouton d'abonnement -->
+          <button *ngIf="(!isTrialPeriod && !isSubscribed && paymentStatus !== 'paid') || isSubscriptionExpired"
                   (click)="goToSubscriptionPage()"
                   class="btn btn-primary subscription-btn">
             <i class="bi bi-cart-plus"></i>
-            <span>S'abonner</span>
+            <span>{{ isSubscriptionExpired ? 'Renouveler l\'abonnement' : 'S\'abonner' }}</span>
+          </button>
+
+          <!-- Statut d'abonnement en échec -->
+          <div *ngIf="paymentStatus === 'failed' && !isSubscriptionExpired"
+               class="subscription-status failed">
+            <i class="bi bi-x-circle-fill"></i>
+            <button (click)="goToSubscriptionPage()" class="btn btn-sm btn-danger">
+              Réessayer
         </button>
+          </div>
         </ng-container>
         
         <!-- Notifications -->
@@ -214,25 +213,9 @@
       </nav>
     </aside>
 
-    <!-- Main Content Area -->
+    <!-- Main Content -->
     <main class="main-content">
-      <!-- Message de chargement -->
-      <div *ngIf="loading" class="loading-container">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Chargement...</span>
-        </div>
-        <p>Chargement du dashboard...</p>
-      </div>
-    
-      
-      <!-- Contenu principal du dashboard -->
-      <div *ngIf="!loading" class="dashboard-content-wrapper">
-        
-        <!-- Contenu personnalisé du dashboard -->
-        <div class="dashboard-content">
           <router-outlet></router-outlet>
-        </div>
-      </div>
     </main>
   </div>
 </div>
@@ -264,6 +247,35 @@
           Déconnexion
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="subscription-status" *ngIf="currentTransaction">
+  <div class="alert" [ngClass]="{
+    'alert-success': paymentStatus === 'paid',
+    'alert-warning': paymentStatus === 'pending',
+    'alert-danger': paymentStatus === 'failed'
+  }">
+    <div class="d-flex align-items-center">
+      <i class="bi" [ngClass]="{
+        'bi-check-circle-fill': paymentStatus === 'paid',
+        'bi-clock-history': paymentStatus === 'pending',
+        'bi-x-circle-fill': paymentStatus === 'failed'
+      }"></i>
+      <span class="ms-2">
+        <ng-container [ngSwitch]="paymentStatus">
+          <ng-container *ngSwitchCase="'paid'">
+            Abonnement actif depuis le {{ lastPaymentDate | date:'dd/MM/yyyy' }}
+          </ng-container>
+          <ng-container *ngSwitchCase="'pending'">
+            Paiement en cours de traitement...
+          </ng-container>
+          <ng-container *ngSwitchCase="'failed'">
+            Le paiement a échoué. Veuillez réessayer.
+          </ng-container>
+        </ng-container>
+      </span>
     </div>
   </div>
 </div>
@@ -689,5 +701,30 @@
 .modal-actions .btn {
   min-width: 100px;
   padding: 0.5rem 1rem;
+}
+
+.subscription-status {
+  margin: 1rem 0;
+}
+
+.subscription-status .alert {
+  margin-bottom: 0;
+  padding: 0.75rem 1rem;
+}
+
+.subscription-status .bi {
+  font-size: 1.25rem;
+}
+
+.alert-success .bi {
+  color: #198754;
+}
+
+.alert-warning .bi {
+  color: #ffc107;
+}
+
+.alert-danger .bi {
+  color: #dc3545;
 }
 </style> 

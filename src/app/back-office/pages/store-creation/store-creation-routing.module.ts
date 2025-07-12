@@ -6,6 +6,10 @@ const routes: Routes = [
   {
     path: '',
     component: StoreCreationComponent
+  },
+  {
+    path: ':influenceurCode',
+    component: StoreCreationComponent
   }
 ];
 

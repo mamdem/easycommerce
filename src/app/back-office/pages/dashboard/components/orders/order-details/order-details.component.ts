@@ -1,14 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { ActivatedRoute, Router } from '@angular/router';
-import { OrderService } from '../../../../../../core/services/order.service';
-import { Order } from '../../../../../../core/models/order.model';
-import { ToastService } from '../../../../../../core/services/toast.service';
-import { MatDialog } from '@angular/material/dialog';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { RejectOrderDialogComponent } from '../reject-order-dialog/reject-order-dialog.component';
+import { Subject, takeUntil, switchMap, filter, of } from 'rxjs';
+import { OrderService } from '../../../../../../core/services/order.service';
 import { StoreService } from '../../../../../../core/services/store.service';
+import { ToastService } from '../../../../../../core/services/toast.service';
+import { Order } from '../../../../../../core/models/order.model';
+import { Store } from '../../../../../../core/models/store.model';
+import { MatDialog } from '@angular/material/dialog';
+import { RejectOrderDialogComponent } from '../reject-order-dialog/reject-order-dialog.component';
 
 @Component({
   selector: 'app-order-details',
@@ -21,39 +22,60 @@ import { StoreService } from '../../../../../../core/services/store.service';
   templateUrl: './order-details.component.html',
   styleUrl: './order-details.component.scss'
 })
-export class OrderDetailsComponent implements OnInit {
+export class OrderDetailsComponent implements OnInit, OnDestroy {
   order: Order | null = null;
   loading = true;
   error = false;
+  currentStore!: Store;
+
+  // Pour la gestion de la destruction du composant
+  private destroy$ = new Subject<void>();
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router,
     private orderService: OrderService,
+    private storeService: StoreService,
     private toastService: ToastService,
-    private dialog: MatDialog,
-    private storeService: StoreService
+    private dialog: MatDialog
   ) { }
 
   ngOnInit(): void {
-    this.route.params.subscribe(params => {
-      const orderId = params['id'];
-      if (orderId) {
+    const orderId = this.route.snapshot.paramMap.get('id');
+    if (!orderId) {
+      this.error = true;
+      this.loading = false;
+      this.toastService.error('ID de commande non trouvé');
+      return;
+    }
+
+    // S'abonner aux changements de boutique
+    this.storeService.selectedStore$.pipe(
+      takeUntil(this.destroy$),
+      switchMap(storeId => {
+        if (!storeId) {
+          return of(null);
+        }
+        return this.storeService.getSelectedStore();
+      }),
+      filter(store => !!store) // Ignorer les valeurs null
+    ).subscribe({
+      next: (store) => {
+        if (store) {
+          this.currentStore = store;
         this.loadOrder(orderId);
-      } else {
+        }
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement de la boutique:', error);
         this.error = true;
         this.loading = false;
-        this.toastService.error('ID de commande invalide');
       }
     });
   }
 
   private loadOrder(orderId: string): void {
     this.loading = true;
-    this.storeService.getSelectedStore().subscribe({
-      next: (store) => {
-        if (store) {
-          const storeUrl = store.id?.split('_')[1] || '';
+    const storeUrl = this.currentStore.id?.split('_')[1] || '';
           this.orderService.getOrderById(storeUrl, orderId).subscribe({
             next: (order) => {
               if (order) {
@@ -82,19 +104,6 @@ export class OrderDetailsComponent implements OnInit {
               this.error = true;
               this.loading = false;
               this.toastService.error('Impossible de charger les détails de la commande');
-            }
-          });
-        } else {
-          this.error = true;
-          this.loading = false;
-          this.toastService.error('Boutique non trouvée');
-        }
-      },
-      error: (error) => {
-        console.error('Erreur lors du chargement de la boutique:', error);
-        this.error = true;
-        this.loading = false;
-        this.toastService.error('Erreur lors du chargement de la boutique');
       }
     });
   }
@@ -145,7 +154,7 @@ export class OrderDetailsComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/orders']);
+    // Implement the goBack method
   }
 
   getStatusLabel(status: string | undefined): string {
@@ -188,5 +197,10 @@ export class OrderDetailsComponent implements OnInit {
 
   calculateItemTotal(price: number | undefined, quantity: number | undefined): number {
     return (price || 0) * (quantity || 0);
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

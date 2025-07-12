@@ -17,6 +17,7 @@ import { StoreNavbarComponent } from '../../components/store-navbar/store-navbar
 import { StoreFooterComponent } from '../../components/store-footer/store-footer.component';
 import { AngularFirestoreModule } from '@angular/fire/compat/firestore';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
+import { NabooPayService } from '../../../core/services/naboo-pay.service';
 import * as AOS from 'aos';
 import localeFr from '@angular/common/locales/fr';
 
@@ -60,6 +61,23 @@ export class StoreHomeComponent implements OnInit, OnDestroy {
   private filteredProductsSubject = new BehaviorSubject<ProductWithPromotion[]>([]);
   filteredProducts$ = this.filteredProductsSubject.asObservable();
 
+  // Statut de l'abonnement
+  isSubscriptionActive: boolean = false;
+  isSubscriptionExpired: boolean = false;
+  isSubscriptionLoading: boolean = true;
+
+  // Période d'essai
+  isTrialPeriod: boolean = false;
+  trialDaysLeft: number = 0;
+  
+  // Propriété pour savoir si la boutique est accessible (période d'essai OU abonnement actif)
+  get isStoreAccessible(): boolean {
+    return this.isTrialPeriod || this.isSubscriptionActive;
+  }
+
+  // Gestion des erreurs d'images
+  logoLoadError: boolean = false;
+
   // Filtres
   searchQuery: string = '';
   sortOption: string = 'name';
@@ -83,6 +101,7 @@ export class StoreHomeComponent implements OnInit, OnDestroy {
     private categoryService: CategoryService,
     private priceService: PriceService,
     private promotionService: PromotionService,
+    private nabooPayService: NabooPayService,
     private router: Router,
     private route: ActivatedRoute
   ) {
@@ -121,6 +140,8 @@ export class StoreHomeComponent implements OnInit, OnDestroy {
   private loadStoreData() {
       this.loading = true;
       this.error = null;
+      this.isSubscriptionLoading = true;
+      this.logoLoadError = false; // Réinitialiser l'erreur de logo
       
     this.firestore.collection('urls').doc(this.storeUrl).valueChanges()
       .pipe(
@@ -139,13 +160,33 @@ export class StoreHomeComponent implements OnInit, OnDestroy {
           
           // Récupérer les données de la boutique
           return combineLatest([
-            this.firestore.doc(`${storePath}`).valueChanges() as Observable<Store>,
-            this.firestore.collection(`${storePath}/categories`).valueChanges({ idField: 'id' }),
-            this.firestore.collection(`${storePath}/products`).valueChanges({ idField: 'id' }),
-            this.firestore.collection(`${storePath}/promotions`).valueChanges({ idField: 'id' })
+            this.firestore.doc(storePath).valueChanges() as Observable<Store>,
+            this.firestore.collection(`${storePath}/categories`).valueChanges({ idField: 'id' }) as Observable<Category[]>,
+            this.firestore.collection(`${storePath}/products`).valueChanges({ idField: 'id' }) as Observable<Product[]>,
+            this.firestore.collection(`${storePath}/promotions`).valueChanges({ idField: 'id' }) as Observable<Promotion[]>
           ]).pipe(
             take(1),
             map(([store, categories, products, promotions]) => {
+              console.log('📦 Données brutes récupérées:', {
+                store,
+                categories: categories.length,
+                products: products.length,
+                promotions: promotions.length
+              });
+
+              // Vérifier le statut de l'abonnement sans le mettre à jour
+              if (store && store.currentTransaction?.orderId) {
+                this.checkSubscriptionStatus(store.currentTransaction.orderId);
+              } else {
+                // Pas de transaction en cours, mais la boutique pourrait être en période d'essai
+                this.isSubscriptionActive = false;
+                this.isSubscriptionExpired = false;
+                this.isSubscriptionLoading = false;
+              }
+
+              // Calculer les informations de période d'essai
+              this.calculateTrialPeriod(store);
+
               // Filtrer les promotions actives
               const now = Date.now();
               const activePromotions = (promotions as Promotion[]).filter(promo => 
@@ -155,20 +196,29 @@ export class StoreHomeComponent implements OnInit, OnDestroy {
                 (!promo.utilisationsMax || promo.utilisationsActuelles < promo.utilisationsMax)
               );
               
-              console.log('📦 Données récupérées:', {
-                store,
-                categoriesCount: categories.length,
-                productsCount: products.length,
-                promotions: {
-                  total: promotions.length,
-                  active: activePromotions.length
-          }
-              });
+              // Stocker les catégories dans le Map pour un accès rapide
+              this.categories = categories;
+              this.categoryMap.clear();
+              categories.forEach(cat => this.categoryMap.set(cat.id, cat));
+
+              // Traiter les produits avec les promotions
+              const processedProducts = this.processProducts(products, activePromotions);
+              console.log('✨ Produits traités:', processedProducts.length);
+              
+              // Mettre à jour les sujets
+              this.productsSubject.next(processedProducts);
+              this.products$ = this.productsSubject.asObservable();
+              
+              // Initialiser les filtres
+              this.initializeFilters(processedProducts);
+              
+              // Mettre à jour les produits filtrés
+              this.filterProducts();
 
               return {
                 store: { ...store, id: storeId } as Store,
                 categories: categories as Category[],
-                products: products as Product[],
+                products: processedProducts,
                 promotions: activePromotions
               };
         })
@@ -176,20 +226,107 @@ export class StoreHomeComponent implements OnInit, OnDestroy {
         }),
         takeUntil(this.destroy$)
       ).subscribe({
-        next: ({ store, categories, products, promotions }) => {
+        next: ({ store, categories }) => {
           console.log('✅ Données chargées avec succès');
           
           this.storeName = store.storeName;
           this.updateStoreStyle(store);
           this.store$ = of(store);
-
-          // Mise à jour des catégories
-        this.categories = categories;
-          categories.forEach(cat => this.categoryMap.set(cat.id, cat));
           this.categories$ = of(categories);
 
-          // Traitement des produits avec promotions
-          const productsWithPromo = products.map(product => {
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement des données:', error);
+          this.error = 'Une erreur est survenue lors du chargement de la boutique';
+          this.loading = false;
+          this.isSubscriptionLoading = false;
+        }
+      });
+  }
+
+  private initializeFilters(products: ProductWithPromotion[]) {
+    if (products.length > 0) {
+      const prices = products.map(p => p.discountedPrice || p.price);
+      this.minPrice = Math.min(...prices);
+      this.maxPrice = Math.max(...prices);
+      this.priceRange = {
+        min: this.minPrice,
+        max: this.maxPrice
+      };
+    }
+  }
+
+  private checkSubscriptionStatus(transactionId: string) {
+    if (!transactionId) {
+      this.isSubscriptionActive = false;
+      this.isSubscriptionLoading = false;
+      return;
+    }
+
+    this.nabooPayService.getTransactionDetails(transactionId).pipe(
+      catchError(error => {
+        console.error('❌ Erreur lors de la vérification de la transaction:', error);
+        return of(null);
+      })
+    ).subscribe({
+      next: (response) => {
+        if (!response) {
+          this.isSubscriptionActive = false;
+          this.isSubscriptionExpired = true;
+          this.isSubscriptionLoading = false;
+          return;
+        }
+
+        const paymentDate = new Date(response.created_at);
+        const today = new Date();
+        const diffTime = Math.abs(today.getTime() - paymentDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        this.isSubscriptionExpired = diffDays > 30;
+        this.isSubscriptionActive = response.transaction_status === 'paid' && !this.isSubscriptionExpired;
+        this.isSubscriptionLoading = false;
+
+        console.log('💳 Vérification du statut de l\'abonnement:', {
+          transactionId,
+          status: response.transaction_status,
+          daysElapsed: diffDays,
+          isActive: this.isSubscriptionActive,
+          isExpired: this.isSubscriptionExpired
+        });
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors de la vérification du statut de l\'abonnement:', error);
+        this.isSubscriptionActive = false;
+        this.isSubscriptionLoading = false;
+      }
+    });
+  }
+
+  /**
+   * Calcule les informations de période d'essai pour la boutique
+   */
+  private calculateTrialPeriod(store: Store): void {
+    if (store?.createdAt) {
+      const creationDate = new Date(store.createdAt);
+      const today = new Date();
+      const diffTime = Math.abs(today.getTime() - creationDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      this.isTrialPeriod = diffDays <= 15;
+      this.trialDaysLeft = Math.max(15 - diffDays, 0);
+      
+      console.log('🕐 Calcul de la période d\'essai:', {
+        creationDate,
+        daysElapsed: diffDays,
+        isTrialPeriod: this.isTrialPeriod,
+        trialDaysLeft: this.trialDaysLeft
+      });
+    }
+  }
+
+  private processProducts(products: Product[], promotions: Promotion[]): ProductWithPromotion[] {
+    return products.map(product => {
             // Vérifier si le produit a un ID et une catégorie valides
             if (!product.id || !product.category) {
               console.warn('⚠️ Produit invalide trouvé:', product);
@@ -198,7 +335,7 @@ export class StoreHomeComponent implements OnInit, OnDestroy {
                   originalPrice: product.price,
                 discountedPrice: null,
                 promotion: null
-              } as ProductWithPromotion;
+        };
             }
 
             const productId = product.id; // On sait que l'ID existe grâce à la vérification précédente
@@ -253,32 +390,6 @@ export class StoreHomeComponent implements OnInit, OnDestroy {
               promotion: applicablePromotion || null,
               promotionId: applicablePromotion?.id
             } as ProductWithPromotion;
-          });
-
-          console.log('🛍️ Résumé des produits:', {
-            total: productsWithPromo.length,
-            avecPromo: productsWithPromo.filter(p => p.promotion).length,
-            sansPromo: productsWithPromo.filter(p => !p.promotion).length
-          });
-
-          this.productsSubject.next(productsWithPromo);
-          this.products$ = this.productsSubject.asObservable();
-          this.filterProducts();
-
-          // Mise à jour des limites de prix absolues
-          if (products.length > 0) {
-            const prices = productsWithPromo.map(p => p.discountedPrice || p.price);
-            this.minPrice = Math.min(...prices);
-            this.maxPrice = Math.max(...prices);
-          }
-
-        this.loading = false;
-      },
-        error: (error) => {
-          console.error('❌ Erreur lors du chargement des données:', error);
-          this.error = error.message || 'Une erreur est survenue lors du chargement des données';
-        this.loading = false;
-      }
       });
   }
 
@@ -413,8 +524,8 @@ export class StoreHomeComponent implements OnInit, OnDestroy {
   }
 
   getCategoryName(categoryId: string): string {
-    const category = this.categories.find(cat => cat.id === categoryId);
-    return category ? category.name : 'Catégorie inconnue';
+    const category = this.categoryMap.get(categoryId);
+    return category ? category.name : 'Non catégorisé';
   }
 
   isProductInCart(product: ProductWithPromotion): boolean {
@@ -449,6 +560,10 @@ export class StoreHomeComponent implements OnInit, OnDestroy {
   onImageError(event: Event) {
     const img = event.target as HTMLImageElement;
     img.src = 'assets/default-product.svg';
+  }
+
+  onLogoError(event: Event) {
+    this.logoLoadError = true;
   }
 
   viewProductDetails(product: Product): void {

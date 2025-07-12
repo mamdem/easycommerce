@@ -14,5 +14,9 @@ export const routes: Routes = [
     path: 'dashboard',
     loadChildren: () => import('./back-office/pages/dashboard/dashboard.module').then(m => m.DashboardModule)
   },
+  {
+    path: 'admin-page',
+    loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule)
+  },
   { path: '**', redirectTo: '/home' }
 ];

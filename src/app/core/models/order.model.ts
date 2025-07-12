@@ -18,6 +18,8 @@ export interface CustomerInfo {
   address: string;
   city: string;
   deliveryInstructions?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export type OrderStatus = 'en_cours' | 'valide' | 'rejete';

@@ -1,17 +1,20 @@
-import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, ChangeDetectorRef, Input, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { Chart, registerables } from 'chart.js';
 import { StoreService } from '../../../../../core/services/store.service';
 import { OrderService } from '../../../../../core/services/order.service';
 import { Store } from '../../../../../core/models/store.model';
 import { Order, OrderStatus } from '../../../../../core/models/order.model';
 import { environment } from '../../../../../../environments/environment';
-import { map, switchMap } from 'rxjs/operators';
-import { forkJoin } from 'rxjs';
+import { map, switchMap, catchError, takeUntil, filter } from 'rxjs/operators';
+import { forkJoin, of, Subject, fromEvent } from 'rxjs';
 import { SubscriptionService, SubscriptionStatus } from '../../../../../core/services/subscription.service';
 import { LoadingSpinnerComponent } from '../../../../../shared/components/loading-spinner/loading-spinner.component';
+import { NabooPayService } from '../../../../../core/services/naboo-pay.service';
+import { TransactionService, Transaction, StoreTransaction } from '../../../../../core/services/transaction.service';
+import { ToastService } from '../../../../../core/services/toast.service';
 
 Chart.register(...registerables);
 
@@ -36,7 +39,7 @@ interface AmountsVisibilityConfig {
     LoadingSpinnerComponent
   ]
 })
-export class OverviewComponent implements OnInit, AfterViewInit {
+export class OverviewComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('salesChart') salesChartRef!: ElementRef;
   @ViewChild('ordersChart') ordersChartRef!: ElementRef;
   
@@ -51,6 +54,14 @@ export class OverviewComponent implements OnInit, AfterViewInit {
     this._showAmounts = value;
     this.saveAmountsVisibility(value);
   }
+
+  // États de l'abonnement
+  isSubscribed: boolean = false;
+  isSubscriptionExpired: boolean = false;
+  paymentStatus: 'pending' | 'paid' | 'failed' = 'pending';
+  isTrialPeriod: boolean = false;
+  trialDaysLeft: number = 0;
+  selectedStore: any;
 
   storeBaseUrl = environment.storeBaseUrl;
 
@@ -86,42 +97,105 @@ export class OverviewComponent implements OnInit, AfterViewInit {
     values: [] as number[]
   };
 
+  private destroy$ = new Subject<void>();
   subscriptionStatus: SubscriptionStatus | null = null;
 
   loading = true;
+  isSubscriptionLoading = false;
+  isSubscriptionActive = false;
+  lastPaymentDate: Date | null = null;
 
   constructor(
     private storeService: StoreService,
     private orderService: OrderService,
     private subscriptionService: SubscriptionService,
-    private cdr: ChangeDetectorRef
+    private nabooPayService: NabooPayService,
+    private transactionService: TransactionService,
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    private toastService: ToastService
   ) {
     this.loadAmountsVisibility();
   }
 
   ngOnInit() {
-    console.log('🟢 Début du chargement des données');
-    this.loading = true;
-    
-    this.storeService.getSelectedStore().subscribe({
+    // S'abonner aux changements de boutique
+    this.storeService.selectedStore$.pipe(
+      takeUntil(this.destroy$),
+      switchMap(storeId => {
+        if (!storeId) {
+          return of(null);
+        }
+        return this.storeService.getStoreById(storeId);
+      }),
+      filter(store => !!store) // Ignorer les valeurs null
+    ).subscribe({
       next: (store) => {
-        console.log('🟢 Store chargé:', store);
         if (store) {
+          this.selectedStore = store;
           this.storeInfo.legalName = store.legalName;
           this.storeInfo.storeName = store.storeName;
           this.storeInfo.url = store.id?.split('_')[1] || '';
           
+          // Vérifier le statut d'abonnement
+          if (store.currentTransaction?.orderId) {
+            this.nabooPayService.getTransactionDetails(store.currentTransaction.orderId).subscribe({
+              next: (transactionDetails) => {
+                // Vérifier l'expiration
+                this.isSubscriptionExpired = this.checkSubscriptionExpiration(transactionDetails.created_at);
+                this.isSubscribed = transactionDetails.transaction_status === 'paid' && !this.isSubscriptionExpired;
+                this.paymentStatus = this.isSubscriptionExpired ? 'failed' : transactionDetails.transaction_status;
+                
+                if (transactionDetails.created_at) {
+                  this.lastPaymentDate = new Date(transactionDetails.created_at);
+                }
+                
+                // Vérifier la période d'essai
+                this.calculateTrialPeriod();
+                
+                // Mettre à jour le statut
+                this.updateSubscriptionStatus();
+          
           // Charger les commandes
+                this.loadOrders();
+              },
+              error: (error) => {
+                console.error('Erreur lors de la vérification de la transaction:', error);
+                this.isSubscribed = false;
+                this.paymentStatus = 'failed';
+                
+                // Vérifier la période d'essai même en cas d'erreur
+                this.calculateTrialPeriod();
+                
+                this.updateSubscriptionStatus();
+                this.loadOrders();
+              }
+            });
+          } else {
+            // Pas de transaction en cours
+            this.isSubscribed = false;
+            this.paymentStatus = 'pending';
+            
+            // Vérifier la période d'essai même sans transaction
+            this.calculateTrialPeriod();
+            
+            this.updateSubscriptionStatus();
+            this.loadOrders();
+          }
+        }
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement de la boutique:', error);
+        this.loading = false;
+      }
+    });
+  }
+
+  private loadOrders() {
           this.orderService.getOrdersByStore(this.storeInfo.url).subscribe({
             next: (orders) => {
               console.log('🟢 Commandes chargées:', orders);
               this.processOrders(orders);
-              
-              // Charger le statut de l'abonnement
-              this.subscriptionService.getSubscriptionStatus().subscribe({
-                next: (status) => {
-                  console.log('🟢 Statut abonnement chargé:', status);
-                  this.subscriptionStatus = status;
                   
                   // Initialiser les graphiques et terminer le chargement
                   setTimeout(() => {
@@ -129,28 +203,60 @@ export class OverviewComponent implements OnInit, AfterViewInit {
                     this.loading = false;
                     console.log('🟢 Chargement terminé');
                   }, 0);
-                },
-                error: (error) => {
-                  console.error('🔴 Erreur lors du chargement du statut:', error);
-                  this.loading = false;
-                }
-              });
             },
             error: (error) => {
               console.error('🔴 Erreur lors du chargement des commandes:', error);
-              this.loading = false;
-            }
-          });
-        } else {
-          console.log('🟡 Aucune boutique sélectionnée');
-          this.loading = false;
-        }
-      },
-      error: (error) => {
-        console.error('🔴 Erreur lors du chargement du store:', error);
         this.loading = false;
       }
     });
+  }
+
+  private checkSubscriptionExpiration(transactionDate: string): boolean {
+    const paymentDate = new Date(transactionDate);
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - paymentDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 30;
+  }
+
+  /**
+   * Calcule les informations de période d'essai pour la boutique actuelle
+   */
+  private calculateTrialPeriod(): void {
+    if (this.selectedStore?.createdAt) {
+      const creationDate = new Date(this.selectedStore.createdAt);
+      const today = new Date();
+      const diffTime = Math.abs(today.getTime() - creationDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      this.isTrialPeriod = diffDays <= 15;
+      this.trialDaysLeft = Math.max(15 - diffDays, 0);
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['isSubscribed'] || changes['isSubscriptionExpired'] || 
+        changes['paymentStatus'] || changes['isTrialPeriod']) {
+      this.updateSubscriptionStatus();
+    }
+  }
+
+  private updateSubscriptionStatus() {
+    this.isSubscriptionActive = this.isSubscribed && !this.isSubscriptionExpired;
+    
+    if (this.isTrialPeriod) {
+      this.storeInfo.status = `Essai gratuit (${this.trialDaysLeft}j)`;
+    } else if (this.isSubscriptionActive) {
+      this.storeInfo.status = 'Actif';
+    } else if (this.isSubscriptionExpired) {
+      this.storeInfo.status = 'Abonnement expiré';
+    } else if (this.paymentStatus === 'pending') {
+      this.storeInfo.status = 'En attente de paiement';
+    } else if (this.paymentStatus === 'failed') {
+      this.storeInfo.status = 'Paiement échoué';
+    } else {
+      this.storeInfo.status = 'Inactif';
+    }
   }
 
   ngAfterViewInit() {
@@ -158,6 +264,11 @@ export class OverviewComponent implements OnInit, AfterViewInit {
     if (!this.loading && this.salesData.values.length > 0) {
       this.initCharts();
     }
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   // Charger la configuration de visibilité des montants
@@ -464,61 +575,63 @@ export class OverviewComponent implements OnInit, AfterViewInit {
     this.cdr.detectChanges();
   }
 
-  getSubscriptionStatusText(): string {
-    console.log('🟣 Getting subscription status text for:', this.subscriptionStatus);
-    if (!this.subscriptionStatus?.status) return 'Non abonné';
-    
-    switch (this.subscriptionStatus.status.toLowerCase()) {
-      case 'trialing':
-        const days = this.subscriptionStatus.daysLeftInTrial || 30;
-        return `Essai gratuit (${days}j)`;
-      case 'active':
-        return 'Abonné';
-      case 'past_due':
-        return 'Paiement en retard';
-      case 'canceled':
-        return 'Abonnement annulé';
-      case 'unpaid':
-        return 'Paiement requis';
-      default:
-        return 'Non abonné';
+  getStatusClass(): string {
+    if (this.isSubscriptionLoading) {
+      return 'bg-secondary';
     }
+    
+    if (this.isTrialPeriod) {
+      return 'bg-info';
+    }
+    
+    if (this.isSubscriptionActive) {
+      return 'bg-success';
+    }
+    
+    if (this.isSubscriptionExpired) {
+      return 'bg-warning text-dark';
+    }
+    
+    if (this.paymentStatus === 'pending') {
+      return 'bg-warning text-dark';
+    }
+    
+    return 'bg-danger';
   }
 
-  getSubscriptionStatusClass(): string {
-    if (!this.subscriptionStatus?.status) return 'bg-secondary';
-    
-    switch (this.subscriptionStatus.status.toLowerCase()) {
-      case 'trialing':
-        return 'bg-info';
-      case 'active':
-        return 'bg-success';
-      case 'past_due':
-      case 'unpaid':
-        return 'bg-warning';
-      case 'canceled':
-        return 'bg-danger';
-      default:
-        return 'bg-secondary';
+  getStatusIcon(): string {
+    if (this.isSubscriptionLoading) {
+      return 'bi-hourglass-split';
     }
-  }
-
-  getSubscriptionIcon(): string {
-    if (!this.subscriptionStatus?.status) return 'bi-cart-plus';
     
-    switch (this.subscriptionStatus.status.toLowerCase()) {
-      case 'trialing':
+    if (this.isTrialPeriod) {
         return 'bi-hourglass-split';
-      case 'active':
+    }
+    
+    if (this.isSubscriptionActive) {
         return 'bi-check-circle-fill';
-      case 'past_due':
+    }
+    
+    if (this.isSubscriptionExpired) {
         return 'bi-exclamation-triangle-fill';
-      case 'canceled':
+    }
+    
+    if (this.paymentStatus === 'pending') {
+      return 'bi-clock-history';
+    }
+    
         return 'bi-x-circle-fill';
-      case 'unpaid':
-        return 'bi-exclamation-circle-fill';
-      default:
-        return 'bi-cart-plus';
+  }
+
+  /**
+   * Redirige vers la page d'abonnement
+   */
+  goToSubscriptionPage(): void {
+    console.log('🟣 Navigation vers la page d\'abonnement');
+    if (this.selectedStore?.id) {
+      this.router.navigate(['/payment', this.selectedStore.id]);
+    } else {
+      this.toastService.error('Veuillez d\'abord sélectionner une boutique');
     }
   }
 } 
