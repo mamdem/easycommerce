@@ -1,0 +1,70 @@
+<div class="verification-container">
+  <div class="verification-content">
+    <div class="verification-header">
+      <a routerLink="/" class="logo-link">
+        <img src="assets/lgo-jokkofy.png" alt="Jokkofy Logo" class="auth-logo">
+      </a>
+      <div class="verification-icon">
+        <i class="bi bi-envelope-check"></i>
+      </div>
+      <h1>Vérifiez votre email</h1>
+      <p>Nous avons envoyé un lien de vérification à votre adresse email</p>
+    </div>
+
+    <div class="verification-body">
+      <div class="email-info">
+        <i class="bi bi-info-circle"></i>
+        <p>
+          <strong>Étapes à suivre :</strong><br>
+          1. Vérifiez votre boîte de réception<br>
+          2. Cliquez sur le lien de vérification dans l'email<br>
+          3. Une fois vérifié, vous serez automatiquement redirigé vers la page de connexion<br>
+          4. Connectez-vous avec vos identifiants
+        </p>
+      </div>
+
+      <div class="verification-actions">
+        <button 
+          type="button" 
+          class="resend-btn" 
+          (click)="resendVerificationEmail()"
+          [disabled]="isResending">
+          <i class="bi bi-arrow-clockwise" *ngIf="!isResending"></i>
+          <i class="bi bi-arrow-clockwise rotating" *ngIf="isResending"></i>
+          {{ isResending ? 'Envoi en cours...' : 'Renvoyer l\'email' }}
+        </button>
+
+        <button 
+          type="button" 
+          class="check-btn" 
+          (click)="onManualVerificationCheck()"
+          [disabled]="isLoading">
+          <i class="bi bi-check-circle" *ngIf="!isLoading"></i>
+          <i class="bi bi-arrow-clockwise rotating" *ngIf="isLoading"></i>
+          {{ isLoading ? 'Vérification...' : 'J\'ai vérifié mon email' }}
+        </button>
+      </div>
+
+      <div class="verification-help">
+        <h3>Vous ne recevez pas l'email ?</h3>
+        <ul>
+          <li>Vérifiez votre dossier spam ou indésirable</li>
+          <li>Assurez-vous que l'adresse email est correcte</li>
+          <li>Attendez quelques minutes avant de renvoyer</li>
+          <li>Une fois l'email vérifié, vous serez automatiquement redirigé vers la page de connexion</li>
+        </ul>
+      </div>
+
+      <div class="verification-footer">
+        <button type="button" class="back-btn" (click)="goToLogin()">
+          <i class="bi bi-arrow-left"></i>
+          Retour à la connexion
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Décoration -->
+  <div class="decoration-blob blob-1"></div>
+  <div class="decoration-blob blob-2"></div>
+</div> 

@@ -237,21 +237,22 @@ export class ProductsComponent implements OnInit, OnDestroy {
           switchMap(activePromotions => {
             this.activePromotions = activePromotions;
             
-            // Charger les catégories d'abord
-            return this.categoryService.getStoreCategories(store.id).pipe(
-              switchMap(categories => {
-                const categoryMap = new Map(categories.map(cat => [cat.id, cat]));
-                
-                // Puis charger les produits
+            // Charger les produits avec le filtre de catégorie
                 return this.productService.getStoreProducts(store.id).pipe(
                   map(products => {
-                    return products.map(product => {
+                // Filtrer par catégorie si une catégorie est sélectionnée
+                let filteredProducts = products;
+                if (this.selectedCategory) {
+                  filteredProducts = products.filter(product => product.category === this.selectedCategory);
+                }
+
+                return filteredProducts.map(product => {
                       const productWithPromo: ProductWithPromotion = {
           ...product,
           originalPrice: product.price,
                         discountedPrice: null,
                         promotion: null,
-                        categoryName: product.category ? categoryMap.get(product.category)?.name || 'Non catégorisé' : 'Non catégorisé'
+                    categoryName: product.category ? this.getCategoryName(product.category) : 'Non catégorisé'
                       };
 
                       // Appliquer la promotion si disponible
@@ -263,8 +264,6 @@ export class ProductsComponent implements OnInit, OnDestroy {
 
                       return productWithPromo;
                     });
-                  })
-                );
               })
             );
           })
@@ -554,10 +553,8 @@ export class ProductsComponent implements OnInit, OnDestroy {
   }
 
   scrollCategories(direction: 'left' | 'right'): void {
-    if (!this.categoriesContainer) return;
-
     const container = this.categoriesContainer.nativeElement;
-    const scrollAmount = container.clientWidth * 0.8; // Défilement de 80% de la largeur visible
+    const scrollAmount = container.offsetWidth * 0.8; // Défilement de 80% de la largeur visible
     
     if (direction === 'left') {
       container.scrollLeft -= scrollAmount;
@@ -565,32 +562,48 @@ export class ProductsComponent implements OnInit, OnDestroy {
       container.scrollLeft += scrollAmount;
     }
     
-    // Update scroll buttons after scrolling
-    this.updateScrollButtons();
+    // Mettre à jour la visibilité des boutons après le défilement
+    this.updateScrollButtonsVisibility();
   }
 
-  private updateScrollButtons(): void {
-    if (!this.categoriesContainer || !this.scrollLeftBtn || !this.scrollRightBtn) return;
-
+  private updateScrollButtonsVisibility(): void {
     const container = this.categoriesContainer.nativeElement;
     
-    // Disable left button if at start
+    // Désactiver le bouton gauche si on est au début
+    if (this.scrollLeftBtn) {
       this.scrollLeftBtn.nativeElement.disabled = container.scrollLeft <= 0;
+    }
     
-    // Disable right button if at end
-      const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
-      this.scrollRightBtn.nativeElement.disabled = isAtEnd;
+    // Désactiver le bouton droit si on est à la fin
+    if (this.scrollRightBtn) {
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      this.scrollRightBtn.nativeElement.disabled = container.scrollLeft >= maxScroll;
+    }
   }
 
   ngAfterViewInit(): void {
-    // Observer les changements de scroll
-    if (this.categoriesContainer) {
-      const container = this.categoriesContainer.nativeElement;
-      container.addEventListener('scroll', () => this.updateScrollButtons());
+    // Observer les changements de taille du conteneur
+    if (typeof ResizeObserver !== 'undefined') {
+      const resizeObserver = new ResizeObserver(() => {
+        this.updateScrollButtonsVisibility();
+      });
       
-      // Mise à jour initiale des boutons
-      this.updateScrollButtons();
+      if (this.categoriesContainer) {
+        resizeObserver.observe(this.categoriesContainer.nativeElement);
+      }
     }
+
+    // Observer le scroll du conteneur
+    if (this.categoriesContainer) {
+      this.categoriesContainer.nativeElement.addEventListener('scroll', () => {
+        this.updateScrollButtonsVisibility();
+      });
+    }
+      
+    // Vérification initiale
+    setTimeout(() => {
+      this.updateScrollButtonsVisibility();
+    });
   }
 
   showAllCategories(): void {

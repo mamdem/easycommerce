@@ -62,6 +62,7 @@ export interface StoreSettings {
   createdAt: number;
   updatedAt: number;
   status?: 'active' | 'inactive' | 'pending';
+  influenceurCode?: string; // Code de l'influenceur qui a référé cette boutique
   currentTransaction?: {
     id: string;
     orderId: string;

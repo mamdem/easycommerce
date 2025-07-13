@@ -12,7 +12,7 @@ import { User } from '../../../core/models/user.model';
 import { CartService } from '../../../core/services/cart.service';
 import { Observable, of, Subscription, forkJoin } from 'rxjs';
 import { SubscriptionService, SubscriptionStatus } from '../../../core/services/subscription.service';
-import { NotificationService } from '../../../core/services/notification.service';
+import { NotificationService, Notification } from '../../../core/services/notification.service';
 import { NotificationDrawerComponent } from '../../../dashboard/components/notification-drawer/notification-drawer.component';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -127,37 +127,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   storeUrl: string = '';
 
   notificationsCount = 0;
+  notifications: Notification[] = [];
 
   subscriptionStatus: SubscriptionStatus | null = null;
   private subscriptionStatusSub: Subscription | null = null;
 
   isNotificationDrawerOpen = false;
-  notifications: any[] = [
-    {
-      id: 1,
-      type: 'order',
-      icon: 'bi-cart-check',
-      message: 'Nouvelle commande reçue',
-      time: 'Il y a 5 minutes',
-      isUnread: true
-    },
-    {
-      id: 2,
-      type: 'review',
-      icon: 'bi-star',
-      message: 'Nouvel avis client',
-      time: 'Il y a 2 heures',
-      isUnread: false
-    },
-    {
-      id: 3,
-      type: 'stock',
-      icon: 'bi-box-seam',
-      message: 'Stock faible pour "Produit X"',
-      time: 'Il y a 1 jour',
-      isUnread: false
-    }
-  ];
 
   showLogoutConfirm = false;
 
@@ -190,8 +165,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.updateUserStatus();
     this.loadSelectedStore();
     this.loadUserStores();
-    this.loadNotifications();
-    this.loadNotificationsCount();
     this.checkTransactionStatus();
 
     // S'abonner aux changements du panier
@@ -246,6 +219,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
             
             // Charger les données détaillées
             this.loadStoreData();
+            
+            // Charger les notifications maintenant que la boutique est sélectionnée
+            this.loadNotifications();
+            this.loadNotificationsCount();
           } else {
             this.router.navigate(['/home']);
           }
@@ -285,9 +262,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
             if (firstStore.primaryColor && firstStore.secondaryColor) {
               this.storeService.applyStoreTheme(firstStore.primaryColor, firstStore.secondaryColor);
             }
-            
+                
             // Charger les données détaillées
             this.loadStoreData();
+            
+            // Charger les notifications maintenant que la boutique est sélectionnée
+            this.loadNotifications();
+            this.loadNotificationsCount();
           } else {
             this.toastService.warning('Vous n\'avez pas encore de boutique, créez-en une !', 'Information');
             this.router.navigate(['/store-creation']);
@@ -724,11 +705,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Charge les notifications (à implémenter avec votre service de notifications)
+   * Charge les notifications
    */
   private loadNotifications(): void {
-    // Pour l'instant, on compte juste les notifications non lues
-    this.notificationsCount = this.notifications.filter(n => n.isUnread).length;
+    if (this.selectedStore?.id) {
+      this.notificationService.getStoreNotifications(this.selectedStore.id).subscribe({
+        next: (notifications: Notification[]) => {
+          this.notifications = notifications;
+          this.notificationsCount = notifications.filter(n => n.status === 'UNREAD').length;
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement des notifications:', error);
+        }
+      });
+    }
   }
 
   getSubscriptionStatusText(status: SubscriptionStatus): string {
@@ -797,12 +787,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   markAllNotificationsAsRead() {
+    if (this.selectedStore?.id) {
+      this.notificationService.markAllAsRead(this.selectedStore.id).then(() => {
     this.notifications = this.notifications.map(notification => ({
       ...notification,
-      isUnread: false
+          status: 'READ' as const
     }));
     this.notificationsCount = 0;
+        this.loadNotificationsCount(); // Recharger le compteur
     this.toastService.success('Toutes les notifications ont été marquées comme lues');
+      }).catch(error => {
+        console.error('Erreur lors du marquage des notifications:', error);
+        this.toastService.error('Erreur lors du marquage des notifications');
+      });
+    }
   }
 
   private loadNotificationsCount() {

@@ -16,7 +16,8 @@ import {
   sendPasswordResetEmail,
   EmailAuthProvider,
   reauthenticateWithCredential,
-  updatePassword as firebaseUpdatePassword
+  updatePassword as firebaseUpdatePassword,
+  sendEmailVerification
 } from 'firebase/auth';
 import { initializeApp } from 'firebase/app';
 import { environment } from '../../../environments/environment';
@@ -47,6 +48,9 @@ export class AuthService {
   constructor(private router: Router, private toastService: ToastService) {
     // Initialisation de Firebase
     this.auth = getAuth(this.app);
+    
+    // Configurer la langue française pour Firebase Auth
+    this.auth.languageCode = 'fr';
     
     // Restaurer l'état de connexion depuis localStorage si disponible
     const savedUser = localStorage.getItem('user');
@@ -191,6 +195,12 @@ export class AuthService {
       const displayName = `${userData.firstName} ${userData.lastName}`.trim();
       await updateProfile(user, {
         displayName: displayName
+      });
+      
+      // Envoyer l'email de vérification en français
+      await sendEmailVerification(user, {
+        url: `${window.location.origin}/auth/email-verification`,
+        handleCodeInApp: false
       });
       
       // Stocker le type d'utilisateur localement
@@ -415,26 +425,33 @@ export class AuthService {
    * Redirection intelligente après connexion
    */
   redirectAfterLogin(): void {
-    // 1. Si l'utilisateur n'est pas connecté, rediriger vers la page de connexion
-    // if (!this.isAuthenticated()) {
-    //   this.router.navigate(['/auth/login']);
-    //   return;
-    // }
+    const currentUser = this.getCurrentUser();
     
-    // 2. Si l'utilisateur est un marchand sans boutique, rediriger vers la création de boutique
-    // if (this.isMerchant() && !this.hasStore()) {
-    //   this.router.navigate(['/store-creation']);
-    //   return;
-    // }
-    
-    // 3. Si l'utilisateur est un marchand avec une boutique, rediriger vers le dashboard
-    // if (this.isMerchant() && this.hasStore()) {
-    //   this.router.navigate(['/dashboard']);
-    //   return;
-    // }
-    
-    // 4. Pour les clients (cas par défaut), rediriger vers la page d'accueil
-    this.router.navigate(['/home']);
+    if (!currentUser) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    // Vérifier si l'email est vérifié
+    if (!currentUser.emailVerified) {
+      this.router.navigate(['/auth/email-verification']);
+      return;
+    }
+
+    // Si l'utilisateur est un marchand sans boutique, rediriger vers la création de boutique
+    if (currentUser.userType === 'merchant' && !currentUser.hasStore) {
+      this.router.navigate(['/store-creation']);
+      return;
+    }
+
+    // Si l'utilisateur est un marchand avec une boutique, rediriger vers le dashboard
+    if (currentUser.userType === 'merchant' && currentUser.hasStore) {
+      this.router.navigate(['/dashboard']);
+      return;
+    }
+
+    // Par défaut, rediriger vers le dashboard
+    this.router.navigate(['/dashboard']);
   }
   
   /**
@@ -658,22 +675,79 @@ export class AuthService {
    */
   async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
     try {
-      const auth = getAuth(this.app);
-      const user = auth.currentUser;
-      
-      if (!user || !user.email) {
-        throw new Error('Utilisateur non connecté ou email manquant');
+      const currentUser = this.auth.currentUser;
+      if (!currentUser || !currentUser.email) {
+        throw new Error('Aucun utilisateur connecté');
       }
 
       // Réauthentifier l'utilisateur avant de changer le mot de passe
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-
+      const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+      await reauthenticateWithCredential(currentUser, credential);
+      
       // Mettre à jour le mot de passe
-      await firebaseUpdatePassword(user, newPassword);
+      await firebaseUpdatePassword(currentUser, newPassword);
+      
+      this.toastService.success('Mot de passe mis à jour avec succès');
     } catch (error) {
       console.error('Erreur lors de la mise à jour du mot de passe:', error);
+      
+      if (error instanceof Error) {
+        switch (error.message) {
+          case 'auth/wrong-password':
+            throw new Error('Mot de passe actuel incorrect');
+          case 'auth/requires-recent-login':
+            throw new Error('Pour des raisons de sécurité, veuillez vous reconnecter avant de modifier votre mot de passe');
+          default:
+            throw new Error('Erreur lors de la mise à jour du mot de passe');
+        }
+      }
       throw error;
+    }
+  }
+
+  // Méthode pour vérifier si l'email de l'utilisateur est vérifié
+  isEmailVerified(): boolean {
+    const currentUser = this.auth.currentUser;
+    return currentUser ? currentUser.emailVerified : false;
+  }
+
+  // Méthode pour renvoyer l'email de vérification
+  async resendVerificationEmail(): Promise<void> {
+    try {
+      const currentUser = this.auth.currentUser;
+      if (!currentUser) {
+        throw new Error('Aucun utilisateur connecté');
+      }
+
+      if (currentUser.emailVerified) {
+        throw new Error('Votre email est déjà vérifié');
+      }
+
+      await sendEmailVerification(currentUser, {
+        url: `${window.location.origin}/auth/email-verification`,
+        handleCodeInApp: false
+      });
+      this.toastService.success('Email de vérification envoyé avec succès');
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de l\'email de vérification:', error);
+      throw error;
+    }
+  }
+
+  // Méthode pour rafraîchir l'état de vérification de l'email
+  async refreshEmailVerificationStatus(): Promise<boolean> {
+    try {
+      const currentUser = this.auth.currentUser;
+      if (!currentUser) {
+        return false;
+      }
+
+      // Recharger l'utilisateur pour obtenir l'état de vérification à jour
+      await currentUser.reload();
+      return currentUser.emailVerified;
+    } catch (error) {
+      console.error('Erreur lors du rafraîchissement du statut de vérification:', error);
+      return false;
     }
   }
 } 

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, from, switchMap, tap } from 'rxjs';
+import { Observable, from, switchMap, tap, firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { NabooPay, TransactionRequest, ProductModel, Wallet, TransactionResponse } from 'naboopay';
 import { StoreService, Transaction } from './store.service';
@@ -37,6 +37,12 @@ export interface NabooPayTransactionResponse {
   checkout_url: string;
 }
 
+export interface PaymentResponse {
+  success: boolean;
+  paymentUrl?: string;
+  error?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -51,6 +57,47 @@ export class NabooPayService {
   ) {
     // Initialiser le client NabooPay avec le token
     this.naboopayClient = new NabooPay(this.TOKEN);
+  }
+
+  async initiatePayment(data: {
+    amount: number;
+    storeId: string;
+  }): Promise<PaymentResponse> {
+    try {
+      const request = new TransactionRequest({
+        method_of_payment: [Wallet.WAVE],
+        products: [
+          new ProductModel({
+            name: 'Abonnement Jokkofy',
+            category: 'subscription',
+            amount: data.amount,
+            quantity: 1,
+            description: 'Abonnement mensuel à la plateforme Jokkofy',
+          }),
+        ],
+      });
+
+      const response = await this.naboopayClient.transaction.create(request);
+
+      // Sauvegarder la transaction dans la boutique
+      await this.storeService.saveTransaction(data.storeId, {
+        orderId: response.order_id,
+        amount: data.amount,
+        status: 'pending',
+        paymentMethod: 'WAVE'
+      });
+
+      return {
+        success: true,
+        paymentUrl: response.checkout_url
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'initiation du paiement:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Une erreur est survenue'
+      };
+    }
   }
 
   initiateWavePayment(data: {

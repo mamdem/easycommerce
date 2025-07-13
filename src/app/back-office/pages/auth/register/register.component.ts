@@ -90,8 +90,8 @@ export class RegisterComponent implements OnInit {
 
       await this.authService.register(email, password, 'merchant', userData);
       
-      this.toastService.success('Compte créé avec succès !');
-      this.router.navigate(['/store-creation']);
+      this.toastService.success('Compte créé avec succès ! Vérifiez votre email et cliquez sur le lien de vérification.');
+      this.router.navigate(['/auth/email-verification']);
     } catch (error) {
       console.error('Erreur lors de l\'inscription:', error);
       this.toastService.error('Erreur lors de l\'inscription. Veuillez réessayer.');

@@ -51,7 +51,7 @@ export class LoginComponent implements OnInit {
       await this.authService.login(email, password);
       
       this.toastService.success('Connexion réussie !');
-      this.router.navigate(['/dashboard']);
+      this.authService.redirectAfterLogin();
     } catch (error) {
       console.error('Erreur lors de la connexion:', error);
       this.toastService.error('Email ou mot de passe incorrect');
@@ -64,7 +64,7 @@ export class LoginComponent implements OnInit {
   async signInWithGoogle(): Promise<void> {
     try {
       await this.authService.loginWithGoogle();
-      this.router.navigate(['/dashboard']);
+      this.authService.redirectAfterLogin();
     } catch (error) {
       console.error('Erreur lors de la connexion avec Google:', error);
       this.toastService.error('Erreur lors de la connexion avec Google');

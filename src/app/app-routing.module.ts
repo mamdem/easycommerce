@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { HomeComponent } from './back-office/pages/home/home.component';
+import { EmailVerificationGuard } from './core/guards/email-verification.guard';
 // Commenté pour désactiver les guards
 // import { StoreCreationGuard } from './core/guards/store-creation.guard';
 // import { authGuard, postLoginGuard } from './core/guards/auth.guard';
@@ -18,13 +19,15 @@ const routes: Routes = [
   },
   { 
     path: 'store-creation',   
-    loadChildren: () => import('./back-office/pages/store-creation/store-creation.module').then(m => m.StoreCreationModule)
+    loadChildren: () => import('./back-office/pages/store-creation/store-creation.module').then(m => m.StoreCreationModule),
+    canActivate: [EmailVerificationGuard]
     // Guards désactivés
     // canActivate: [authGuard, postLoginGuard]
   },
   { 
     path: 'dashboard', 
-    loadChildren: () => import('./back-office/pages/dashboard/dashboard.module').then(m => m.DashboardModule)
+    loadChildren: () => import('./back-office/pages/dashboard/dashboard.module').then(m => m.DashboardModule),
+    canActivate: [EmailVerificationGuard]
     // Guards désactivés
     // canActivate: [authGuard, postLoginGuard]
   },

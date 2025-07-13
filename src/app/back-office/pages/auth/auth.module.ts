@@ -6,11 +6,13 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { AuthRoutingModule } from './auth-routing.module';
 import { LoginComponent } from './login/login.component';
 import { RegisterComponent } from './register/register.component';
+import { EmailVerificationComponent } from './email-verification/email-verification.component';
 
 @NgModule({
   declarations: [
     LoginComponent,
-    RegisterComponent
+    RegisterComponent,
+    EmailVerificationComponent
   ],
   imports: [
     CommonModule,

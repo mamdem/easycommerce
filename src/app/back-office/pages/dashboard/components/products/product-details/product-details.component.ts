@@ -323,8 +323,9 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
 
   editProduct(product: ProductWithPromotion): void {
     this.actionLoading = true;
-    this.router.navigate(['../edit', product.id], { relativeTo: this.route })
-      .finally(() => this.actionLoading = false);
+    this.router.navigate(['/dashboard/products/edit', product.id], {
+      state: { product }
+    }).finally(() => this.actionLoading = false);
   }
 
   deleteProduct(product: ProductWithPromotion): void {
@@ -375,7 +376,7 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['../'], { relativeTo: this.route });
+    this.router.navigate(['/dashboard/products']);
   }
 
   handleImageError(event: Event): void {

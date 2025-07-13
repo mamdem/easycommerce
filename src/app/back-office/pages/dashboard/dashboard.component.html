@@ -118,7 +118,8 @@
   <app-notification-drawer
     [isOpen]="isNotificationDrawerOpen"
     [storeId]="selectedStore ? selectedStore.id : ''"
-    (closeDrawer)="isNotificationDrawerOpen = false">
+    (closeDrawer)="isNotificationDrawerOpen = false"
+    (markAllRead)="markAllNotificationsAsRead()">
   </app-notification-drawer>
 
   <!-- Bannière de la boutique -->
@@ -191,11 +192,6 @@
             <li class="nav-item">
               <a routerLink="/dashboard/settings" routerLinkActive="active">
                 <i class="bi bi-gear"></i>Paramètres
-              </a>
-            </li>
-            <li class="nav-item">
-              <a routerLink="/dashboard/integration" routerLinkActive="active">
-                <i class="bi bi-code-slash"></i>Intégration
               </a>
             </li>
           </ul>
