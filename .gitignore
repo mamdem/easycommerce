@@ -40,3 +40,35 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Backend files (sensitive)
+/backend/
+backend/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Firebase files
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+auth-config.json
+auth-current.json
+
+# Service account keys
+serviceAccountKey.json
+**/serviceAccountKey.json
+
+# API keys and secrets
+**/config/serviceAccountKey.json
+**/.env
+**/secrets.json
+
+# Build logs
+*.log
+pglite-debug.log

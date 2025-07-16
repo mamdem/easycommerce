@@ -43,15 +43,41 @@ npm run build:prod
 
 ## URLs de déploiement
 
-- **Application** : https://ecommerce-cf09f.web.app
+- **Application (Domaine personnalisé)** : https://jokkofy.com
+- **Application (Firebase)** : https://ecommerce-cf09f.web.app
 - **Console Firebase** : https://console.firebase.google.com/project/ecommerce-cf09f
+
+## Configuration du Domaine Personnalisé
+
+### Étapes pour configurer jokkofy.com :
+
+1. **Firebase Console** :
+   - Aller sur Hosting dans la console Firebase
+   - Ajouter un domaine personnalisé : `jokkofy.com`
+   - Noter les enregistrements DNS fournis
+
+2. **Configuration DNS** :
+   ```
+   Type: A
+   Nom: @
+   Valeur: [IP fournie par Firebase]
+   
+   Type: CNAME
+   Nom: www
+   Valeur: ecommerce-cf09f.web.app
+   ```
+
+3. **Vérification** :
+   - Attendre la propagation DNS (jusqu'à 24h)
+   - Firebase validera automatiquement le domaine
+   - Le certificat SSL sera généré automatiquement
 
 ## Configuration Firebase
 
 Le projet est configuré avec :
 - **Hosting** : Pour servir l'application Angular
 - **Firestore** : Pour la base de données
-- **Functions** : Pour les fonctions serverless (si nécessaire)
+- **Domaine personnalisé** : jokkofy.com
 
 ## Sécurité
 
