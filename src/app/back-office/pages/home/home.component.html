@@ -85,30 +85,29 @@
           </div>
 
           <!-- Liste des boutiques -->
-          <div class="stores-grid" *ngIf="!loading && userStores.length > 0">
+          <div class="stores-horizontal-scroll" *ngIf="!loading && userStores.length > 0">
             <!-- Carte pour créer une nouvelle boutique -->
             <div class="store-card new-store" (click)="createNewStore()">
-                  <div class="add-icon">
+              <div class="add-icon">
                 <i class="bi bi-plus-lg"></i>
               </div>
               <h3>Nouvelle boutique</h3>
             </div>
-            
             <!-- Cartes des boutiques existantes -->
             <div class="store-card" *ngFor="let store of userStores" (click)="navigateToStoreDashboard(store.id || '')">
               <div class="store-banner">
                 <img [src]="store.bannerUrl || 'assets/default-banner.svg'" [alt]="store.storeName + ' banner'" onError="this.src='assets/default-banner.svg'">
               </div>
               <div class="store-content">
-                  <div class="store-logo">
+                <div class="store-logo">
                   <img [src]="store.logoUrl || 'assets/default-store.svg'" [alt]="store.storeName" onError="this.src='assets/default-store.svg'">
-                  </div>
+                </div>
                 <div class="card-content">
                   <h3>{{ store.storeName }}</h3>
                   <button class="btn btn-primary">
                     <span>Accéder</span>
                     <i class="bi bi-arrow-right"></i>
-                    </button>
+                  </button>
                 </div>
               </div>
             </div>

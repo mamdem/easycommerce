@@ -480,3 +480,9 @@
     font-size: 0.875rem;
   }
 } 
+
+// Marge bottom pour le composant settings
+:host {
+  display: block;
+  margin-bottom: 3rem;
+} 

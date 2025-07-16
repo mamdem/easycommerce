@@ -8,7 +8,6 @@ import { StoreService } from '../../../../../../core/services/store.service';
 import { ToastService } from '../../../../../../core/services/toast.service';
 import { Order } from '../../../../../../core/models/order.model';
 import { Store } from '../../../../../../core/models/store.model';
-import { MatDialog } from '@angular/material/dialog';
 import { RejectOrderDialogComponent } from '../reject-order-dialog/reject-order-dialog.component';
 
 @Component({
@@ -17,7 +16,8 @@ import { RejectOrderDialogComponent } from '../reject-order-dialog/reject-order-
   imports: [
     CommonModule,
     RouterModule,
-    MatButtonModule
+    MatButtonModule,
+    RejectOrderDialogComponent
   ],
   templateUrl: './order-details.component.html',
   styleUrl: './order-details.component.scss'
@@ -27,6 +27,9 @@ export class OrderDetailsComponent implements OnInit, OnDestroy {
   loading = true;
   error = false;
   currentStore!: Store;
+  
+  // Pour le dialog de rejet
+  showRejectDialog = false;
 
   // Pour la gestion de la destruction du composant
   private destroy$ = new Subject<void>();
@@ -35,41 +38,43 @@ export class OrderDetailsComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private orderService: OrderService,
     private storeService: StoreService,
-    private toastService: ToastService,
-    private dialog: MatDialog
+    private toastService: ToastService
   ) { }
 
   ngOnInit(): void {
-    const orderId = this.route.snapshot.paramMap.get('id');
-    if (!orderId) {
-      this.error = true;
-      this.loading = false;
-      this.toastService.error('ID de commande non trouvé');
-      return;
-    }
-
-    // S'abonner aux changements de boutique
-    this.storeService.selectedStore$.pipe(
-      takeUntil(this.destroy$),
-      switchMap(storeId => {
-        if (!storeId) {
-          return of(null);
-        }
-        return this.storeService.getSelectedStore();
-      }),
-      filter(store => !!store) // Ignorer les valeurs null
-    ).subscribe({
-      next: (store) => {
-        if (store) {
-          this.currentStore = store;
-        this.loadOrder(orderId);
-        }
-      },
-      error: (error) => {
-        console.error('Erreur lors du chargement de la boutique:', error);
+    this.route.params.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(params => {
+      const orderId = params['id'];
+      if (!orderId) {
         this.error = true;
         this.loading = false;
+        this.toastService.error('ID de commande non trouvé');
+        return;
       }
+      // S'abonner aux changements de boutique
+      this.storeService.selectedStore$.pipe(
+        takeUntil(this.destroy$),
+        switchMap(storeId => {
+          if (!storeId) {
+            return of(null);
+          }
+          return this.storeService.getSelectedStore();
+        }),
+        filter(store => !!store)
+      ).subscribe({
+        next: (store) => {
+          if (store) {
+            this.currentStore = store;
+            this.loadOrder(orderId);
+          }
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement de la boutique:', error);
+          this.error = true;
+          this.loading = false;
+        }
+      });
     });
   }
 
@@ -128,29 +133,32 @@ export class OrderDetailsComponent implements OnInit, OnDestroy {
 
   rejectOrder(): void {
     if (!this.order) return;
+    this.showRejectDialog = true;
+  }
 
-    const dialogRef = this.dialog.open(RejectOrderDialogComponent, {
-      data: { order: this.order }
-    });
+  onRejectConfirm(reason: string): void {
+    if (!this.order?.id) return;
 
-    dialogRef.afterClosed().subscribe(reason => {
-      if (reason !== undefined && this.order?.id) {
-        this.orderService.updateOrderStatus(this.order.storeUrl, this.order.id, 'rejete', reason).subscribe({
-          next: () => {
-            if (this.order) {
-              this.order.status = 'rejete';
-              this.order.updatedAt = Date.now();
-              this.order.rejectionReason = reason;
-            }
-            this.toastService.success('Commande rejetée');
-          },
-          error: (error) => {
-            console.error('Erreur lors du rejet de la commande:', error);
-            this.toastService.error('Erreur lors du rejet de la commande');
-          }
-        });
+    this.orderService.updateOrderStatus(this.order.storeUrl, this.order.id, 'rejete', reason).subscribe({
+      next: () => {
+        if (this.order) {
+          this.order.status = 'rejete';
+          this.order.updatedAt = Date.now();
+          this.order.rejectionReason = reason;
+        }
+        this.showRejectDialog = false;
+        this.toastService.success('Commande rejetée');
+      },
+      error: (error) => {
+        console.error('Erreur lors du rejet de la commande:', error);
+        this.toastService.error('Erreur lors du rejet de la commande');
+        this.showRejectDialog = false;
       }
     });
+  }
+
+  onRejectCancel(): void {
+    this.showRejectDialog = false;
   }
 
   goBack(): void {

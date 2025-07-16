@@ -19,17 +19,15 @@ const routes: Routes = [
   },
   { 
     path: 'store-creation',   
-    loadChildren: () => import('./back-office/pages/store-creation/store-creation.module').then(m => m.StoreCreationModule),
-    canActivate: [EmailVerificationGuard]
-    // Guards désactivés
-    // canActivate: [authGuard, postLoginGuard]
+    loadChildren: () => import('./back-office/pages/store-creation/store-creation.module').then(m => m.StoreCreationModule)
+    // Guards désactivés temporairement
+    // canActivate: [EmailVerificationGuard]
   },
   { 
     path: 'dashboard', 
-    loadChildren: () => import('./back-office/pages/dashboard/dashboard.module').then(m => m.DashboardModule),
-    canActivate: [EmailVerificationGuard]
-    // Guards désactivés
-    // canActivate: [authGuard, postLoginGuard]
+    loadChildren: () => import('./back-office/pages/dashboard/dashboard.module').then(m => m.DashboardModule)
+    // Guards désactivés temporairement
+    // canActivate: [EmailVerificationGuard]
   },
   {
     path: 'boutique/:storeUrl',

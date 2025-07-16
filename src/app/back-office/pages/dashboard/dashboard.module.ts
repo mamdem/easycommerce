@@ -9,7 +9,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
 import { DashboardRoutingModule } from './dashboard-routing.module';
-import { DashboardComponent } from './dashboard.component';
 import { ProductsComponent } from './components/products/products.component';
 import { AddProductComponent } from './components/products/add-product/add-product.component';
 import { EditProductComponent } from './components/products/edit-product/edit-product.component';
@@ -19,7 +18,6 @@ import { StatisticsComponent } from './components/statistics/statistics.componen
 import { OrdersComponent } from './components/orders/orders.component';
 import { OrderDetailsComponent } from './components/orders/order-details/order-details.component';
 import { OverviewComponent } from './components/overview/overview.component';
-import { RejectOrderDialogComponent } from './components/orders/reject-order-dialog/reject-order-dialog.component';
 import { PromotionsComponent } from './components/promotions/promotions.component';
 
 @NgModule({
@@ -39,7 +37,6 @@ import { PromotionsComponent } from './components/promotions/promotions.componen
     MatFormFieldModule,
     MatInputModule,
     OrderDetailsComponent,
-    RejectOrderDialogComponent,
     CustomersComponent,
     SettingsComponent,
     PromotionsComponent,

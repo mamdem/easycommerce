@@ -2,7 +2,6 @@ import { Component, OnInit, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { MatDialog } from '@angular/material/dialog';
 import { Subject, takeUntil, switchMap, filter, of } from 'rxjs';
 import { OrderService } from '../../../../../core/services/order.service';
 import { StoreService } from '../../../../../core/services/store.service';
@@ -28,7 +27,8 @@ type SortDirection = 'asc' | 'desc';
     CommonModule,
     FormsModule,
     RouterModule,
-    LoadingSpinnerComponent
+    LoadingSpinnerComponent,
+    RejectOrderDialogComponent
   ]
 })
 export class OrdersComponent implements OnInit, OnDestroy {
@@ -38,6 +38,10 @@ export class OrdersComponent implements OnInit, OnDestroy {
   orders: Order[] = [];
   loading = true;
   currentStore!: Store;
+  
+  // Pour le dialog de rejet
+  showRejectDialog = false;
+  orderToReject: Order | null = null;
   
   // Pour la gestion de la destruction du composant
   private destroy$ = new Subject<void>();
@@ -60,7 +64,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
 
   // Pagination
   currentPage = 1;
-  pageSize = 15;
+  pageSize = 8;
   totalPages = 0;
 
   // Format de la date pour l'export
@@ -82,7 +86,6 @@ export class OrdersComponent implements OnInit, OnDestroy {
     private orderService: OrderService,
     private storeService: StoreService,
     private toastService: ToastService,
-    private dialog: MatDialog,
     private printService: PrintService
   ) { }
 
@@ -288,29 +291,36 @@ export class OrdersComponent implements OnInit, OnDestroy {
 
   // Rejeter une commande
   rejectOrder(order: Order): void {
-    const dialogRef = this.dialog.open(RejectOrderDialogComponent, {
-      width: '500px',
-      data: { order },
-      disableClose: false,
-      autoFocus: true
-    });
+    this.orderToReject = order;
+    this.showRejectDialog = true;
+  }
 
-    dialogRef.afterClosed().subscribe(reason => {
-      if (reason && order.id) {
-        this.orderService.updateOrderStatus(order.storeUrl, order.id, 'rejete', reason).subscribe({
-          next: () => {
-            order.status = 'rejete';
-            order.rejectionReason = reason;
-            order.updatedAt = Date.now();
-            this.toastService.success('Commande rejetée');
-          },
-          error: (error) => {
-            console.error('Erreur lors du rejet de la commande:', error);
-            this.toastService.error('Erreur lors du rejet de la commande');
-          }
-        });
+  onRejectConfirm(reason: string): void {
+    if (!this.orderToReject?.id) return;
+
+    this.orderService.updateOrderStatus(this.orderToReject.storeUrl, this.orderToReject.id, 'rejete', reason).subscribe({
+      next: () => {
+        if (this.orderToReject) {
+          this.orderToReject.status = 'rejete';
+          this.orderToReject.rejectionReason = reason;
+          this.orderToReject.updatedAt = Date.now();
+        }
+        this.showRejectDialog = false;
+        this.orderToReject = null;
+        this.toastService.success('Commande rejetée');
+      },
+      error: (error) => {
+        console.error('Erreur lors du rejet de la commande:', error);
+        this.toastService.error('Erreur lors du rejet de la commande');
+        this.showRejectDialog = false;
+        this.orderToReject = null;
       }
     });
+  }
+
+  onRejectCancel(): void {
+    this.showRejectDialog = false;
+    this.orderToReject = null;
   }
 
   // Imprimer les commandes

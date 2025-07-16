@@ -279,3 +279,11 @@
     </nav>
   </div>
 </div> 
+
+<!-- Dialog de rejet de commande -->
+<app-reject-order-dialog
+  [show]="showRejectDialog"
+  [order]="orderToReject"
+  (confirm)="onRejectConfirm($event)"
+  (cancel)="onRejectCancel()">
+</app-reject-order-dialog> 

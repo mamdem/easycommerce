@@ -1607,3 +1607,166 @@ body {
     border-color: rgba(0, 0, 0, 0.1);
   }
 } 
+
+.stores-horizontal-scroll {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: #fe7b33 #f5f5f5;
+  width: 100vw;
+  max-width: none;
+  margin-left: 50%;
+  transform: translateX(-50%);
+  padding-left: 4vw;
+  padding-right: 4vw;
+  height: 340px; /* Nouvelle hauteur augmentée */
+  align-items: center; /* Centrage vertical des cards */
+}
+
+.stores-horizontal-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.stores-horizontal-scroll::-webkit-scrollbar-thumb {
+  background: #fe7b33;
+  border-radius: 4px;
+}
+.stores-horizontal-scroll::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+.stores-horizontal-scroll .store-card {
+  min-width: 300px;
+  max-width: 320px;
+  scroll-snap-align: start;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  border-radius: 18px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 2px solid transparent;
+  background: #fff;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stores-horizontal-scroll .store-card:hover {
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 8px 32px rgba(254,123,51,0.15);
+  border-color: #fe7b33;
+}
+
+.stores-horizontal-scroll .store-banner {
+  height: 100px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+  margin-bottom: -40px;
+  position: relative;
+}
+.stores-horizontal-scroll .store-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.stores-horizontal-scroll .store-content {
+  padding: 1rem;
+  text-align: center;
+  position: relative;
+  margin-top: -40px;
+  width: 100%;
+}
+
+.stores-horizontal-scroll .store-logo {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto;
+  border-radius: 12px;
+  padding: 3px;
+  background: white;
+  border: 2px solid rgba(254,123,51, 0.2);
+  transition: all 0.3s ease;
+  margin-bottom: 0.5rem;
+}
+.stores-horizontal-scroll .store-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.stores-horizontal-scroll .card-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1f36;
+  margin-bottom: 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.stores-horizontal-scroll .btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  background: #fe7b33;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.stores-horizontal-scroll .btn i {
+  transition: transform 0.3s ease;
+}
+
+.stores-horizontal-scroll .store-card.new-store {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px dashed rgba(254,123,51, 0.3);
+  height: 260px;
+}
+
+.stores-horizontal-scroll .store-card.new-store:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #fe7b33;
+}
+
+.stores-horizontal-scroll .store-card.new-store .add-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  background: rgba(254,123,51, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+}
+
+.stores-horizontal-scroll .store-card.new-store .add-icon i {
+  font-size: 1.8rem;
+  color: #fe7b33;
+  transition: all 0.3s ease;
+}
+
+.stores-horizontal-scroll .store-card.new-store h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1f36;
+  margin: 0;
+  transition: color 0.3s ease;
+} 

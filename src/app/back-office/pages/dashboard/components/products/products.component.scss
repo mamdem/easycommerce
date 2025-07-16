@@ -1213,3 +1213,9 @@
     }
   }
 } 
+
+// Marge bottom pour le composant products
+:host {
+  display: block;
+  margin-bottom: 3rem;
+} 

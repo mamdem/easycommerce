@@ -64,7 +64,8 @@ export class LoginComponent implements OnInit {
   async signInWithGoogle(): Promise<void> {
     try {
       await this.authService.loginWithGoogle();
-      this.authService.redirectAfterLogin();
+      this.toastService.success('Connexion avec Google réussie !');
+      this.authService.redirectAfterGoogleLogin();
     } catch (error) {
       console.error('Erreur lors de la connexion avec Google:', error);
       this.toastService.error('Erreur lors de la connexion avec Google');

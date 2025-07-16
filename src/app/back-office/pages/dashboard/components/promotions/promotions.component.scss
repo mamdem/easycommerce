@@ -393,3 +393,9 @@ $shadow-color: rgba(0, 0, 0, 0.05);
     margin: 0 auto;
   }
 } 
+
+// Marge bottom pour le composant promotions
+:host {
+  display: block;
+  margin-bottom: 3rem;
+} 

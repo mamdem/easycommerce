@@ -693,3 +693,9 @@
     }
   }
 } 
+
+// Marge bottom pour le composant orders
+:host {
+  display: block;
+  margin-bottom: 3rem;
+} 

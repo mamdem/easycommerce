@@ -44,7 +44,7 @@ export class CustomersComponent implements OnInit, OnDestroy {
 
   // Pagination
   currentPage = 1;
-  pageSize = 15;
+  pageSize = 8;
   totalPages = 0;
 
   constructor(
@@ -386,6 +386,11 @@ export class CustomersComponent implements OnInit, OnDestroy {
   // Réinitialiser la recherche
   clearSearch(): void {
     this.searchTerm = '';
+    this.onSearch();
+  }
+
+  // Gérer la recherche
+  onSearch(): void {
     this.currentPage = 1;
   }
 

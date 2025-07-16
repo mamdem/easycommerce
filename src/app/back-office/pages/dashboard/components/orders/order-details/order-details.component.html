@@ -120,10 +120,6 @@
               <td colspan="3" class="text-end">Sous-total</td>
               <td class="text-end"><strong>{{ formatAmount(order && order.subtotal) }}</strong></td>
             </tr>
-            <tr>
-              <td colspan="3" class="text-end">Frais de livraison</td>
-              <td class="text-end"><strong>{{ formatAmount(order && order.shippingFee) }}</strong></td>
-            </tr>
             <tr class="table-active">
               <td colspan="3" class="text-end"><strong>Total</strong></td>
               <td class="text-end"><strong>{{ formatAmount(order && order.total) }}</strong></td>
@@ -184,3 +180,11 @@
     </button>
   </div>
 </div>
+
+<!-- Dialog de rejet de commande -->
+<app-reject-order-dialog
+  [show]="showRejectDialog"
+  [order]="order"
+  (confirm)="onRejectConfirm($event)"
+  (cancel)="onRejectCancel()">
+</app-reject-order-dialog>

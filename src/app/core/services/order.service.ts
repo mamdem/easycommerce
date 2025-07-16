@@ -25,8 +25,8 @@ export class OrderService {
     console.log('Articles du panier:', cartItems);
     
     const subtotal = this.cartService.getCartSubtotal(storeUrl);
-    const shippingFee = this.cartService.getShippingFee(storeUrl);
-    const total = subtotal + shippingFee;
+    // const shippingFee = this.cartService.getShippingFee(storeUrl); // On ne veut plus de frais de livraison
+    const total = subtotal; // Le total est égal au sous-total
 
     if (cartItems.length === 0) {
       console.warn('Tentative de création de commande avec un panier vide');
@@ -61,7 +61,7 @@ export class OrderService {
       items: orderItems,
       customerInfo: cleanCustomerInfo,
       subtotal,
-      shippingFee,
+      // shippingFee, // On retire cette propriété
       total,
       status: 'en_cours',
       createdAt: Date.now()

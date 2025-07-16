@@ -2,8 +2,9 @@ import { Component, OnInit, Input, Output, EventEmitter, OnChanges, SimpleChange
 import { CommonModule } from '@angular/common';
 import { NotificationService, Notification } from '../../../core/services/notification.service';
 import { Observable, of } from 'rxjs';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { map } from 'rxjs/operators';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-notification-drawer',
@@ -11,7 +12,7 @@ import { map } from 'rxjs/operators';
   imports: [CommonModule, RouterModule],
   template: `
     <div class="notification-drawer" [class.open]="isOpen">
-      <div class="drawer-header">
+      <div class="drawer-header" [ngStyle]="{'background': primaryColor ? 'linear-gradient(135deg, ' + primaryColor + ' 0%, ' + primaryColor + ' 100%)' : ''}">
         <h2>
           <i class="bi bi-bell-fill"></i>
           Notifications
@@ -40,10 +41,6 @@ import { map } from 'rxjs/operators';
             </div>
             
             <div class="notification-content">
-              <div class="notification-message">
-                {{ notification.message }}
-              </div>
-              
               <div class="notification-details" *ngIf="notification.data">
                 <ng-container [ngSwitch]="notification.type">
                   
@@ -197,7 +194,7 @@ import { map } from 'rxjs/operators';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      /* La couleur de fond sera surchargée dynamiquement par [ngStyle] */
       color: white;
 
       h2 {
@@ -559,14 +556,24 @@ import { map } from 'rxjs/operators';
 export class NotificationDrawerComponent implements OnInit, OnChanges {
   @Input() isOpen = false;
   @Input() storeId?: string;
+  @Input() primaryColor?: string; // Ajout de la couleur primaire
   @Output() closeDrawer = new EventEmitter<void>();
   @Output() markAllRead = new EventEmitter<void>();
   notifications$: Observable<Notification[]> = of([]);
 
-  constructor(private notificationService: NotificationService) {}
+  constructor(
+    private notificationService: NotificationService, 
+    private router: Router,
+    private route: ActivatedRoute
+  ) {}
 
-  ngOnInit() {
-    this.loadNotifications();
+  ngOnInit(): void {
+    this.route.params.subscribe(params => {
+      const orderId = params['orderId'];
+      if (orderId) {
+        this.loadNotifications();
+      }
+    });
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -644,9 +651,8 @@ export class NotificationDrawerComponent implements OnInit, OnChanges {
   viewOrderDetails(orderId: string | undefined, event: Event) {
     event.stopPropagation();
     if (orderId) {
-      // Naviguer vers les détails de la commande
-      console.log('Naviguer vers la commande:', orderId);
-      // this.router.navigate(['/dashboard/orders', orderId]);
+      this.closeDrawer.emit();
+      this.router.navigate(['/dashboard/orders', orderId]);
     }
   }
 

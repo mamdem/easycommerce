@@ -179,27 +179,87 @@ export class StatisticsComponent implements OnInit, OnDestroy {
       sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
   }
 
+  // Formater la devise
+  formatCurrency(value: number): string {
+    if (value === 0) return '0';
+    if (value < 1000) return `${Math.round(value)} FCFA`;
+    if (value < 1000000) return `${(value / 1000).toFixed(0)}k FCFA`;
+    return `${(value / 1000000).toFixed(1)}M FCFA`;
+  }
+
+  // Obtenir les labels formatés selon la période
+  getFormattedLabels(): string[] {
+    const labels = this.currentLabels;
+    
+    if (this.selectedPeriod === 'daily') {
+      return labels.map((label, index) => {
+        const parts = label.split('/');
+        if (parts.length === 3) {
+          const day = parts[0];
+          const month = parts[1];
+          
+          // Afficher seulement quelques labels pour éviter l'encombrement
+          if (index % 2 === 0 || labels.length <= 7) {
+            return `${day}/${month}`;
+          }
+          return '';
+        }
+        return label;
+      });
+    }
+    
+    if (this.selectedPeriod === 'weekly') {
+      return labels.map(label => label.replace('Semaine ', 'S'));
+    }
+    
+    if (this.selectedPeriod === 'monthly') {
+      return labels.map(label => {
+        // Raccourcir les noms de mois
+        return label.replace('janvier', 'Jan')
+                   .replace('février', 'Fév')
+                   .replace('mars', 'Mar')
+                   .replace('avril', 'Avr')
+                   .replace('mai', 'Mai')
+                   .replace('juin', 'Jun')
+                   .replace('juillet', 'Jul')
+                   .replace('août', 'Aoû')
+                   .replace('septembre', 'Sep')
+                   .replace('octobre', 'Oct')
+                   .replace('novembre', 'Nov')
+                   .replace('décembre', 'Déc');
+      });
+    }
+    
+    return labels;
+  }
+
   private generateSalesData(orders: Order[]): void {
     const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-    const validOrders = orders.filter(order => 
-      order.status === 'valide' && 
-      order.createdAt >= thirtyDaysAgo.getTime()
-    );
+    const validOrders = orders.filter(order => order.status === 'valide');
 
-    // Générer les données journalières
+    // Générer les données journalières (derniers 14 jours pour une meilleure lisibilité)
     const dailyData = new Map<string, number>();
     const weeklyData = new Map<string, number>();
     const monthlyData = new Map<string, number>();
 
-    for (let i = 0; i < 30; i++) {
+    // Pour les données journalières - 14 derniers jours
+    for (let i = 13; i >= 0; i--) {
       const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
       const dateStr = date.toLocaleDateString('fr-FR');
-      const weekStr = `${date.getFullYear()}-W${this.getWeekNumber(date)}`;
-      const monthStr = `${date.getFullYear()}-${date.getMonth() + 1}`;
-
       dailyData.set(dateStr, 0);
+    }
+
+    // Pour les données hebdomadaires - 8 dernières semaines
+    for (let i = 7; i >= 0; i--) {
+      const date = new Date(now.getTime() - (i * 7 * 24 * 60 * 60 * 1000));
+      const weekStr = `${date.getFullYear()}-W${this.getWeekNumber(date)}`;
       weeklyData.set(weekStr, 0);
+    }
+
+    // Pour les données mensuelles - 6 derniers mois
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStr = `${date.getFullYear()}-${date.getMonth() + 1}`;
       monthlyData.set(monthStr, 0);
     }
 
@@ -210,27 +270,31 @@ export class StatisticsComponent implements OnInit, OnDestroy {
       const weekStr = `${date.getFullYear()}-W${this.getWeekNumber(date)}`;
       const monthStr = `${date.getFullYear()}-${date.getMonth() + 1}`;
 
-      dailyData.set(dateStr, (dailyData.get(dateStr) || 0) + (order.total || 0));
-      weeklyData.set(weekStr, (weeklyData.get(weekStr) || 0) + (order.total || 0));
-      monthlyData.set(monthStr, (monthlyData.get(monthStr) || 0) + (order.total || 0));
+      if (dailyData.has(dateStr)) {
+        dailyData.set(dateStr, (dailyData.get(dateStr) || 0) + (order.total || 0));
+      }
+      if (weeklyData.has(weekStr)) {
+        weeklyData.set(weekStr, (weeklyData.get(weekStr) || 0) + (order.total || 0));
+      }
+      if (monthlyData.has(monthStr)) {
+        monthlyData.set(monthStr, (monthlyData.get(monthStr) || 0) + (order.total || 0));
+      }
     });
 
     // Convertir les données en tableaux
-    this.salesData.daily = Array.from(dailyData.values()).reverse();
-    this.salesData.weekly = Array.from(weeklyData.values()).reverse();
-    this.salesData.monthly = Array.from(monthlyData.values()).reverse();
+    this.salesData.daily = Array.from(dailyData.values());
+    this.salesData.weekly = Array.from(weeklyData.values());
+    this.salesData.monthly = Array.from(monthlyData.values());
 
     // Générer les labels
-    this.timeLabels.daily = Array.from(dailyData.keys()).reverse();
+    this.timeLabels.daily = Array.from(dailyData.keys());
     this.timeLabels.weekly = Array.from(weeklyData.keys())
-      .map(week => `Semaine ${week.split('-W')[1]}`)
-      .reverse();
+      .map(week => `Semaine ${week.split('-W')[1]}`);
     this.timeLabels.monthly = Array.from(monthlyData.keys())
       .map(month => {
         const [year, monthNum] = month.split('-');
         return new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleDateString('fr-FR', { month: 'long' });
-      })
-      .reverse();
+      });
   }
 
   private calculateTopProducts(orders: Order[]): void {

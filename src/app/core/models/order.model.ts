@@ -31,7 +31,7 @@ export interface Order {
   items: OrderItem[];
   customerInfo: CustomerInfo;
   subtotal: number;
-  shippingFee: number;
+  shippingFee?: number; // Devient optionnel
   total: number;
   status: OrderStatus;
   createdAt: number;

@@ -118,6 +118,7 @@
   <app-notification-drawer
     [isOpen]="isNotificationDrawerOpen"
     [storeId]="selectedStore ? selectedStore.id : ''"
+    [primaryColor]="selectedStore.primaryColor"
     (closeDrawer)="isNotificationDrawerOpen = false"
     (markAllRead)="markAllNotificationsAsRead()">
   </app-notification-drawer>

@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permettre l'accès à tous les documents pour le moment
+    // Vous devriez ajuster ces règles selon vos besoins de sécurité
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+} 

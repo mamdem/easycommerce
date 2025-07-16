@@ -85,3 +85,9 @@
   position: relative;
   width: 100%;
 } 
+
+// Marge bottom pour le composant overview
+:host {
+  display: block;
+  margin-bottom: 3rem;
+} 

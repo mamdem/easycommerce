@@ -257,3 +257,9 @@
     }
   }
 } 
+
+// Marge bottom pour le composant customers
+:host {
+  display: block;
+  margin-bottom: 3rem;
+} 

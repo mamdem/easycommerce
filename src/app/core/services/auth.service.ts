@@ -313,6 +313,12 @@ export class AuthService {
     }
   }
 
+  // Méthode pour rediriger après connexion Google
+  redirectAfterGoogleLogin(): void {
+    // Pour la connexion Google, toujours rediriger vers la page d'accueil
+    this.router.navigate(['/home']);
+  }
+
   // Méthode pour la connexion avec Facebook
   async loginWithFacebook(): Promise<UserCredential> {
     try {
@@ -432,24 +438,38 @@ export class AuthService {
       return;
     }
 
-    // Vérifier si l'email est vérifié
-    if (!currentUser.emailVerified) {
+    // Pour les connexions Google, l'email est automatiquement vérifié
+    // Permettre l'accès au dashboard même si emailVerified est false
+    let shouldCheckEmailVerification = true;
+    if (currentUser.providerData && currentUser.providerData.length > 0) {
+      const googleProvider = currentUser.providerData.find(provider => 
+        provider.providerId === 'google.com'
+      );
+      
+      if (googleProvider) {
+        // Pour les utilisateurs Google, ne pas vérifier l'email
+        shouldCheckEmailVerification = false;
+      }
+    }
+
+    // Vérifier si l'email est vérifié (sauf pour les utilisateurs Google)
+    if (shouldCheckEmailVerification && !currentUser.emailVerified) {
       this.router.navigate(['/auth/email-verification']);
       return;
     }
-
+    
     // Si l'utilisateur est un marchand sans boutique, rediriger vers la création de boutique
     if (currentUser.userType === 'merchant' && !currentUser.hasStore) {
       this.router.navigate(['/store-creation']);
       return;
     }
-
+    
     // Si l'utilisateur est un marchand avec une boutique, rediriger vers le dashboard
     if (currentUser.userType === 'merchant' && currentUser.hasStore) {
       this.router.navigate(['/dashboard']);
       return;
     }
-
+    
     // Par défaut, rediriger vers le dashboard
     this.router.navigate(['/dashboard']);
   }
@@ -683,7 +703,7 @@ export class AuthService {
       // Réauthentifier l'utilisateur avant de changer le mot de passe
       const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
       await reauthenticateWithCredential(currentUser, credential);
-      
+
       // Mettre à jour le mot de passe
       await firebaseUpdatePassword(currentUser, newPassword);
       
